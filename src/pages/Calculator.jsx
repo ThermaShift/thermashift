@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Calculator, DollarSign, Leaf, Thermometer, TrendingDown, Zap, Download } from 'lucide-react';
 
@@ -12,28 +13,34 @@ function fmt(n) {
 
 export default function CalculatorPage() {
   const [inputs, setInputs] = useState({
-    rackCount: 50,
-    avgPowerPerRack: 30, // kW
-    currentPUE: 1.5,
-    electricityRate: 0.08, // $/kWh
-    coolingType: 'air', // air, rdhx, d2c, immersion
+    rackCount: '50',
+    avgPowerPerRack: '30',
+    currentPUE: '1.5',
+    electricityRate: '0.08',
+    coolingType: 'air',
   });
 
   const set = (key, val) => setInputs(prev => ({ ...prev, [key]: val }));
 
+  // Parse numeric values for calculations, with sensible defaults
+  const rackCount = Math.max(1, parseInt(inputs.rackCount) || 0);
+  const avgPowerPerRack = Math.max(1, parseFloat(inputs.avgPowerPerRack) || 0);
+  const currentPUE = Math.max(1.0, Math.min(3.0, parseFloat(inputs.currentPUE) || 1.5));
+  const electricityRate = Math.max(0.01, parseFloat(inputs.electricityRate) || 0.08);
+
   // Calculations
-  const totalITPower = inputs.rackCount * inputs.avgPowerPerRack; // kW
-  const currentTotalPower = totalITPower * inputs.currentPUE; // kW
+  const totalITPower = rackCount * avgPowerPerRack; // kW
+  const currentTotalPower = totalITPower * currentPUE; // kW
   const currentCoolingPower = currentTotalPower - totalITPower; // kW
   const annualHours = 8760;
   const currentAnnualEnergy = currentTotalPower * annualHours; // kWh
-  const currentAnnualCost = currentAnnualEnergy * inputs.electricityRate;
-  const currentCoolingCost = currentCoolingPower * annualHours * inputs.electricityRate;
+  const currentAnnualCost = currentAnnualEnergy * electricityRate;
+  const currentCoolingCost = currentCoolingPower * annualHours * electricityRate;
 
   // Target PUE by cooling type
   const targetPUE = {
-    air: inputs.currentPUE,
-    rdhx: Math.max(1.2, inputs.currentPUE - 0.15),
+    air: currentPUE,
+    rdhx: Math.max(1.2, currentPUE - 0.15),
     d2c: 1.15,
     immersion: 1.06,
   };
@@ -42,8 +49,8 @@ export default function CalculatorPage() {
   const newTotalPower = totalITPower * newPUE;
   const newCoolingPower = newTotalPower - totalITPower;
   const newAnnualEnergy = newTotalPower * annualHours;
-  const newAnnualCost = newAnnualEnergy * inputs.electricityRate;
-  const newCoolingCost = newCoolingPower * annualHours * inputs.electricityRate;
+  const newAnnualCost = newAnnualEnergy * electricityRate;
+  const newCoolingCost = newCoolingPower * annualHours * electricityRate;
 
   const annualSavings = currentAnnualCost - newAnnualCost;
   const coolingSavingsPercent = currentCoolingCost > 0 ? ((currentCoolingCost - newCoolingCost) / currentCoolingCost * 100) : 0;
@@ -94,7 +101,7 @@ export default function CalculatorPage() {
       </section>
 
       <section style={{ paddingBottom: '80px' }}>
-        <div className="container" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: '40px', alignItems: 'start' }}>
+        <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'start' }}>
           {/* Inputs */}
           <div className="card" style={{ position: 'sticky', top: '90px' }}>
             <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '24px' }}>Your Facility</h3>
@@ -105,7 +112,7 @@ export default function CalculatorPage() {
                 <input
                   type="number"
                   value={inputs.rackCount}
-                  onChange={(e) => set('rackCount', Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={(e) => set('rackCount', e.target.value)}
                 />
               </div>
 
@@ -114,7 +121,7 @@ export default function CalculatorPage() {
                 <input
                   type="number"
                   value={inputs.avgPowerPerRack}
-                  onChange={(e) => set('avgPowerPerRack', Math.max(1, parseFloat(e.target.value) || 1))}
+                  onChange={(e) => set('avgPowerPerRack', e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
                   Air-cooled: 5-25kW | GPU racks: 40-140kW
@@ -127,7 +134,7 @@ export default function CalculatorPage() {
                   type="number"
                   step="0.01"
                   value={inputs.currentPUE}
-                  onChange={(e) => set('currentPUE', Math.max(1.0, Math.min(3.0, parseFloat(e.target.value) || 1.5)))}
+                  onChange={(e) => set('currentPUE', e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
                   Industry avg: 1.5 | Best-in-class: 1.1
@@ -140,7 +147,7 @@ export default function CalculatorPage() {
                   type="number"
                   step="0.01"
                   value={inputs.electricityRate}
-                  onChange={(e) => set('electricityRate', Math.max(0.01, parseFloat(e.target.value) || 0.08))}
+                  onChange={(e) => set('electricityRate', e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
                   US average: $0.08/kWh
@@ -230,9 +237,9 @@ export default function CalculatorPage() {
               <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>
                 Plus {fmt(annualHeatRevenue)}/year in waste heat revenue. Let us show you how.
               </p>
-              <a href="/contact" className="btn btn-primary">
+              <Link to="/contact" className="btn btn-primary">
                 Get Your Custom Analysis <Download size={18} />
-              </a>
+              </Link>
             </div>
           </div>
         </div>
