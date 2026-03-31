@@ -35,7 +35,7 @@ export default function Contact() {
   return (
     <main style={{ paddingTop: '72px' }}>
       <section style={{ padding: '60px 0 80px' }}>
-        <div className="container" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '64px', alignItems: 'start' }}>
+        <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '64px', alignItems: 'start' }}>
           <div>
             <h1 style={{ fontSize: '2.25rem', fontWeight: 800, marginBottom: '16px' }}>
               Get a Free Cooling<br />Efficiency Review

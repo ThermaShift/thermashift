@@ -27,8 +27,12 @@ const STATUS_COLORS = {
 
 export default function Tracker() {
   const [prospects, setProspects] = useState(() => {
-    const saved = localStorage.getItem('thermashift_prospects');
-    return saved ? JSON.parse(saved) : INITIAL_PROSPECTS;
+    try {
+      const saved = localStorage.getItem('thermashift_prospects');
+      return saved ? JSON.parse(saved) : INITIAL_PROSPECTS;
+    } catch {
+      return INITIAL_PROSPECTS;
+    }
   });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
