@@ -58,7 +58,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Email</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>info@thermashift.com</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>info@thermashift.net</div>
                 </div>
               </div>
 

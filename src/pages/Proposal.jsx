@@ -63,7 +63,7 @@ function generateProposal(data) {
   doc.text('Cooling Intelligence. Environmental Impact.', margin, 30);
   doc.setFontSize(9);
   doc.setTextColor(...gray);
-  doc.text('thermashift.com | info@thermashift.com | Harrisburg, NC', margin, 38);
+  doc.text('thermashift.net | info@thermashift.net | Harrisburg, NC', margin, 38);
 
   y = 55;
 

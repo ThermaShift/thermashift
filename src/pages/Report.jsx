@@ -23,7 +23,7 @@ function generateReport(data) {
   doc.text('Cooling Intelligence. Environmental Impact.', margin, 30);
   doc.setFontSize(9);
   doc.setTextColor(...gray);
-  doc.text('thermashift.com | info@thermashift.com | Harrisburg, NC', margin, 38);
+  doc.text('thermashift.net | info@thermashift.net | Harrisburg, NC', margin, 38);
 
   y = 55;
 
@@ -216,7 +216,7 @@ function generateReport(data) {
   y += 8;
   doc.setFontSize(8);
   doc.setTextColor(...gray);
-  doc.text('This report was prepared by ThermaShift. For questions, contact info@thermashift.com.', margin, y);
+  doc.text('This report was prepared by ThermaShift. For questions, contact info@thermashift.net.', margin, y);
   y += 4;
   doc.text('© 2026 ThermaShift. All rights reserved. Confidential.', margin, y);
 
