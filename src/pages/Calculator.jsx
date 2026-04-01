@@ -6,6 +6,7 @@ import { Calculator, DollarSign, Leaf, Thermometer, TrendingDown, Zap, Download 
 const COLORS = ['#06b6d4', '#10b981', '#f59e0b', '#8b5cf6'];
 
 function fmt(n) {
+  if (n <= 0) return '$0';
   if (n >= 1000000) return `$${(n / 1000000).toFixed(1)}M`;
   if (n >= 1000) return `$${(n / 1000).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
@@ -17,7 +18,7 @@ export default function CalculatorPage() {
     avgPowerPerRack: '30',
     currentPUE: '1.5',
     electricityRate: '0.08',
-    coolingType: 'air',
+    coolingType: 'rdhx',
   });
 
   const set = (key, val) => setInputs(prev => ({ ...prev, [key]: val }));
@@ -37,12 +38,12 @@ export default function CalculatorPage() {
   const currentAnnualCost = currentAnnualEnergy * electricityRate;
   const currentCoolingCost = currentCoolingPower * annualHours * electricityRate;
 
-  // Target PUE by cooling type
+  // Target PUE by cooling type (never worse than current)
   const targetPUE = {
     air: currentPUE,
-    rdhx: Math.max(1.2, currentPUE - 0.15),
-    d2c: 1.15,
-    immersion: 1.06,
+    rdhx: Math.min(currentPUE, Math.max(1.2, currentPUE - 0.15)),
+    d2c: Math.min(currentPUE, 1.15),
+    immersion: Math.min(currentPUE, 1.06),
   };
 
   const newPUE = targetPUE[inputs.coolingType];
@@ -52,8 +53,8 @@ export default function CalculatorPage() {
   const newAnnualCost = newAnnualEnergy * electricityRate;
   const newCoolingCost = newCoolingPower * annualHours * electricityRate;
 
-  const annualSavings = currentAnnualCost - newAnnualCost;
-  const coolingSavingsPercent = currentCoolingCost > 0 ? ((currentCoolingCost - newCoolingCost) / currentCoolingCost * 100) : 0;
+  const annualSavings = Math.max(0, currentAnnualCost - newAnnualCost);
+  const coolingSavingsPercent = currentCoolingCost > 0 ? Math.max(0, (currentCoolingCost - newCoolingCost) / currentCoolingCost * 100) : 0;
 
   // Waste heat recovery potential
   const wasteHeatKW = totalITPower * 0.95; // 95% of IT load becomes heat
@@ -63,7 +64,7 @@ export default function CalculatorPage() {
 
   // Carbon impact
   const carbonFactor = 0.42; // kg CO2 per kWh (US average)
-  const annualCarbonReduction = (currentAnnualEnergy - newAnnualEnergy) * carbonFactor / 1000; // tonnes
+  const annualCarbonReduction = Math.max(0, (currentAnnualEnergy - newAnnualEnergy) * carbonFactor / 1000); // tonnes
 
   // 5 year projection
   const fiveYearSavings = annualSavings * 5;
