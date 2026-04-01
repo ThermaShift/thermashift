@@ -25,7 +25,7 @@ function NotFound() {
 
 function App() {
   return (
-    <Router basename="/thermashift">
+    <Router>
       <AuthProvider>
         <Navbar />
         <Routes>
