@@ -322,11 +322,18 @@ def send_data(data, config):
         req.add_header('User-Agent', 'ThermaShift-Agent/2.0')
         req.add_header('Prefer', 'return=minimal')
 
-        # Use Supabase anon key for the HTTP auth (required by Supabase)
-        supabase_key = config.get('supabase_anon_key', client_key)
+        # Use Supabase anon key for HTTP auth (required by Supabase)
+        THERMASHIFT_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4'
+        supabase_key = config.get('supabase_anon_key', '')
+        # Auto-detect ThermaShift cloud endpoint
+        if 'auqklthrpvsqyelfjood.supabase.co' in url:
+            supabase_key = THERMASHIFT_ANON
         if supabase_key:
             req.add_header('apikey', supabase_key)
             req.add_header('Authorization', f"Bearer {supabase_key}")
+        elif client_key:
+            req.add_header('apikey', client_key)
+            req.add_header('Authorization', f"Bearer {client_key}")
 
         with urllib.request.urlopen(req, timeout=30) as resp:
             return True, f"HTTP {resp.status}"
@@ -494,6 +501,7 @@ def main():
     parser.add_argument('--cooling-type', '-c',
                         choices=['Air', 'RDHX', 'D2C', 'Immersion', 'Hybrid'],
                         help='Override cooling type')
+    parser.add_argument('--facility-id', '-f', help='Override facility ID')
     parser.add_argument('--endpoint', help='Override endpoint URL')
     parser.add_argument('--api-key', help='Override API key')
 
@@ -507,6 +515,8 @@ def main():
         config['polling_interval'] = args.interval
     if args.cooling_type:
         config['cooling_type'] = args.cooling_type
+    if args.facility_id:
+        config['facility_id'] = args.facility_id
     if args.endpoint:
         config['endpoint_url'] = args.endpoint
     if args.api_key:
