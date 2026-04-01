@@ -7,6 +7,7 @@ import {
   Activity, Thermometer, Droplets, Zap, Leaf, AlertTriangle,
   Server, Wind, RefreshCw, Gauge, Plus, Trash2, Edit3, Check, X,
   Building, Eye, ArrowLeft, Bell, Download, Upload, FileSpreadsheet,
+  Brain, TrendingUp, TrendingDown, ShieldAlert, Wrench, ArrowUpRight,
 } from 'lucide-react';
 
 // Generate simulated data based on facility parameters
@@ -205,6 +206,136 @@ B5,40,20.3,39.8,RDHX`;
   a.download = 'thermashift_rack_data_template.csv';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// AI Thermal Intelligence Engine
+function analyzeFacility(racks, metrics, facility) {
+  const alertThreshold = parseFloat(facility.alertTempThreshold) || 45;
+  const targetPUE = parseFloat(facility.targetPUE) || 1.2;
+  const currentPUE = parseFloat(metrics.pue) || 1.5;
+  const recommendations = [];
+
+  if (racks.length === 0) return { score: 0, grade: '—', recommendations: [] };
+
+  // Sort racks by risk
+  const sortedByTemp = [...racks].sort((a, b) => b.outletTemp - a.outletTemp);
+  const sortedByPower = [...racks].sort((a, b) => b.power - a.power);
+  const avgPower = racks.reduce((s, r) => s + r.power, 0) / racks.length;
+  const avgOutlet = racks.reduce((s, r) => s + r.outletTemp, 0) / racks.length;
+  const maxTemp = sortedByTemp[0]?.outletTemp || 0;
+  const maxPower = sortedByPower[0]?.power || 0;
+  const hotspots = racks.filter(r => r.outletTemp > alertThreshold);
+  const warningRacks = racks.filter(r => r.outletTemp > alertThreshold - 5 && r.outletTemp <= alertThreshold);
+  const highDensity = racks.filter(r => r.power > avgPower * 1.3);
+  const deltaTs = racks.map(r => r.outletTemp - r.inletTemp);
+  const avgDeltaT = deltaTs.reduce((s, d) => s + d, 0) / deltaTs.length;
+  const maxDeltaT = Math.max(...deltaTs);
+
+  // Scoring (0-100)
+  let score = 100;
+  score -= hotspots.length * 12;
+  score -= warningRacks.length * 5;
+  score -= Math.max(0, (currentPUE - targetPUE) * 30);
+  score -= Math.max(0, (avgOutlet - 38) * 3);
+  score -= Math.max(0, (maxDeltaT - 25) * 2);
+  score = Math.max(0, Math.min(100, Math.round(score)));
+
+  const grade = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 40 ? 'D' : 'F';
+
+  // CRITICAL: Active hotspots
+  if (hotspots.length > 0) {
+    const names = hotspots.map(r => r.name).join(', ');
+    recommendations.push({
+      severity: 'critical',
+      icon: ShieldAlert,
+      title: `${hotspots.length} rack${hotspots.length > 1 ? 's' : ''} above ${alertThreshold}°C threshold`,
+      detail: `Racks ${names} require immediate cooling intervention. Sustained temperatures above ${alertThreshold}°C risk hardware damage and unplanned downtime.`,
+      action: hotspots.some(r => r.power > 40)
+        ? 'Deploy direct-to-chip or immersion cooling for these high-density racks immediately.'
+        : 'Increase airflow to affected zones. Consider rear-door heat exchangers as a retrofit solution.',
+    });
+  }
+
+  // WARNING: Racks approaching threshold
+  if (warningRacks.length > 0) {
+    const names = warningRacks.map(r => `${r.name} (${r.outletTemp}°C)`).join(', ');
+    recommendations.push({
+      severity: 'warning',
+      icon: TrendingUp,
+      title: `${warningRacks.length} rack${warningRacks.length > 1 ? 's' : ''} approaching thermal threshold`,
+      detail: `Racks ${names} are within 5°C of the ${alertThreshold}°C alert threshold. These will likely become hotspots under peak load.`,
+      action: 'Redistribute workloads away from these racks during peak hours, or proactively upgrade cooling before next load increase.',
+    });
+  }
+
+  // HIGH DENSITY: Racks that need liquid cooling
+  if (highDensity.length > 0) {
+    const airCooledHigh = highDensity.filter(r => r.coolingType === 'Air' || r.coolingType === 'air');
+    if (airCooledHigh.length > 0) {
+      const names = airCooledHigh.map(r => `${r.name} (${r.power}kW)`).join(', ');
+      recommendations.push({
+        severity: 'warning',
+        icon: Wrench,
+        title: `${airCooledHigh.length} high-density rack${airCooledHigh.length > 1 ? 's' : ''} still on air cooling`,
+        detail: `Racks ${names} are drawing ${Math.round(avgPower * 1.3)}+ kW but rely on air cooling. Air cooling is typically effective only up to 25kW per rack.`,
+        action: airCooledHigh.some(r => r.power > 50)
+          ? 'These racks are candidates for immersion cooling (PUE target: 1.03-1.06). ROI payback: 18-24 months.'
+          : 'Retrofit with rear-door heat exchangers for 30-50% cooling improvement at lower cost than full liquid cooling.',
+      });
+    }
+  }
+
+  // PUE OPTIMIZATION
+  if (currentPUE > targetPUE + 0.1) {
+    const wastedPower = (racks.reduce((s, r) => s + r.power, 0)) * (currentPUE - targetPUE);
+    const annualWaste = wastedPower * 8760 * 0.10;
+    recommendations.push({
+      severity: 'info',
+      icon: TrendingDown,
+      title: `PUE ${currentPUE} is ${(currentPUE - targetPUE).toFixed(2)} above target of ${targetPUE}`,
+      detail: `Current cooling overhead is higher than optimal. This represents approximately ${Math.round(wastedPower)} kW of wasted cooling power, costing ~$${(annualWaste / 1000).toFixed(0)}K/year in excess energy.`,
+      action: 'Implement hot/cold aisle containment if not already in place. Raise cold aisle temperature to ASHRAE recommended 27°C. Consider free cooling economizer hours.',
+    });
+  }
+
+  // THERMAL IMBALANCE
+  const tempStdDev = Math.sqrt(racks.reduce((s, r) => s + Math.pow(r.outletTemp - avgOutlet, 2), 0) / racks.length);
+  if (tempStdDev > 5) {
+    const coldest = sortedByTemp[sortedByTemp.length - 1];
+    const hottest = sortedByTemp[0];
+    recommendations.push({
+      severity: 'info',
+      icon: ArrowUpRight,
+      title: 'Significant thermal imbalance detected across facility',
+      detail: `Temperature spread: ${coldest.name} at ${coldest.outletTemp}°C vs ${hottest.name} at ${hottest.outletTemp}°C (${(hottest.outletTemp - coldest.outletTemp).toFixed(1)}°C delta). Standard deviation: ${tempStdDev.toFixed(1)}°C.`,
+      action: 'Rebalance airflow distribution. Cold zones may have overcooled racks wasting energy while hot zones are underserved. Consider variable-speed fan drives for targeted cooling.',
+    });
+  }
+
+  // COOLING TYPE UPGRADE PATH
+  const airOnly = racks.filter(r => r.coolingType === 'Air' || r.coolingType === 'air');
+  if (airOnly.length === racks.length && avgPower > 15) {
+    recommendations.push({
+      severity: 'info',
+      icon: Wrench,
+      title: 'Facility is 100% air-cooled — liquid cooling transition recommended',
+      detail: `At ${avgPower.toFixed(0)} kW average per rack, this facility is at the upper limit of effective air cooling. Industry data shows liquid cooling delivers 30-50% energy savings at these densities.`,
+      action: `Phase 1: Deploy rear-door HX on the top ${Math.min(10, Math.round(racks.length * 0.2))} highest-temperature racks. Phase 2: Evaluate direct-to-chip for racks above 40kW. Estimated annual savings: $${(racks.reduce((s, r) => s + r.power, 0) * 0.15 * 8760 * 0.10 / 1000).toFixed(0)}K.`,
+    });
+  }
+
+  // POSITIVE: Everything looks good
+  if (recommendations.length === 0) {
+    recommendations.push({
+      severity: 'success',
+      icon: TrendingDown,
+      title: 'Facility thermal performance is optimal',
+      detail: `All ${racks.length} racks within safe temperature ranges. PUE of ${currentPUE} meets target. No immediate action required.`,
+      action: 'Continue monitoring. Consider waste heat recovery to generate additional revenue from thermal output.',
+    });
+  }
+
+  return { score, grade, recommendations };
 }
 
 function MetricCard({ icon: Icon, label, value, unit, color, sub }) {
@@ -493,6 +624,77 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
           </div>
         </div>
       )}
+
+      {/* AI Thermal Intelligence */}
+      {(() => {
+        const analysis = analyzeFacility(racks, metrics, facility);
+        const severityColors = {
+          critical: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', color: '#ef4444', label: 'CRITICAL' },
+          warning: { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)', color: '#f59e0b', label: 'WARNING' },
+          info: { bg: 'rgba(6,182,212,0.08)', border: 'rgba(6,182,212,0.2)', color: '#06b6d4', label: 'OPTIMIZE' },
+          success: { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)', color: '#10b981', label: 'OPTIMAL' },
+        };
+        const gradeColors = { A: '#10b981', B: '#06b6d4', C: '#f59e0b', D: '#f97316', F: '#ef4444' };
+
+        return (
+          <div className="card" style={{ padding: '20px', marginBottom: '20px', background: 'linear-gradient(135deg, rgba(139,92,246,0.06) 0%, var(--surface) 100%)', borderColor: 'rgba(139,92,246,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Brain size={16} style={{ color: '#8b5cf6' }} /> AI Thermal Intelligence
+                <span style={{
+                  padding: '2px 8px', borderRadius: '100px', fontSize: '0.6rem', fontWeight: 700,
+                  background: 'rgba(139,92,246,0.15)', color: '#8b5cf6', border: '1px solid rgba(139,92,246,0.3)',
+                }}>PRO</span>
+              </h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-dim)', fontWeight: 600, textTransform: 'uppercase' }}>Health Score</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: gradeColors[analysis.grade] || 'var(--text)' }}>
+                    {analysis.score}/100
+                  </div>
+                </div>
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '8px',
+                  background: `${gradeColors[analysis.grade] || '#64748b'}20`,
+                  border: `2px solid ${gradeColors[analysis.grade] || '#64748b'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '1.1rem', fontWeight: 900, color: gradeColors[analysis.grade] || 'var(--text)',
+                }}>
+                  {analysis.grade}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {analysis.recommendations.map((rec, i) => {
+                const sev = severityColors[rec.severity] || severityColors.info;
+                return (
+                  <div key={i} style={{
+                    padding: '16px', borderRadius: '8px',
+                    background: sev.bg, border: `1px solid ${sev.border}`,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <rec.icon size={16} style={{ color: sev.color }} />
+                      <span style={{ fontSize: '0.65rem', fontWeight: 700, color: sev.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{sev.label}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text)' }}>{rec.title}</span>
+                    </div>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '8px' }}>
+                      {rec.detail}
+                    </p>
+                    <div style={{
+                      fontSize: '0.8rem', color: sev.color, fontWeight: 600,
+                      padding: '8px 12px', background: `${sev.color}10`, borderRadius: '6px',
+                      borderLeft: `3px solid ${sev.color}`,
+                    }}>
+                      Recommended: {rec.action}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Waste Heat */}
       <div className="card" style={{ padding: '20px', background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, var(--surface) 100%)', borderColor: 'rgba(16,185,129,0.2)' }}>
