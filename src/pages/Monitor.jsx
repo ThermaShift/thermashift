@@ -6,7 +6,7 @@ import {
 import {
   Activity, Thermometer, Droplets, Zap, Leaf, AlertTriangle,
   Server, Wind, RefreshCw, Gauge, Plus, Trash2, Edit3, Check, X,
-  Building, Eye, ArrowLeft, Bell, Download,
+  Building, Eye, ArrowLeft, Bell, Download, Upload, FileSpreadsheet,
 } from 'lucide-react';
 
 // Generate simulated data based on facility parameters
@@ -81,6 +81,132 @@ function generateFacilityData(facility) {
   };
 }
 
+// Parse CSV rack data into dashboard format
+function parseCSVData(csvText, facility) {
+  const lines = csvText.trim().split(/\r?\n/);
+  if (lines.length < 2) return null;
+
+  // Parse a CSV line handling quoted fields
+  function parseCSVLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ''; continue; }
+      current += ch;
+    }
+    result.push(current.trim());
+    return result;
+  }
+
+  // Parse header — find column indices
+  const header = parseCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+  const findCol = (...names) => header.findIndex(h => names.some(n => h === n || h.startsWith(n)));
+
+  const nameCol = findCol('rack', 'name', 'id', 'rackname', 'rackid');
+  const powerCol = findCol('power', 'powerkw', 'kw', 'load', 'watts');
+  const inletCol = findCol('inlet', 'inlettemp', 'inlettempc', 'supply');
+  const outletCol = findCol('outlet', 'outlettemp', 'outlettempc', 'return', 'exhaust');
+  const coolingCol = findCol('cooling', 'coolingtype', 'cooltype');
+
+  if (powerCol === -1 && outletCol === -1) return null; // need at least power or temp
+
+  const alertThreshold = parseFloat(facility.alertTempThreshold) || 45;
+  const racks = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 2 || cols.every(c => !c)) continue;
+
+    const name = nameCol >= 0 ? (cols[nameCol] || `R${i}`) : `R${i}`;
+    const power = powerCol >= 0 ? Math.max(0, parseFloat(cols[powerCol]) || 0) : 0;
+    const inletTemp = inletCol >= 0 ? Math.max(-10, Math.min(60, parseFloat(cols[inletCol]) || 20)) : 20;
+    const outletTemp = outletCol >= 0 ? Math.max(-10, Math.min(80, parseFloat(cols[outletCol]) || 30)) : 30;
+    const coolingType = coolingCol >= 0 ? (cols[coolingCol] || 'Air') : facility.coolingType || 'Air';
+
+    // Skip rows where all numeric values are zero/default (likely empty row)
+    if (power === 0 && inletTemp === 20 && outletTemp === 30 && powerCol >= 0) continue;
+
+    racks.push({
+      name,
+      power: +power.toFixed(0),
+      inletTemp: +inletTemp.toFixed(1),
+      outletTemp: +outletTemp.toFixed(1),
+      isHotspot: outletTemp > alertThreshold,
+      coolingType,
+    });
+  }
+
+  if (racks.length === 0) return null;
+
+  // Calculate metrics from real data
+  const totalITPower = racks.reduce((s, r) => s + r.power, 0);
+  const avgOutletTemp = +(racks.reduce((s, r) => s + r.outletTemp, 0) / racks.length).toFixed(1);
+  const avgInletTemp = +(racks.reduce((s, r) => s + r.inletTemp, 0) / racks.length).toFixed(1);
+  const currentPUE = parseFloat(facility.currentPUE) || 1.5;
+  const totalFacility = totalITPower * currentPUE;
+  const coolingPower = totalFacility - totalITPower;
+  const hotspots = racks.filter(r => r.isHotspot);
+  const wasteHeatRecoverable = +(totalITPower * 0.95 * 0.6).toFixed(0);
+
+  // Generate time series from the imported snapshot (flat line with slight variation)
+  const rand = (min, max) => +(min + Math.random() * (max - min)).toFixed(2);
+  const timeSeries = [];
+  for (let h = 0; h < 24; h++) {
+    const hour = `${String(h).padStart(2, '0')}:00`;
+    const variance = rand(0.97, 1.03);
+    timeSeries.push({
+      time: hour,
+      totalITPower: +(totalITPower * variance).toFixed(0),
+      totalFacilityPower: +(totalFacility * variance).toFixed(0),
+      pue: +(currentPUE * rand(0.98, 1.02)).toFixed(3),
+      avgInletTemp: +(avgInletTemp * rand(0.95, 1.05)).toFixed(1),
+      avgOutletTemp: +(avgOutletTemp * rand(0.95, 1.05)).toFixed(1),
+      carbonEmissions: +(totalFacility * variance * 0.42 / 1000).toFixed(2),
+    });
+  }
+
+  return {
+    metrics: {
+      pue: currentPUE.toFixed(2),
+      totalITPower,
+      coolingPower: +coolingPower.toFixed(0),
+      avgOutletTemp,
+      hotspots: hotspots.length,
+      annualCarbonTonnes: +((totalFacility * 8760 * 0.42) / 1000000).toFixed(1),
+      uptime: '—',
+      wasteHeatRecoverable,
+      wue: '—',
+    },
+    racks,
+    timeSeries,
+    hotspots,
+  };
+}
+
+function downloadCSVTemplate() {
+  const template = `rack_name,power_kw,inlet_temp_c,outlet_temp_c,cooling_type
+A1,22,20.5,35.2,Air
+A2,28,21.0,38.1,Air
+A3,45,19.8,42.5,RDHX
+A4,18,20.2,33.0,Air
+A5,52,20.0,41.8,D2C
+B1,30,21.5,36.7,Air
+B2,25,20.8,34.9,Air
+B3,65,19.5,44.2,D2C
+B4,20,21.0,32.5,Air
+B5,40,20.3,39.8,RDHX`;
+  const blob = new Blob([template], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'thermashift_rack_data_template.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function MetricCard({ icon: Icon, label, value, unit, color, sub }) {
   return (
     <div className="card" style={{ padding: '16px' }}>
@@ -133,16 +259,68 @@ function RackHeatMap({ racks, threshold }) {
 function FacilityDashboard({ facility, onBack, onRefresh }) {
   const [data, setData] = useState(() => generateFacilityData(facility));
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [dataSource, setDataSource] = useState('simulated');
+  const [importError, setImportError] = useState('');
 
   const refresh = useCallback(() => {
-    setData(generateFacilityData(facility));
-    setLastUpdate(new Date());
-  }, [facility]);
+    if (dataSource === 'simulated') {
+      setData(generateFacilityData(facility));
+      setLastUpdate(new Date());
+    }
+  }, [facility, dataSource]);
 
   useEffect(() => {
+    if (dataSource !== 'simulated') return;
     const interval = setInterval(refresh, 15000);
     return () => clearInterval(interval);
-  }, [refresh]);
+  }, [refresh, dataSource]);
+
+  const handleCSVImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError('');
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setImportError('File too large. Maximum size is 5MB.');
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setImportError('Failed to read file. Please try again.');
+    };
+    reader.onload = (event) => {
+      const text = event.target?.result;
+      if (typeof text !== 'string') {
+        setImportError('Could not read file contents.');
+        return;
+      }
+
+      const parsed = parseCSVData(text, facility);
+      if (!parsed) {
+        setImportError('Could not parse CSV. Make sure it has columns for rack name, power (kW), and/or temperatures. Download the template for the expected format.');
+        return;
+      }
+      if (parsed.racks.length === 0) {
+        setImportError('No valid rack data found in CSV. Check that data rows have numeric values for power or temperature.');
+        return;
+      }
+      setData(parsed);
+      setDataSource('imported');
+      setLastUpdate(new Date());
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // reset so same file can be re-imported
+  };
+
+  const switchToSimulated = () => {
+    setDataSource('simulated');
+    setData(generateFacilityData(facility));
+    setLastUpdate(new Date());
+    setImportError('');
+  };
 
   const { metrics, racks, timeSeries, hotspots } = data;
   const alertThreshold = parseFloat(facility.alertTempThreshold) || 45;
@@ -163,18 +341,48 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
                 background: facility.status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)',
                 color: facility.status === 'Active' ? 'var(--success)' : 'var(--warning)',
               }}>{facility.status || 'Active'}</span>
+              <span style={{
+                padding: '2px 8px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 700,
+                background: dataSource === 'imported' ? 'rgba(6,182,212,0.15)' : 'rgba(100,116,139,0.15)',
+                color: dataSource === 'imported' ? 'var(--accent)' : 'var(--text-dim)',
+                border: `1px solid ${dataSource === 'imported' ? 'rgba(6,182,212,0.3)' : 'rgba(100,116,139,0.3)'}`,
+              }}>{dataSource === 'imported' ? `IMPORTED (${racks.length} racks)` : 'SIMULATED'}</span>
             </div>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>
               {facility.facilityLocation} — Updated: {lastUpdate.toLocaleTimeString()}
             </p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={refresh} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
-            <RefreshCw size={14} /> Refresh
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button onClick={downloadCSVTemplate} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
+            <Download size={14} /> Template
           </button>
+          <label className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer' }}>
+            <Upload size={14} /> Import CSV
+            <input type="file" accept=".csv,.txt" onChange={handleCSVImport} style={{ display: 'none' }} />
+          </label>
+          {dataSource === 'imported' ? (
+            <button onClick={switchToSimulated} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
+              <RefreshCw size={14} /> Simulated
+            </button>
+          ) : (
+            <button onClick={refresh} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
+              <RefreshCw size={14} /> Refresh
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Import error */}
+      {importError && (
+        <div style={{
+          padding: '12px 16px', borderRadius: '8px', marginBottom: '16px',
+          background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+          color: 'var(--danger)', fontSize: '0.85rem',
+        }}>
+          {importError}
+        </div>
+      )}
 
       {/* Metrics */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '20px' }}>
