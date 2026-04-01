@@ -9,6 +9,7 @@ import Tracker from './pages/Tracker';
 import Report from './pages/Report';
 import Proposal from './pages/Proposal';
 import Monitor from './pages/Monitor';
+import Contracts from './pages/Contracts';
 import Contact from './pages/Contact';
 
 function NotFound() {
@@ -43,6 +44,7 @@ function App() {
           <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
           <Route path="/proposal" element={<ProtectedRoute><Proposal /></ProtectedRoute>} />
           <Route path="/monitor" element={<ProtectedRoute><Monitor /></ProtectedRoute>} />
+          <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
