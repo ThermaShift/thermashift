@@ -140,8 +140,13 @@ def setup_wizard():
     delivery = input(f"  Select [1-3, default 1]: ").strip() or '1'
     if delivery == '1':
         config['endpoint_url'] = 'https://auqklthrpvsqyelfjood.supabase.co/rest/v1/sensor_readings'
-        config['api_key'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4'
-        print("  Connected to ThermaShift Cloud.")
+        config['supabase_anon_key'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4'
+        config['api_key'] = input("  Enter your Client API Key (provided by ThermaShift): ").strip()
+        if not config['api_key']:
+            print("  WARNING: No API key entered. Data will be rejected by the server.")
+            print("  Contact your ThermaShift administrator to get your API key.")
+        else:
+            print("  Connected to ThermaShift Cloud.")
     elif delivery == '2':
         config['endpoint_url'] = input(f"  Webhook URL [{config.get('endpoint_url', '')}]: ").strip() or config.get('endpoint_url', '')
         if config['endpoint_url']:
@@ -306,17 +311,22 @@ def send_data(data, config):
         # Remove 'timestamp' key — Supabase uses 'created_at' auto-column
         clean_data.pop('timestamp', None)
 
+        # Include client API key in the payload for authorization
+        client_key = config.get('api_key', '')
+        if client_key:
+            clean_data['client_api_key'] = client_key
+
         payload = json.dumps(clean_data).encode('utf-8')
         req = urllib.request.Request(url, data=payload, method='POST')
         req.add_header('Content-Type', 'application/json')
         req.add_header('User-Agent', 'ThermaShift-Agent/2.0')
         req.add_header('Prefer', 'return=minimal')
 
-        api_key = config.get('api_key', '')
-        if api_key:
-            # Supabase requires both apikey header and Authorization
-            req.add_header('apikey', api_key)
-            req.add_header('Authorization', f"Bearer {api_key}")
+        # Use Supabase anon key for the HTTP auth (required by Supabase)
+        supabase_key = config.get('supabase_anon_key', client_key)
+        if supabase_key:
+            req.add_header('apikey', supabase_key)
+            req.add_header('Authorization', f"Bearer {supabase_key}")
 
         with urllib.request.urlopen(req, timeout=30) as resp:
             return True, f"HTTP {resp.status}"

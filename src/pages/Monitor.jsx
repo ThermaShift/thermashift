@@ -855,6 +855,175 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
 
 const INITIAL_FACILITIES = [];
 
+// Supabase service key for client management (admin only)
+const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTA3NjE5OSwiZXhwIjoyMDkwNjUyMTk5fQ.J83H_6K5-TjjQO5e-ChlUiv1fp5H1HBGP3ftvFb8bQc';
+
+function ClientManager() {
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newClient, setNewClient] = useState({ client_name: '', facility_id: '', max_racks: '10', contract_notes: '' });
+  const [copiedKey, setCopiedKey] = useState(null);
+
+  const loadClients = async () => {
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/clients?select=*&order=created_at.desc`, {
+        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` },
+      });
+      if (resp.ok) setClients(await resp.json());
+    } catch {}
+    setLoading(false);
+  };
+
+  useEffect(() => { loadClients(); }, []);
+
+  const addClient = async () => {
+    if (!newClient.client_name.trim() || !newClient.facility_id.trim()) return;
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': SUPABASE_SERVICE_KEY,
+          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({
+          client_name: newClient.client_name.trim(),
+          facility_id: newClient.facility_id.trim().toLowerCase().replace(/\s+/g, '-'),
+          max_racks: parseInt(newClient.max_racks) || 10,
+          contract_notes: newClient.contract_notes,
+        }),
+      });
+      if (resp.ok) {
+        setNewClient({ client_name: '', facility_id: '', max_racks: '10', contract_notes: '' });
+        setShowAdd(false);
+        loadClients();
+      }
+    } catch {}
+  };
+
+  const toggleStatus = async (client) => {
+    const newStatus = client.status === 'active' ? 'inactive' : 'active';
+    await fetch(`${SUPABASE_URL}/clients?id=eq.${client.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_SERVICE_KEY,
+        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+      },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    loadClients();
+  };
+
+  const deleteClient = async (client) => {
+    if (!confirm(`Remove client "${client.client_name}"? Their agent will stop working.`)) return;
+    await fetch(`${SUPABASE_URL}/clients?id=eq.${client.id}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` },
+    });
+    loadClients();
+  };
+
+  const copyKey = (key) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  return (
+    <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Wifi size={16} style={{ color: 'var(--accent)' }} /> Authorized Clients
+          <span style={{ padding: '2px 8px', borderRadius: '100px', fontSize: '0.6rem', fontWeight: 700, background: 'rgba(16,185,129,0.15)', color: 'var(--success)' }}>
+            {clients.filter(c => c.status === 'active').length} active
+          </span>
+        </h3>
+        <button onClick={() => setShowAdd(!showAdd)} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
+          <Plus size={14} /> Add Client
+        </button>
+      </div>
+
+      {showAdd && (
+        <div style={{ padding: '16px', background: 'var(--primary)', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', marginBottom: '12px' }}>
+            <div>
+              <label style={{ fontSize: '0.75rem' }}>Client Name *</label>
+              <input value={newClient.client_name} onChange={(e) => setNewClient({ ...newClient, client_name: e.target.value })} placeholder="Flexential" style={{ padding: '8px 12px', fontSize: '0.85rem' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem' }}>Facility ID *</label>
+              <input value={newClient.facility_id} onChange={(e) => setNewClient({ ...newClient, facility_id: e.target.value })} placeholder="flexential-clt-01" style={{ padding: '8px 12px', fontSize: '0.85rem' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem' }}>Max Racks</label>
+              <input type="number" value={newClient.max_racks} onChange={(e) => setNewClient({ ...newClient, max_racks: e.target.value })} style={{ padding: '8px 12px', fontSize: '0.85rem' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.75rem' }}>Contract Notes</label>
+              <input value={newClient.contract_notes} onChange={(e) => setNewClient({ ...newClient, contract_notes: e.target.value })} placeholder="12-month SaaS, 100 racks" style={{ padding: '8px 12px', fontSize: '0.85rem' }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={addClient} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.8rem' }}><Check size={14} /> Create & Generate API Key</button>
+            <button onClick={() => setShowAdd(false)} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>Loading clients...</p>
+      ) : clients.length === 0 ? (
+        <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>No clients yet. Add a client to generate their API key for agent access.</p>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Client', 'Facility ID', 'API Key', 'Racks', 'Status', 'Notes', ''].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-dim)', textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {clients.map(c => (
+                <tr key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 600, fontSize: '0.85rem' }}>{c.client_name}</td>
+                  <td style={{ padding: '10px 12px', fontSize: '0.8rem', color: 'var(--text-muted)' }}><code>{c.facility_id}</code></td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <button onClick={() => copyKey(c.api_key)} style={{
+                      background: 'var(--primary)', border: '1px solid var(--border)', borderRadius: '4px',
+                      color: copiedKey === c.api_key ? 'var(--success)' : 'var(--text-dim)', padding: '4px 8px',
+                      fontSize: '0.7rem', cursor: 'pointer', fontFamily: 'monospace',
+                    }}>
+                      {copiedKey === c.api_key ? 'Copied!' : `${c.api_key.slice(0, 12)}... (click to copy)`}
+                    </button>
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: '0.85rem', color: 'var(--accent)', fontWeight: 700 }}>{c.max_racks}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <button onClick={() => toggleStatus(c)} style={{
+                      padding: '2px 8px', borderRadius: '100px', fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer',
+                      background: c.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                      color: c.status === 'active' ? 'var(--success)' : 'var(--danger)',
+                      border: `1px solid ${c.status === 'active' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                    }}>{c.status}</button>
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: '0.8rem', color: 'var(--text-dim)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.contract_notes || '—'}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <button onClick={() => deleteClient(c)} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '4px' }}><Trash2 size={14} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Monitor() {
   const [facilities, setFacilities] = useState(() => {
     try {
@@ -922,6 +1091,9 @@ export default function Monitor() {
                   <Plus size={18} /> Add Facility
                 </button>
               </div>
+
+              {/* Client Authorization Manager */}
+              <ClientManager />
 
               {/* Add Form */}
               {showAdd && (
