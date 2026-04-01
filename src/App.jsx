@@ -1,12 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import { AuthProvider, ProtectedRoute, AdminLogin } from './components/AdminAuth';
 import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Dashboard from './pages/Dashboard';
 import Tracker from './pages/Tracker';
 import Report from './pages/Report';
 import Proposal from './pages/Proposal';
+import Monitor from './pages/Monitor';
 import Contact from './pages/Contact';
 
 function NotFound() {
@@ -24,18 +26,28 @@ function NotFound() {
 function App() {
   return (
     <Router basename="/thermashift">
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/calculator" element={<Calculator />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/tracker" element={<Tracker />} />
-        <Route path="/report" element={<Report />} />
-        <Route path="/proposal" element={<Proposal />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Footer />
+      <AuthProvider>
+        <Navbar />
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/calculator" element={<Calculator />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/contact" element={<Contact />} />
+
+          {/* Admin login */}
+          <Route path="/admin" element={<AdminLogin />} />
+
+          {/* Protected routes */}
+          <Route path="/tracker" element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
+          <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
+          <Route path="/proposal" element={<ProtectedRoute><Proposal /></ProtectedRoute>} />
+          <Route path="/monitor" element={<ProtectedRoute><Monitor /></ProtectedRoute>} />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Footer />
+      </AuthProvider>
     </Router>
   );
 }
