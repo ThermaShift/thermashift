@@ -6,6 +6,7 @@ import Calculator from './pages/Calculator';
 import Dashboard from './pages/Dashboard';
 import Tracker from './pages/Tracker';
 import Report from './pages/Report';
+import Proposal from './pages/Proposal';
 import Contact from './pages/Contact';
 
 function NotFound() {
@@ -30,6 +31,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/tracker" element={<Tracker />} />
         <Route path="/report" element={<Report />} />
+        <Route path="/proposal" element={<Proposal />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

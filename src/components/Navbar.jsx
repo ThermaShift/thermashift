@@ -12,7 +12,6 @@ export default function Navbar() {
     { to: '/', label: 'Home' },
     { to: '/calculator', label: 'ROI Calculator' },
     { to: '/dashboard', label: 'Dashboard Demo' },
-    { to: '/report', label: 'Report Generator' },
   ];
 
   return (
