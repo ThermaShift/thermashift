@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<title>ThermaShift Agent — Installation Guide</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f172a; color: #e2e8f0; line-height: 1.7;
+    padding: 40px 20px;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 2rem; font-weight: 800; margin-bottom: 8px; }
+  h1 span { color: #06b6d4; }
+  h2 {
+    font-size: 1.4rem; font-weight: 700; margin-top: 48px; margin-bottom: 16px;
+    padding-bottom: 8px; border-bottom: 1px solid #334155;
+  }
+  h3 { font-size: 1.1rem; font-weight: 700; margin-top: 32px; margin-bottom: 12px; color: #06b6d4; }
+  p { margin-bottom: 16px; color: #94a3b8; }
+  .subtitle { font-size: 1.05rem; color: #64748b; margin-bottom: 32px; }
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 100px;
+    font-size: 0.7rem; font-weight: 700; margin-left: 8px;
+  }
+  .badge-linux { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .badge-windows { background: rgba(6,182,212,0.15); color: #06b6d4; }
+  .badge-mac { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+  .badge-all { background: rgba(16,185,129,0.15); color: #10b981; }
+
+  .tab-group { display: flex; gap: 0; margin-top: 24px; margin-bottom: 0; flex-wrap: wrap; }
+  .tab {
+    padding: 10px 20px; background: #1e293b; border: 1px solid #334155;
+    color: #94a3b8; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    border-bottom: none;
+  }
+  .tab:first-child { border-radius: 8px 0 0 0; }
+  .tab:last-child { border-radius: 0 8px 0 0; }
+  .tab.active { background: #0f172a; color: #06b6d4; border-color: #06b6d4; border-bottom: 1px solid #0f172a; }
+  .tab-content {
+    display: none; padding: 24px; background: #0f172a;
+    border: 1px solid #334155; border-radius: 0 0 8px 8px; margin-bottom: 24px;
+  }
+  .tab-content.active { display: block; border-color: #06b6d4; }
+
+  pre {
+    background: #1e293b; padding: 16px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 0.85rem; line-height: 1.8;
+    border: 1px solid #334155; margin-bottom: 16px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  }
+  code {
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    background: #1e293b; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem;
+  }
+  pre code { background: none; padding: 0; }
+  .comment { color: #64748b; }
+  .cmd { color: #06b6d4; }
+  .flag { color: #f59e0b; }
+  .string { color: #10b981; }
+
+  ol, ul { padding-left: 24px; margin-bottom: 16px; }
+  li { margin-bottom: 8px; color: #94a3b8; }
+  li strong { color: #e2e8f0; }
+
+  .card {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    padding: 24px; margin-bottom: 16px;
+  }
+  .card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(6,182,212,0.15); color: #06b6d4;
+    font-weight: 800; font-size: 0.8rem; margin-right: 10px; flex-shrink: 0;
+  }
+  .step { display: flex; align-items: flex-start; margin-bottom: 20px; }
+  .step-content { flex: 1; }
+
+  .warning {
+    padding: 16px; border-radius: 8px; margin-bottom: 16px;
+    background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
+    color: #f59e0b; font-size: 0.9rem;
+  }
+  .info {
+    padding: 16px; border-radius: 8px; margin-bottom: 16px;
+    background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2);
+    color: #06b6d4; font-size: 0.9rem;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+  th { text-align: left; padding: 10px 16px; font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #334155; }
+  td { padding: 10px 16px; font-size: 0.9rem; border-bottom: 1px solid #1e293b; }
+
+  .footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid #334155; text-align: center; color: #64748b; font-size: 0.8rem; }
+  a { color: #06b6d4; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Therma<span>Shift</span> Monitoring Agent</h1>
+<p class="subtitle">Installation & Setup Guide — v2.0</p>
+
+<div class="info">
+  This agent collects thermal and performance data from your servers and sends it to the ThermaShift Thermal Intelligence Platform for real-time monitoring, AI-powered analysis, and cooling optimization recommendations.
+</div>
+
+<!-- ============================================================ -->
+<h2>Requirements</h2>
+
+<table>
+  <tr><th>Requirement</th><th>Details</th></tr>
+  <tr><td><strong>Python 3.7+</strong></td><td>Pre-installed on most Linux and macOS. <a href="https://python.org/downloads">Download for Windows</a>.</td></tr>
+  <tr><td><strong>psutil</strong> (Python package)</td><td>Required. Collects CPU, memory, disk, and temperature data.</td></tr>
+  <tr><td><strong>GPUtil</strong> (optional)</td><td>For GPU temperature monitoring (NVIDIA GPUs only).</td></tr>
+  <tr><td><strong>Network access</strong></td><td>HTTPS outbound to <code>supabase.co</code> for data delivery.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>Quick Install</h2>
+<p>Choose your operating system:</p>
+
+<div class="tab-group">
+  <div class="tab active" onclick="showTab('linux')">Linux</div>
+  <div class="tab" onclick="showTab('windows')">Windows</div>
+  <div class="tab" onclick="showTab('mac')">macOS</div>
+</div>
+
+<!-- LINUX -->
+<div class="tab-content active" id="tab-linux">
+<h3>One-Line Install <span class="badge badge-linux">Linux</span></h3>
+<pre><code><span class="cmd">curl</span> <span class="flag">-sSL</span> https://thermashift.net/agent/install-linux.sh | <span class="cmd">bash</span></code></pre>
+
+<h3>Manual Install</h3>
+<div class="step">
+  <span class="step-num">1</span>
+  <div class="step-content">
+    <strong>Verify Python is installed</strong>
+    <pre><code><span class="cmd">python3</span> <span class="flag">--version</span></code></pre>
+    <p>If not installed:</p>
+    <pre><code><span class="comment"># Debian / Ubuntu</span>
+<span class="cmd">sudo apt update</span> && <span class="cmd">sudo apt install</span> python3 python3-pip
+
+<span class="comment"># RHEL / CentOS / Fedora</span>
+<span class="cmd">sudo yum install</span> python3 python3-pip
+
+<span class="comment"># Arch Linux</span>
+<span class="cmd">sudo pacman -S</span> python python-pip</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span>
+  <div class="step-content">
+    <strong>Install Python dependencies</strong>
+    <pre><code><span class="cmd">pip3 install</span> psutil
+
+<span class="comment"># Optional: GPU monitoring (NVIDIA only)</span>
+<span class="cmd">pip3 install</span> GPUtil</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span>
+  <div class="step-content">
+    <strong>Download the agent</strong>
+    <pre><code><span class="cmd">mkdir -p</span> ~/.thermashift
+<span class="cmd">curl</span> <span class="flag">-sSL</span> https://thermashift.net/agent/thermashift-agent.py <span class="flag">-o</span> ~/.thermashift/thermashift-agent.py
+<span class="cmd">chmod</span> +x ~/.thermashift/thermashift-agent.py</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span>
+  <div class="step-content">
+    <strong>Run the setup wizard</strong>
+    <pre><code><span class="cmd">python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--setup</span></code></pre>
+    <p>Follow the prompts to configure your facility name, rack ID, polling interval, and data delivery.</p>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span>
+  <div class="step-content">
+    <strong>Start monitoring</strong>
+    <pre><code><span class="comment"># Run in foreground (for testing)</span>
+<span class="cmd">python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--daemon</span>
+
+<span class="comment"># Run in background</span>
+<span class="cmd">nohup python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--daemon</span> &
+
+<span class="comment"># Or set up as a systemd service (see below)</span></code></pre>
+  </div>
+</div>
+
+<h3>Run as a systemd Service (Recommended for Production)</h3>
+<pre><code><span class="comment"># Create service file</span>
+<span class="cmd">sudo tee</span> /etc/systemd/system/thermashift-agent.service > /dev/null << 'EOF'
+[Unit]
+Description=ThermaShift Monitoring Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /root/.thermashift/thermashift-agent.py --daemon
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+<span class="comment"># Enable and start</span>
+<span class="cmd">sudo systemctl daemon-reload</span>
+<span class="cmd">sudo systemctl enable</span> thermashift-agent
+<span class="cmd">sudo systemctl start</span> thermashift-agent
+
+<span class="comment"># Check status</span>
+<span class="cmd">sudo systemctl status</span> thermashift-agent</code></pre>
+</div>
+
+<!-- WINDOWS -->
+<div class="tab-content" id="tab-windows">
+<h3>One-Line Install <span class="badge badge-windows">Windows</span></h3>
+<p>Open <strong>PowerShell as Administrator</strong> and run:</p>
+<pre><code><span class="cmd">irm</span> https://thermashift.net/agent/install-windows.ps1 | <span class="cmd">iex</span></code></pre>
+
+<h3>Manual Install</h3>
+<div class="step">
+  <span class="step-num">1</span>
+  <div class="step-content">
+    <strong>Install Python</strong>
+    <p>Download from <a href="https://python.org/downloads">python.org/downloads</a></p>
+    <div class="warning">
+      IMPORTANT: Check the box <strong>"Add Python to PATH"</strong> during installation. This is required for the agent to work from any directory.
+    </div>
+    <p>Verify after install:</p>
+    <pre><code><span class="cmd">python</span> <span class="flag">--version</span></code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span>
+  <div class="step-content">
+    <strong>Install Python dependencies</strong>
+    <pre><code><span class="cmd">python</span> <span class="flag">-m pip install</span> psutil
+
+<span class="comment"># Optional: GPU monitoring (NVIDIA only)</span>
+<span class="cmd">python</span> <span class="flag">-m pip install</span> GPUtil</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span>
+  <div class="step-content">
+    <strong>Download the agent</strong>
+    <p>Option A — PowerShell:</p>
+    <pre><code><span class="cmd">New-Item</span> <span class="flag">-ItemType Directory -Force -Path</span> <span class="string">"$env:USERPROFILE\.thermashift"</span>
+<span class="cmd">Invoke-WebRequest</span> <span class="flag">-Uri</span> <span class="string">"https://thermashift.net/agent/thermashift-agent.py"</span> <span class="flag">-OutFile</span> <span class="string">"$env:USERPROFILE\.thermashift\thermashift-agent.py"</span></code></pre>
+    <p>Option B — Download directly: <a href="https://thermashift.net/agent/thermashift-agent.py">thermashift-agent.py</a> and save to <code>C:\Users\YourName\.thermashift\</code></p>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span>
+  <div class="step-content">
+    <strong>Run the setup wizard</strong>
+    <pre><code><span class="cmd">python</span> <span class="string">"%USERPROFILE%\.thermashift\thermashift-agent.py"</span> <span class="flag">--setup</span></code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span>
+  <div class="step-content">
+    <strong>Start monitoring</strong>
+    <pre><code><span class="comment"># Run in foreground (for testing)</span>
+<span class="cmd">python</span> <span class="string">"%USERPROFILE%\.thermashift\thermashift-agent.py"</span> <span class="flag">--daemon</span></code></pre>
+  </div>
+</div>
+
+<h3>Run as a Windows Service (Recommended for Production)</h3>
+<p>Use Task Scheduler for automatic startup:</p>
+<ol>
+  <li>Open <strong>Task Scheduler</strong> (search in Start Menu)</li>
+  <li>Click <strong>Create Basic Task</strong></li>
+  <li>Name: <code>ThermaShift Agent</code></li>
+  <li>Trigger: <strong>When the computer starts</strong></li>
+  <li>Action: <strong>Start a program</strong></li>
+  <li>Program: <code>python</code></li>
+  <li>Arguments: <code>C:\Users\YourName\.thermashift\thermashift-agent.py --daemon</code></li>
+  <li>Check <strong>"Run with highest privileges"</strong></li>
+  <li>Click <strong>Finish</strong></li>
+</ol>
+</div>
+
+<!-- MAC -->
+<div class="tab-content" id="tab-mac">
+<h3>One-Line Install <span class="badge badge-mac">macOS</span></h3>
+<pre><code><span class="cmd">curl</span> <span class="flag">-sSL</span> https://thermashift.net/agent/install-mac.sh | <span class="cmd">bash</span></code></pre>
+
+<h3>Manual Install</h3>
+<div class="step">
+  <span class="step-num">1</span>
+  <div class="step-content">
+    <strong>Verify Python is installed</strong>
+    <pre><code><span class="cmd">python3</span> <span class="flag">--version</span></code></pre>
+    <p>If not installed:</p>
+    <pre><code><span class="comment"># Using Homebrew (recommended)</span>
+<span class="cmd">brew install</span> python3
+
+<span class="comment"># Or download from python.org</span></code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">2</span>
+  <div class="step-content">
+    <strong>Install Python dependencies</strong>
+    <pre><code><span class="cmd">pip3 install</span> psutil</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">3</span>
+  <div class="step-content">
+    <strong>Download the agent</strong>
+    <pre><code><span class="cmd">mkdir -p</span> ~/.thermashift
+<span class="cmd">curl</span> <span class="flag">-sSL</span> https://thermashift.net/agent/thermashift-agent.py <span class="flag">-o</span> ~/.thermashift/thermashift-agent.py</code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">4</span>
+  <div class="step-content">
+    <strong>Run the setup wizard</strong>
+    <pre><code><span class="cmd">python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--setup</span></code></pre>
+  </div>
+</div>
+
+<div class="step">
+  <span class="step-num">5</span>
+  <div class="step-content">
+    <strong>Start monitoring</strong>
+    <pre><code><span class="cmd">python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--daemon</span></code></pre>
+  </div>
+</div>
+
+<div class="info">
+  Note: CPU temperature reading on macOS may require running with <code>sudo</code> for full sensor access. The agent will still work without it — temperature will show as N/A and defaults will be used.
+</div>
+
+<h3>Run as a Launch Daemon (Recommended for Production)</h3>
+<pre><code><span class="comment"># Create launch daemon plist</span>
+<span class="cmd">sudo tee</span> /Library/LaunchDaemons/net.thermashift.agent.plist > /dev/null << 'EOF'
+&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd"&gt;
+&lt;plist version="1.0"&gt;
+&lt;dict&gt;
+  &lt;key&gt;Label&lt;/key&gt;
+  &lt;string&gt;net.thermashift.agent&lt;/string&gt;
+  &lt;key&gt;ProgramArguments&lt;/key&gt;
+  &lt;array&gt;
+    &lt;string&gt;/usr/local/bin/python3&lt;/string&gt;
+    &lt;string&gt;/Users/YOUR_USERNAME/.thermashift/thermashift-agent.py&lt;/string&gt;
+    &lt;string&gt;--daemon&lt;/string&gt;
+  &lt;/array&gt;
+  &lt;key&gt;RunAtLoad&lt;/key&gt;
+  &lt;true/&gt;
+  &lt;key&gt;KeepAlive&lt;/key&gt;
+  &lt;true/&gt;
+  &lt;key&gt;StandardErrorPath&lt;/key&gt;
+  &lt;string&gt;/tmp/thermashift-agent.err&lt;/string&gt;
+&lt;/dict&gt;
+&lt;/plist&gt;
+EOF
+
+<span class="comment"># Load and start</span>
+<span class="cmd">sudo launchctl load</span> /Library/LaunchDaemons/net.thermashift.agent.plist</code></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2>Setup Wizard</h2>
+
+<p>The setup wizard (<code>--setup</code>) walks you through configuring the agent. Here's what each option means:</p>
+
+<div class="card">
+  <h4>Facility Name</h4>
+  <p>Your company or data center name. Example: <code>Flexential Charlotte</code></p>
+</div>
+
+<div class="card">
+  <h4>Facility ID</h4>
+  <p>A unique identifier that links this agent to your facility on the ThermaShift dashboard. Your ThermaShift administrator will provide this. Example: <code>flexential-clt-01</code></p>
+</div>
+
+<div class="card">
+  <h4>Rack/Server Name</h4>
+  <p>Identifies this specific machine. Defaults to the hostname. Example: <code>A1</code>, <code>Rack-3-Server-12</code></p>
+</div>
+
+<div class="card">
+  <h4>Cooling Type</h4>
+  <p>The cooling method used for this server:</p>
+  <ul>
+    <li><strong>Air Cooling</strong> — Standard CRAC/CRAH units</li>
+    <li><strong>RDHX</strong> — Rear-Door Heat Exchangers</li>
+    <li><strong>D2C</strong> — Direct-to-Chip liquid cooling</li>
+    <li><strong>Immersion</strong> — Full immersion cooling</li>
+    <li><strong>Hybrid</strong> — Mix of cooling methods</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h4>Polling Interval</h4>
+  <p>How often the agent collects and sends data:</p>
+  <table>
+    <tr><th>Preset</th><th>Interval</th><th>Best For</th></tr>
+    <tr><td>Real-time</td><td>30 seconds</td><td>Active troubleshooting, demos</td></tr>
+    <tr><td>Frequent</td><td>1 minute</td><td>High-density or mission-critical racks</td></tr>
+    <tr><td>Standard</td><td>5 minutes</td><td>Normal production monitoring</td></tr>
+    <tr><td>Conservative</td><td>15 minutes</td><td>Low-priority or many agents</td></tr>
+    <tr><td>Hourly</td><td>60 minutes</td><td>Baseline/trend data collection</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h4>Data Delivery</h4>
+  <p>Where collected data is sent:</p>
+  <ul>
+    <li><strong>ThermaShift Cloud (recommended)</strong> — Automatically configured. Data appears on your ThermaShift dashboard within seconds.</li>
+    <li><strong>Custom webhook</strong> — Send to your own API, Zapier, or other service.</li>
+    <li><strong>Local only</strong> — Saves to CSV on the local machine. Export manually.</li>
+  </ul>
+</div>
+
+<!-- ============================================================ -->
+<h2>Command Reference</h2>
+
+<table>
+  <tr><th>Command</th><th>Description</th></tr>
+  <tr><td><code>--setup</code></td><td>Run interactive setup wizard</td></tr>
+  <tr><td><code>--daemon</code></td><td>Start continuous monitoring using saved config</td></tr>
+  <tr><td><code>--status</code></td><td>Show current configuration</td></tr>
+  <tr><td><code>--interval 60</code></td><td>Override polling interval (seconds)</td></tr>
+  <tr><td><code>--rack-name A1</code></td><td>Override rack/server identifier</td></tr>
+  <tr><td><code>--cooling-type D2C</code></td><td>Override cooling type</td></tr>
+  <tr><td><code>--export data.csv</code></td><td>Single snapshot to platform-compatible CSV</td></tr>
+  <tr><td><code>--json</code></td><td>Output as JSON instead of CSV</td></tr>
+  <tr><td><code>--endpoint URL</code></td><td>Override data delivery endpoint</td></tr>
+  <tr><td><code>--api-key KEY</code></td><td>Override API authentication key</td></tr>
+  <tr><td><code>--quiet</code></td><td>Suppress console output</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>Data Collected</h2>
+
+<p>The agent collects the following data points at each polling interval:</p>
+
+<table>
+  <tr><th>Metric</th><th>Source</th><th>Notes</th></tr>
+  <tr><td>CPU Temperature</td><td>System sensors</td><td>Linux: lm-sensors / sysfs. Windows: WMI. macOS: powermetrics.</td></tr>
+  <tr><td>GPU Temperature</td><td>GPUtil (NVIDIA)</td><td>Requires optional GPUtil package</td></tr>
+  <tr><td>Power Draw</td><td>Estimated</td><td>Based on CPU usage, core count, and TDP model</td></tr>
+  <tr><td>CPU Usage</td><td>psutil</td><td>Percentage across all cores</td></tr>
+  <tr><td>Memory Usage</td><td>psutil</td><td>Percentage and total GB</td></tr>
+  <tr><td>Disk Usage</td><td>psutil</td><td>Root partition percentage</td></tr>
+  <tr><td>Inlet Temperature</td><td>Configurable</td><td>Default: 22°C. Override in setup if you have inlet sensors.</td></tr>
+  <tr><td>Outlet Temperature</td><td>CPU temp</td><td>Uses CPU temperature as proxy for outlet air temp</td></tr>
+  <tr><td>Hostname & OS</td><td>System</td><td>Automatically detected</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>Troubleshooting</h2>
+
+<div class="card">
+  <h4>CPU Temperature shows N/A</h4>
+  <p><strong>Linux:</strong> Install lm-sensors: <code>sudo apt install lm-sensors && sudo sensors-detect</code></p>
+  <p><strong>Windows:</strong> WMI thermal zone access may require Administrator privileges. Run the agent as Administrator.</p>
+  <p><strong>macOS:</strong> Run with <code>sudo</code> for full sensor access.</p>
+  <p>The agent will still work without temperature data — it uses safe defaults (35°C outlet).</p>
+</div>
+
+<div class="card">
+  <h4>Send failed: Connection error</h4>
+  <p>Check that the server has outbound HTTPS access to <code>supabase.co</code>. Some firewalls or proxies may block this. Test with:</p>
+  <pre><code><span class="cmd">curl</span> <span class="flag">-I</span> https://auqklthrpvsqyelfjood.supabase.co</code></pre>
+</div>
+
+<div class="card">
+  <h4>Permission denied errors</h4>
+  <p>The agent needs write access to <code>~/.thermashift/</code> for config and logs. On Linux/Mac:</p>
+  <pre><code><span class="cmd">chmod</span> <span class="flag">-R</span> 700 ~/.thermashift</code></pre>
+</div>
+
+<div class="card">
+  <h4>Agent stops after closing terminal</h4>
+  <p>Use one of the service methods above (systemd, Task Scheduler, or launchd) for persistent monitoring. Or run with <code>nohup</code>:</p>
+  <pre><code><span class="cmd">nohup python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--daemon</span> > /dev/null 2>&1 &</code></pre>
+</div>
+
+<div class="card">
+  <h4>Reset configuration</h4>
+  <pre><code><span class="cmd">rm</span> ~/.thermashift/config.json
+<span class="cmd">python3</span> ~/.thermashift/thermashift-agent.py <span class="flag">--setup</span></code></pre>
+</div>
+
+<!-- ============================================================ -->
+<h2>Security</h2>
+
+<ul>
+  <li>Data is transmitted over <strong>HTTPS</strong> (TLS encrypted)</li>
+  <li>The agent collects <strong>system metrics only</strong> — no file contents, user data, network traffic, or credentials</li>
+  <li>Configuration and API keys are stored locally in <code>~/.thermashift/config.json</code></li>
+  <li>The agent runs with the permissions of the user that started it</li>
+  <li>No inbound ports are opened — the agent only makes outbound HTTPS requests</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>Support</h2>
+
+<p>Questions? Contact your ThermaShift administrator or reach us at:</p>
+<ul>
+  <li>Email: <a href="mailto:info@thermashift.net">info@thermashift.net</a></li>
+  <li>Web: <a href="https://thermashift.net">thermashift.net</a></li>
+</ul>
+
+<div class="footer">
+  <p>&copy; 2026 ThermaShift. Cooling Intelligence. Environmental Impact.</p>
+</div>
+
+</div>
+
+<script>
+function showTab(os) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + os).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.textContent.toLowerCase().includes(os === 'mac' ? 'macos' : os)) t.classList.add('active');
+  });
+}
+</script>
+</body>
+</html>
