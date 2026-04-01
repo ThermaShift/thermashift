@@ -220,14 +220,21 @@ function generateContract(data) {
   doc.setTextColor(80, 80, 80);
 
   const conditions = [
-    'Confidentiality: All facility data, reports, and deliverables are confidential. ThermaShift will not share client data with third parties without written consent.',
-    'Data Security: All monitoring data is transmitted over HTTPS encryption. Data is stored in SOC 2 compliant cloud infrastructure.',
-    'Intellectual Property: Reports, designs, and recommendations prepared by ThermaShift are licensed to the client for internal use. ThermaShift retains ownership of methodologies and tools.',
-    'Liability: ThermaShift liability is limited to the total contract value. ThermaShift is not liable for facility downtime, equipment damage, or consequential damages.',
-    'Insurance: ThermaShift maintains professional liability insurance covering services rendered under this agreement.',
-    'Dispute Resolution: Disputes shall be resolved through mediation in Mecklenburg County, North Carolina before pursuing legal action.',
-    'Force Majeure: Neither party is liable for delays caused by circumstances beyond reasonable control.',
-    'Governing Law: This agreement is governed by the laws of the State of North Carolina.',
+    'Confidentiality: All facility data, reports, and deliverables are confidential. ThermaShift will not share client data with third parties without written consent. This obligation survives termination for a period of 3 years.',
+    'Data Security: All monitoring data is transmitted over HTTPS encryption. Data is stored in SOC 2 compliant cloud infrastructure. Client retains ownership of all facility data collected.',
+    'Intellectual Property: Reports, designs, and recommendations prepared by ThermaShift are licensed to the client for internal use only. ThermaShift retains ownership of all methodologies, tools, software, algorithms, and platforms used to deliver services.',
+    'Limitation of Liability: ThermaShift total liability under this agreement shall not exceed the total fees paid by client in the 12 months preceding any claim. In no event shall ThermaShift be liable for indirect, incidental, consequential, special, or punitive damages, including but not limited to lost profits, facility downtime, equipment damage, data loss, or business interruption, regardless of the cause of action.',
+    'Indemnification: Client shall indemnify and hold harmless ThermaShift and its subcontractors from any claims, damages, or expenses arising from (a) client misuse of deliverables, (b) client facility conditions, or (c) client failure to follow ThermaShift recommendations communicated in writing.',
+    'Resource Substitution: ThermaShift may utilize qualified subcontractors to perform services under this agreement. In the event a key resource becomes unavailable during an engagement, ThermaShift shall have fifteen (15) business days to assign a qualified replacement. Project timelines will be adjusted accordingly with written notice to the client. ThermaShift guarantees replacement resources will meet equivalent qualification standards.',
+    'Warranty: ThermaShift warrants that services will be performed in a professional and workmanlike manner consistent with industry standards. Client must notify ThermaShift of any warranty claims within 30 days of deliverable receipt. ThermaShift will re-perform deficient work at no additional cost.',
+    'Insurance: ThermaShift maintains professional liability (E&O) insurance with minimum coverage of $1,000,000 per occurrence.',
+    'Non-Solicitation: During the contract term and for 12 months thereafter, neither party shall directly solicit or hire employees or subcontractors of the other party who were involved in delivering services under this agreement.',
+    'Dispute Resolution: The parties agree to attempt resolution through good-faith negotiation for 30 days, then non-binding mediation administered by the American Arbitration Association in Mecklenburg County, North Carolina, before pursuing litigation. The prevailing party in any legal action shall be entitled to recover reasonable attorney fees.',
+    'Force Majeure: Neither party is liable for delays or failure to perform caused by circumstances beyond reasonable control, including but not limited to natural disasters, pandemics, government actions, utility failures, cyberattacks, or supply chain disruptions. Affected party must notify the other within 5 business days.',
+    'Governing Law: This agreement is governed by and construed in accordance with the laws of the State of North Carolina, without regard to conflict of law principles. Exclusive jurisdiction and venue shall be in the state or federal courts located in Mecklenburg County, North Carolina.',
+    'Entire Agreement: This document constitutes the entire agreement between the parties and supersedes all prior discussions, proposals, and agreements. Modifications require written consent signed by both parties.',
+    'Severability: If any provision of this agreement is found invalid or unenforceable, the remaining provisions shall continue in full force and effect.',
+    'Assignment: Neither party may assign this agreement without prior written consent of the other party, except ThermaShift may assign to a successor entity in the event of merger, acquisition, or reorganization.',
   ];
 
   conditions.forEach(c => {
