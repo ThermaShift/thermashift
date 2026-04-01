@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Send, CheckCircle, Mail, MapPin, Link as LinkedinIcon } from 'lucide-react';
+import { useForm } from '@formspree/react';
+import { Send, CheckCircle, Mail, MapPin, Link as LinkedinIcon, AlertCircle } from 'lucide-react';
 
 export default function Contact() {
-  const [submitted, setSubmitted] = useState(false);
+  const [state, handleFormspree] = useForm('xqeglkdw');
   const [form, setForm] = useState({
     name: '', email: '', company: '', role: '', phone: '',
     rackCount: '', avgPowerPerRack: '', currentPUE: '',
@@ -15,12 +16,10 @@ export default function Contact() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // In production, this would send to a backend or email service
-    console.log('Form submitted:', form);
-    setSubmitted(true);
+    handleFormspree(e);
   };
 
-  if (submitted) {
+  if (state.succeeded) {
     return (
       <main style={{ paddingTop: '72px' }}>
         <section style={{ padding: '120px 0', textAlign: 'center' }}>
@@ -116,36 +115,36 @@ export default function Contact() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
                   <label>Full Name *</label>
-                  <input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="John Smith" />
+                  <input required name="name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="John Smith" />
                 </div>
                 <div>
                   <label>Work Email *</label>
-                  <input required type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="you@company.com" />
+                  <input required type="email" name="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="you@company.com" />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
                   <label>Company *</label>
-                  <input required value={form.company} onChange={(e) => set('company', e.target.value)} placeholder="Flexential" />
+                  <input required name="company" value={form.company} onChange={(e) => set('company', e.target.value)} placeholder="Flexential" />
                 </div>
                 <div>
                   <label>Your Role</label>
-                  <select value={form.role} onChange={(e) => set('role', e.target.value)}>
+                  <select name="role" value={form.role} onChange={(e) => set('role', e.target.value)}>
                     <option value="">Select...</option>
-                    <option value="facilities">Director of Facilities</option>
-                    <option value="engineering">VP of Engineering</option>
-                    <option value="operations">Director of DC Operations</option>
-                    <option value="sustainability">Chief Sustainability Officer</option>
-                    <option value="cto">CTO / CIO</option>
-                    <option value="other">Other</option>
+                    <option value="Director of Facilities">Director of Facilities</option>
+                    <option value="VP of Engineering">VP of Engineering</option>
+                    <option value="Director of DC Operations">Director of DC Operations</option>
+                    <option value="Chief Sustainability Officer">Chief Sustainability Officer</option>
+                    <option value="CTO / CIO">CTO / CIO</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label>Phone (optional)</label>
-                <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="(704) 555-0100" />
+                <input type="tel" name="phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="(704) 555-0100" />
               </div>
 
               <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '8px', marginBottom: '-8px' }}>Your Facility</h4>
@@ -153,25 +152,25 @@ export default function Contact() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
                   <label>Facility Location</label>
-                  <input value={form.facilityLocation} onChange={(e) => set('facilityLocation', e.target.value)} placeholder="Charlotte, NC" />
+                  <input name="facilityLocation" value={form.facilityLocation} onChange={(e) => set('facilityLocation', e.target.value)} placeholder="Charlotte, NC" />
                 </div>
                 <div>
                   <label>Approximate Rack Count</label>
-                  <input type="number" value={form.rackCount} onChange={(e) => set('rackCount', e.target.value)} placeholder="200" />
+                  <input type="number" name="rackCount" value={form.rackCount} onChange={(e) => set('rackCount', e.target.value)} placeholder="200" />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
                   <label>Avg Power per Rack (kW)</label>
-                  <input type="number" value={form.avgPowerPerRack} onChange={(e) => set('avgPowerPerRack', e.target.value)} placeholder="15" />
+                  <input type="number" name="avgPowerPerRack" value={form.avgPowerPerRack} onChange={(e) => set('avgPowerPerRack', e.target.value)} placeholder="15" />
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px', display: 'block' }}>
                     Air-cooled: 5-25kW | GPU: 40-140kW
                   </span>
                 </div>
                 <div>
                   <label>Current PUE (if known)</label>
-                  <input type="number" step="0.01" value={form.currentPUE} onChange={(e) => set('currentPUE', e.target.value)} placeholder="1.5" />
+                  <input type="number" step="0.01" name="currentPUE" value={form.currentPUE} onChange={(e) => set('currentPUE', e.target.value)} placeholder="1.5" />
                   <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px', display: 'block' }}>
                     Industry avg: 1.58 | Best-in-class: 1.1
                   </span>
@@ -180,15 +179,15 @@ export default function Contact() {
 
               <div>
                 <label>Current Cooling Type</label>
-                <select value={form.coolingType} onChange={(e) => set('coolingType', e.target.value)}>
+                <select name="coolingType" value={form.coolingType} onChange={(e) => set('coolingType', e.target.value)}>
                   <option value="">Select...</option>
-                  <option value="air-only">Air Cooling Only (CRAC/CRAH)</option>
-                  <option value="air-containment">Air + Hot/Cold Aisle Containment</option>
-                  <option value="rdhx">Rear-Door Heat Exchangers</option>
-                  <option value="d2c">Direct-to-Chip Liquid Cooling</option>
-                  <option value="immersion">Immersion Cooling</option>
-                  <option value="hybrid">Hybrid (mix of above)</option>
-                  <option value="unsure">Not sure</option>
+                  <option value="Air Cooling Only (CRAC/CRAH)">Air Cooling Only (CRAC/CRAH)</option>
+                  <option value="Air + Hot/Cold Aisle Containment">Air + Hot/Cold Aisle Containment</option>
+                  <option value="Rear-Door Heat Exchangers">Rear-Door Heat Exchangers</option>
+                  <option value="Direct-to-Chip Liquid Cooling">Direct-to-Chip Liquid Cooling</option>
+                  <option value="Immersion Cooling">Immersion Cooling</option>
+                  <option value="Hybrid (mix of above)">Hybrid (mix of above)</option>
+                  <option value="Not sure">Not sure</option>
                 </select>
               </div>
 
@@ -196,38 +195,38 @@ export default function Contact() {
 
               <div>
                 <label>Biggest Cooling Challenge</label>
-                <select value={form.biggestChallenge} onChange={(e) => set('biggestChallenge', e.target.value)}>
+                <select name="biggestChallenge" value={form.biggestChallenge} onChange={(e) => set('biggestChallenge', e.target.value)}>
                   <option value="">Select...</option>
-                  <option value="density">Can't support higher rack densities (AI/GPU workloads)</option>
-                  <option value="cost">Cooling energy costs too high</option>
-                  <option value="pue">PUE is above target</option>
-                  <option value="capacity">Running out of cooling capacity</option>
-                  <option value="esg">ESG/sustainability reporting requirements</option>
-                  <option value="heat">Interested in waste heat monetization</option>
-                  <option value="reliability">Cooling reliability / hotspot concerns</option>
-                  <option value="other">Other</option>
+                  <option value="Can't support higher rack densities (AI/GPU)">Can't support higher rack densities (AI/GPU workloads)</option>
+                  <option value="Cooling energy costs too high">Cooling energy costs too high</option>
+                  <option value="PUE is above target">PUE is above target</option>
+                  <option value="Running out of cooling capacity">Running out of cooling capacity</option>
+                  <option value="ESG/sustainability reporting requirements">ESG/sustainability reporting requirements</option>
+                  <option value="Interested in waste heat monetization">Interested in waste heat monetization</option>
+                  <option value="Cooling reliability / hotspot concerns">Cooling reliability / hotspot concerns</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                 <div>
                   <label>Timeline for Changes</label>
-                  <select value={form.timeline} onChange={(e) => set('timeline', e.target.value)}>
+                  <select name="timeline" value={form.timeline} onChange={(e) => set('timeline', e.target.value)}>
                     <option value="">Select...</option>
-                    <option value="immediate">Immediate (0-3 months)</option>
-                    <option value="near">Near-term (3-12 months)</option>
-                    <option value="planning">Planning phase (12+ months)</option>
-                    <option value="exploring">Just exploring options</option>
+                    <option value="Immediate (0-3 months)">Immediate (0-3 months)</option>
+                    <option value="Near-term (3-12 months)">Near-term (3-12 months)</option>
+                    <option value="Planning phase (12+ months)">Planning phase (12+ months)</option>
+                    <option value="Just exploring options">Just exploring options</option>
                   </select>
                 </div>
                 <div>
                   <label>Tracking ESG Metrics?</label>
-                  <select value={form.trackingESG} onChange={(e) => set('trackingESG', e.target.value)}>
+                  <select name="trackingESG" value={form.trackingESG} onChange={(e) => set('trackingESG', e.target.value)}>
                     <option value="">Select...</option>
-                    <option value="yes-reporting">Yes, actively reporting</option>
-                    <option value="yes-internal">Yes, internal tracking only</option>
-                    <option value="starting">Just getting started</option>
-                    <option value="no">Not yet</option>
+                    <option value="Yes, actively reporting">Yes, actively reporting</option>
+                    <option value="Yes, internal tracking only">Yes, internal tracking only</option>
+                    <option value="Just getting started">Just getting started</option>
+                    <option value="Not yet">Not yet</option>
                   </select>
                 </div>
               </div>
@@ -236,14 +235,26 @@ export default function Contact() {
                 <label>Anything else we should know?</label>
                 <textarea
                   rows={3}
+                  name="message"
                   value={form.message}
                   onChange={(e) => set('message', e.target.value)}
                   placeholder="We're looking to support 80kW racks in our Charlotte facility..."
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                <Send size={18} /> Request Free Review
+              {state.errors && state.errors.length > 0 && (
+                <div style={{
+                  padding: '12px 16px', borderRadius: '8px',
+                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 600,
+                }}>
+                  <AlertCircle size={16} /> Something went wrong. Please try again.
+                </div>
+              )}
+
+              <button type="submit" disabled={state.submitting} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: state.submitting ? 0.7 : 1 }}>
+                <Send size={18} /> {state.submitting ? 'Sending...' : 'Request Free Review'}
               </button>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'center' }}>
                 No spam. No sales pressure. Just a conversation about your cooling infrastructure.
