@@ -4,7 +4,11 @@ import { Send, CheckCircle, Mail, MapPin, Link as LinkedinIcon } from 'lucide-re
 export default function Contact() {
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState({
-    name: '', email: '', company: '', role: '', rackCount: '', message: '',
+    name: '', email: '', company: '', role: '', phone: '',
+    rackCount: '', avgPowerPerRack: '', currentPUE: '',
+    coolingType: '', facilityLocation: '',
+    biggestChallenge: '', timeline: '', trackingESG: '',
+    message: '',
   });
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
@@ -106,36 +110,130 @@ export default function Contact() {
           <form onSubmit={handleSubmit} className="card" style={{ padding: '36px' }}>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '24px' }}>Request your free review</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              <div>
-                <label>Full Name *</label>
-                <input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="Steve Betancur" />
+
+              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '-8px' }}>About You</h4>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label>Full Name *</label>
+                  <input required value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="John Smith" />
+                </div>
+                <div>
+                  <label>Work Email *</label>
+                  <input required type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="you@company.com" />
+                </div>
               </div>
-              <div>
-                <label>Work Email *</label>
-                <input required type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="you@company.com" />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label>Company *</label>
+                  <input required value={form.company} onChange={(e) => set('company', e.target.value)} placeholder="Flexential" />
+                </div>
+                <div>
+                  <label>Your Role</label>
+                  <select value={form.role} onChange={(e) => set('role', e.target.value)}>
+                    <option value="">Select...</option>
+                    <option value="facilities">Director of Facilities</option>
+                    <option value="engineering">VP of Engineering</option>
+                    <option value="operations">Director of DC Operations</option>
+                    <option value="sustainability">Chief Sustainability Officer</option>
+                    <option value="cto">CTO / CIO</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
               </div>
+
               <div>
-                <label>Company *</label>
-                <input required value={form.company} onChange={(e) => set('company', e.target.value)} placeholder="Flexential" />
+                <label>Phone (optional)</label>
+                <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="(704) 555-0100" />
               </div>
+
+              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '8px', marginBottom: '-8px' }}>Your Facility</h4>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label>Facility Location</label>
+                  <input value={form.facilityLocation} onChange={(e) => set('facilityLocation', e.target.value)} placeholder="Charlotte, NC" />
+                </div>
+                <div>
+                  <label>Approximate Rack Count</label>
+                  <input type="number" value={form.rackCount} onChange={(e) => set('rackCount', e.target.value)} placeholder="200" />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label>Avg Power per Rack (kW)</label>
+                  <input type="number" value={form.avgPowerPerRack} onChange={(e) => set('avgPowerPerRack', e.target.value)} placeholder="15" />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px', display: 'block' }}>
+                    Air-cooled: 5-25kW | GPU: 40-140kW
+                  </span>
+                </div>
+                <div>
+                  <label>Current PUE (if known)</label>
+                  <input type="number" step="0.01" value={form.currentPUE} onChange={(e) => set('currentPUE', e.target.value)} placeholder="1.5" />
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)', marginTop: '2px', display: 'block' }}>
+                    Industry avg: 1.58 | Best-in-class: 1.1
+                  </span>
+                </div>
+              </div>
+
               <div>
-                <label>Your Role</label>
-                <select value={form.role} onChange={(e) => set('role', e.target.value)}>
+                <label>Current Cooling Type</label>
+                <select value={form.coolingType} onChange={(e) => set('coolingType', e.target.value)}>
                   <option value="">Select...</option>
-                  <option value="facilities">Director of Facilities</option>
-                  <option value="engineering">VP of Engineering</option>
-                  <option value="operations">Director of DC Operations</option>
-                  <option value="sustainability">Chief Sustainability Officer</option>
-                  <option value="cto">CTO</option>
+                  <option value="air-only">Air Cooling Only (CRAC/CRAH)</option>
+                  <option value="air-containment">Air + Hot/Cold Aisle Containment</option>
+                  <option value="rdhx">Rear-Door Heat Exchangers</option>
+                  <option value="d2c">Direct-to-Chip Liquid Cooling</option>
+                  <option value="immersion">Immersion Cooling</option>
+                  <option value="hybrid">Hybrid (mix of above)</option>
+                  <option value="unsure">Not sure</option>
+                </select>
+              </div>
+
+              <h4 style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '8px', marginBottom: '-8px' }}>Your Priorities</h4>
+
+              <div>
+                <label>Biggest Cooling Challenge</label>
+                <select value={form.biggestChallenge} onChange={(e) => set('biggestChallenge', e.target.value)}>
+                  <option value="">Select...</option>
+                  <option value="density">Can't support higher rack densities (AI/GPU workloads)</option>
+                  <option value="cost">Cooling energy costs too high</option>
+                  <option value="pue">PUE is above target</option>
+                  <option value="capacity">Running out of cooling capacity</option>
+                  <option value="esg">ESG/sustainability reporting requirements</option>
+                  <option value="heat">Interested in waste heat monetization</option>
+                  <option value="reliability">Cooling reliability / hotspot concerns</option>
                   <option value="other">Other</option>
                 </select>
               </div>
-              <div>
-                <label>Approximate Rack Count</label>
-                <input type="number" value={form.rackCount} onChange={(e) => set('rackCount', e.target.value)} placeholder="50" />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+                <div>
+                  <label>Timeline for Changes</label>
+                  <select value={form.timeline} onChange={(e) => set('timeline', e.target.value)}>
+                    <option value="">Select...</option>
+                    <option value="immediate">Immediate (0-3 months)</option>
+                    <option value="near">Near-term (3-12 months)</option>
+                    <option value="planning">Planning phase (12+ months)</option>
+                    <option value="exploring">Just exploring options</option>
+                  </select>
+                </div>
+                <div>
+                  <label>Tracking ESG Metrics?</label>
+                  <select value={form.trackingESG} onChange={(e) => set('trackingESG', e.target.value)}>
+                    <option value="">Select...</option>
+                    <option value="yes-reporting">Yes, actively reporting</option>
+                    <option value="yes-internal">Yes, internal tracking only</option>
+                    <option value="starting">Just getting started</option>
+                    <option value="no">Not yet</option>
+                  </select>
+                </div>
               </div>
+
               <div>
-                <label>Anything specific you'd like us to assess?</label>
+                <label>Anything else we should know?</label>
                 <textarea
                   rows={3}
                   value={form.message}
@@ -143,6 +241,7 @@ export default function Contact() {
                   placeholder="We're looking to support 80kW racks in our Charlotte facility..."
                 />
               </div>
+
               <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
                 <Send size={18} /> Request Free Review
               </button>

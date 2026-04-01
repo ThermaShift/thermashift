@@ -14,10 +14,10 @@ function fmt(n) {
 
 export default function CalculatorPage() {
   const [inputs, setInputs] = useState({
-    rackCount: '50',
-    avgPowerPerRack: '30',
-    currentPUE: '1.5',
-    electricityRate: '0.08',
+    rackCount: '100',
+    avgPowerPerRack: '20',
+    currentPUE: '1.58',
+    electricityRate: '0.10',
     coolingType: 'rdhx',
   });
 
@@ -125,7 +125,7 @@ export default function CalculatorPage() {
                   onChange={(e) => set('avgPowerPerRack', e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
-                  Air-cooled: 5-25kW | GPU racks: 40-140kW
+                  Traditional: 5-15kW | Mixed: 15-30kW | GPU/AI: 40-140kW
                 </span>
               </div>
 
@@ -138,7 +138,7 @@ export default function CalculatorPage() {
                   onChange={(e) => set('currentPUE', e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
-                  Industry avg: 1.5 | Best-in-class: 1.1
+                  Industry avg: 1.58 (Uptime Institute 2023) | Best-in-class: 1.1
                 </span>
               </div>
 
@@ -151,7 +151,7 @@ export default function CalculatorPage() {
                   onChange={(e) => set('electricityRate', e.target.value)}
                 />
                 <span style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginTop: '4px', display: 'block' }}>
-                  US average: $0.08/kWh
+                  US commercial avg: $0.11/kWh | DC negotiated: $0.05-0.10
                 </span>
               </div>
 
@@ -241,6 +241,42 @@ export default function CalculatorPage() {
               <Link to="/contact" className="btn btn-primary">
                 Get Your Custom Analysis <Download size={18} />
               </Link>
+            </div>
+
+            {/* Methodology */}
+            <div className="card" style={{ padding: '28px' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '16px' }}>How We Calculate These Numbers</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.7 }}>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Energy Savings</div>
+                  Savings come from PUE improvement. PUE (Power Usage Effectiveness) measures total facility power divided by IT power.
+                  A PUE of 1.58 means 58% overhead goes to cooling, lighting, and losses. Reducing PUE directly reduces your energy bill.
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Target PUE by Cooling Type</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginTop: '4px' }}>
+                    <span>Rear-Door HX: PUE 1.20-1.40 <span style={{ color: 'var(--text-dim)' }}>(Motivair, CoolIT)</span></span>
+                    <span>Direct-to-Chip: PUE 1.10-1.18 <span style={{ color: 'var(--text-dim)' }}>(Google, Microsoft)</span></span>
+                    <span>Immersion: PUE 1.02-1.06 <span style={{ color: 'var(--text-dim)' }}>(GRC, LiquidCool)</span></span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Waste Heat Revenue</div>
+                  ~95% of IT power becomes heat (thermodynamics). We assume 60% is recoverable with liquid cooling,
+                  valued at $0.03/kWh — a conservative rate based on European district heating markets.
+                  US market rates are still emerging.
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: '4px' }}>Carbon Reduction</div>
+                  Based on EPA 2023 US average grid emissions factor of 0.42 kg CO₂/kWh.
+                  Actual values vary by region (NC: ~0.35-0.45, VA: ~0.30-0.40 kg/kWh).
+                </div>
+                <div style={{ padding: '12px 16px', background: 'var(--primary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--accent)' }}>Note:</span> Energy savings are based on proven, deployed technology and are directly
+                  measurable. Waste heat revenue estimates are based on market potential — actual revenue depends on local heat buyers and agreements.
+                  These projections are starting points; a site-specific assessment provides precise numbers.
+                </div>
+              </div>
             </div>
           </div>
         </div>
