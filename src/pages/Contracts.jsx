@@ -55,6 +55,17 @@ const PRICING = {
       { name: 'Immersion Cooling (per rack)', price: 25000, description: 'Full immersion cooling tank per rack, fluid, plumbing, and commissioning' },
     ],
   },
+  // Managed Services
+  managed: {
+    label: '24/7 Managed Cooling Services',
+    unit: 'per month',
+    options: [
+      { name: 'ThermaWatch — Monitor & Alert', price: 2000, isMonthlyFixed: true, description: '24/7 AI-powered monitoring with real-time alerts. Automated hotspot detection, PUE tracking, and monthly performance reports. Alerts sent to your team for action.' },
+      { name: 'ThermaGuard — Monitor & Remediate', price: 5000, isMonthlyFixed: true, description: 'Everything in ThermaWatch plus remote troubleshooting and remediation by ThermaShift engineers. 8-hour response SLA. Up to 10 hours/month remote hands included.' },
+      { name: 'ThermaResponse — Monitor & Dispatch', price: 12000, isMonthlyFixed: true, description: 'Everything in ThermaGuard plus on-site technician dispatch. 4-hour response SLA. Up to 4 on-site dispatches per month. Emergency incident management included.' },
+      { name: 'ThermaOps — Full Managed Services', price: 35000, isMonthlyFixed: true, description: 'Dedicated on-site or near-site cooling operations staff. 15-minute critical response SLA. Preventive maintenance, capacity planning, and continuous thermal optimization included.' },
+    ],
+  },
   // Sensors
   sensors: {
     label: 'Environmental Sensors',
@@ -330,6 +341,9 @@ export default function Contracts() {
       svc.quantity = rackCount;
       svc.monthlyTotal = rackCount * tier.pricePerRack;
       svc.isMonthly = true;
+    } else if (option.isMonthlyFixed) {
+      svc.monthlyTotal = option.price;
+      svc.isMonthly = true;
     }
     set('services', [...form.services, svc]);
   };
@@ -421,7 +435,7 @@ export default function Contracts() {
                       >
                         <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>{opt.name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                          {key === 'monitoring' ? `$10-18/rack/month based on volume` : opt.isRevenueShare ? '15% revenue share' : `$${opt.price.toLocaleString()}`}
+                          {key === 'monitoring' ? `$10-18/rack/month based on volume` : opt.isRevenueShare ? '15% revenue share' : opt.isMonthlyFixed ? `$${opt.price.toLocaleString()}/month` : `$${opt.price.toLocaleString()}`}
                         </div>
                       </button>
                     ))}

@@ -549,6 +549,149 @@ Subject: Welcome to ThermaShift — Getting Started
 
 ---
 
+## 11. 24/7 Managed Cooling Services — Service Delivery
+
+### Service Tiers Overview
+
+| Tier | Name | SLA | Your Cost/mo | Price/mo | What You Need |
+|---|---|---|---|---|---|
+| 1 | ThermaWatch | Alerts only | ~$500 | $2,000 | Just your AI platform |
+| 2 | ThermaGuard | 8hr remote | ~$2,500 | $5,000 | White-label NOC partner |
+| 3 | ThermaResponse | 4hr on-site | ~$5,000 | $12,000 | Contract DC techs |
+| 4 | ThermaOps | 15min critical | ~$15,000 | $35,000 | Dedicated FTEs |
+
+### Tier 1: ThermaWatch (you can deliver this TODAY)
+
+**Who does the work:** Your AI platform + you as the human escalation
+
+**What you deliver:**
+- 24/7 automated monitoring via the ThermaShift platform
+- AI thermal intelligence analyzes data continuously
+- Alerts sent to client's team when thresholds are breached
+- Monthly performance report (PUE trends, hotspot history, recommendations)
+- Quarterly business review call
+
+**How to deliver it:**
+1. Set up client in the monitoring platform (standard onboarding)
+2. Configure alert thresholds per their requirements
+3. Set up email alerts (future feature) or check dashboards daily
+4. Generate and send monthly report by the 5th of each month
+5. That's it — the platform does the heavy lifting
+
+**Your time commitment:** ~2-3 hours/month per client (report generation + monitoring review)
+
+**When to start selling this:** NOW — you have everything you need
+
+### Tier 2: ThermaGuard (need a NOC partner)
+
+**Who does the work:** White-label NOC partner + you for escalations
+
+**How to set up:**
+1. Partner with a white-label NOC service:
+   - **INOC** (inoc.com) — US-based, starts ~$4K/mo for 24/7 coverage
+   - **Medha Cloud** (medhacloud.com) — offshore, starts ~$1,600/mo
+   - **ConnectWise NOC** — integrates with PSA tools
+2. Give them access to your monitoring dashboard
+3. Define runbooks: "If PUE exceeds 1.5, do X. If hotspot detected, do Y."
+4. They handle Tier 1 alerts, escalate to you for complex issues
+
+**Wait until:** You have 2+ ThermaWatch clients (revenue covers NOC cost)
+
+**Runbook template for NOC partner:**
+- Alert: Hotspot detected (rack temp > threshold)
+  - Action: Verify via dashboard, check if trend or spike
+  - If trending up: notify client facility team via email/phone
+  - If spike: escalate to ThermaShift engineer (you)
+- Alert: PUE exceeding target
+  - Action: Check for abnormal cooling unit behavior
+  - Notify client with recommendation
+- Alert: Agent offline (no data for 30+ minutes)
+  - Action: Contact client to verify server/network status
+
+### Tier 3: ThermaResponse (need contract technicians)
+
+**Who does the work:** Contract DC technicians for on-site dispatch
+
+**How to set up:**
+1. Build a bench of 2-3 contract DC technicians in your target markets:
+   - Charlotte metro
+   - Research Triangle (Raleigh/Durham)
+   - Northern Virginia (future)
+2. Pay them ONLY when dispatched ($30-45/hr, 2-hour minimum = $60-90 per dispatch)
+3. Your cost per dispatch: ~$200-400 (including drive time)
+4. Client contract includes up to 4 dispatches/month ($800-1,600 in tech costs)
+5. You charge $12,000/month — margin is excellent
+
+**Finding contract DC techs:**
+- Indeed/LinkedIn: search "data center technician" in Charlotte/Raleigh
+- Staffing agencies: Robert Half Technology, TEKsystems, Insight Global
+- Community colleges with DC training programs
+- Former military (many have infrastructure experience)
+
+**Technician requirements:**
+- Experience with CRAC/CRAH units, UPS, PDUs
+- Comfortable working in raised-floor environments
+- Basic understanding of hot/cold aisle airflow
+- Available for on-call rotation (evenings/weekends)
+- Own transportation, within 1 hour of client facilities
+
+### Tier 4: ThermaOps (need revenue to support FTEs)
+
+**Don't sell this until:** You have $50K+/month in recurring revenue
+
+**What it requires:**
+- 2-3 dedicated FTEs per client facility
+- Full-time on-site or near-site presence
+- $70K-85K/year per technician in NC
+- Benefits, insurance, management overhead
+- Total loaded cost: ~$180K-300K/year for a 3-person team
+
+**When it makes sense:** Enterprise clients with 500+ racks who want to outsource their entire cooling operations. These deals are $420K+/year — worth the investment.
+
+### Emergency Response Protocol
+
+When an alert triggers that requires action:
+
+1. **0-5 minutes:** AI detects anomaly, generates alert
+2. **5-15 minutes:** NOC partner (Tier 2+) or you (Tier 1) reviews alert
+3. **15-30 minutes:** Determine if remote fix or on-site dispatch needed
+4. **Remote fix:** Execute runbook procedure, document actions, notify client
+5. **On-site dispatch:** Contact on-call technician, provide:
+   - Facility address and access instructions
+   - Specific rack/unit affected
+   - What the technician should do
+   - Client facility contact name/phone
+6. **Post-incident:** Write incident report within 24 hours
+7. **Root cause analysis:** Within 1 week for critical incidents
+
+### Incident Report Template (email to client)
+
+> Subject: Incident Report — [Date] — [Brief Description]
+>
+> **Incident Summary:**
+> - Date/Time: [when detected]
+> - Duration: [how long until resolved]
+> - Severity: [Critical/High/Medium/Low]
+> - Affected: [which racks/systems]
+>
+> **What Happened:**
+> [2-3 sentences describing the issue]
+>
+> **Actions Taken:**
+> 1. [What was done]
+> 2. [What was done]
+> 3. [Resolution]
+>
+> **Root Cause:**
+> [What caused it]
+>
+> **Prevention:**
+> [What we're doing to prevent recurrence]
+>
+> **Current Status:** Resolved / Monitoring
+
+---
+
 ## Appendix: Key Industry Knowledge
 
 ### PUE Reference
