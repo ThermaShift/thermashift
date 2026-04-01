@@ -134,12 +134,21 @@ def setup_wizard():
     # Endpoint
     print("\n-- DATA DELIVERY --\n")
     print("  Where should monitoring data be sent?\n")
-    print("  Options:")
-    print("    - Webhook URL (Supabase, Zapier, Make, custom API)")
-    print("    - Leave blank to save locally only (CSV export)\n")
-    config['endpoint_url'] = input(f"  Webhook/API endpoint [{config.get('endpoint_url', '')}]: ").strip() or config.get('endpoint_url', '')
-    if config['endpoint_url']:
-        config['api_key'] = input(f"  API key/token (if required) [{config.get('api_key', '')}]: ").strip() or config.get('api_key', '')
+    print("    1. ThermaShift Cloud (recommended)")
+    print("    2. Custom webhook URL")
+    print("    3. Local only (CSV export)\n")
+    delivery = input(f"  Select [1-3, default 1]: ").strip() or '1'
+    if delivery == '1':
+        config['endpoint_url'] = 'https://auqklthrpvsqyelfjood.supabase.co/rest/v1/sensor_readings'
+        config['api_key'] = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4'
+        print("  Connected to ThermaShift Cloud.")
+    elif delivery == '2':
+        config['endpoint_url'] = input(f"  Webhook URL [{config.get('endpoint_url', '')}]: ").strip() or config.get('endpoint_url', '')
+        if config['endpoint_url']:
+            config['api_key'] = input(f"  API key/token [{config.get('api_key', '')}]: ").strip() or config.get('api_key', '')
+    else:
+        config['endpoint_url'] = ''
+        config['api_key'] = ''
 
     # Local logging
     config['log_locally'] = input(f"\n  Also save data locally? [Y/n]: ").strip().lower() != 'n'
@@ -286,25 +295,34 @@ def collect_data(config):
 
 
 def send_data(data, config):
-    """Send data to the configured endpoint."""
+    """Send data to the configured endpoint (Supabase or custom webhook)."""
     url = config.get('endpoint_url', '')
     if not url:
         return False, 'No endpoint configured'
 
     try:
-        payload = json.dumps(data).encode('utf-8')
+        # Remove non-serializable or null values
+        clean_data = {k: v for k, v in data.items() if v is not None}
+        # Remove 'timestamp' key — Supabase uses 'created_at' auto-column
+        clean_data.pop('timestamp', None)
+
+        payload = json.dumps(clean_data).encode('utf-8')
         req = urllib.request.Request(url, data=payload, method='POST')
         req.add_header('Content-Type', 'application/json')
         req.add_header('User-Agent', 'ThermaShift-Agent/2.0')
-        if config.get('api_key'):
-            req.add_header('Authorization', f"Bearer {config['api_key']}")
-        if config.get('facility_id'):
-            req.add_header('X-Facility-ID', config['facility_id'])
+        req.add_header('Prefer', 'return=minimal')
+
+        api_key = config.get('api_key', '')
+        if api_key:
+            # Supabase requires both apikey header and Authorization
+            req.add_header('apikey', api_key)
+            req.add_header('Authorization', f"Bearer {api_key}")
 
         with urllib.request.urlopen(req, timeout=30) as resp:
             return True, f"HTTP {resp.status}"
     except urllib.error.HTTPError as e:
-        return False, f"HTTP {e.code}: {e.reason}"
+        body = e.read().decode()[:200]
+        return False, f"HTTP {e.code}: {body}"
     except urllib.error.URLError as e:
         return False, f"Connection error: {e.reason}"
     except Exception as e:
@@ -314,6 +332,7 @@ def send_data(data, config):
 def log_locally(data, config):
     """Append data point to local CSV file."""
     csv_path = config.get('local_csv_path', str(CONFIG_DIR / 'thermashift_data.csv'))
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     file_exists = os.path.exists(csv_path)
 
     # Rotate file if too large

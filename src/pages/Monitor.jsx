@@ -8,7 +8,103 @@ import {
   Server, Wind, RefreshCw, Gauge, Plus, Trash2, Edit3, Check, X,
   Building, Eye, ArrowLeft, Bell, Download, Upload, FileSpreadsheet,
   Brain, TrendingUp, TrendingDown, ShieldAlert, Wrench, ArrowUpRight,
+  Cloud, Wifi,
 } from 'lucide-react';
+
+// Supabase config
+const SUPABASE_URL = 'https://auqklthrpvsqyelfjood.supabase.co/rest/v1';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+
+async function fetchLiveData(facilityId) {
+  if (!facilityId) return null;
+  try {
+    const url = `${SUPABASE_URL}/sensor_readings?facility_id=eq.${encodeURIComponent(facilityId)}&order=created_at.desc&limit=200`;
+    const resp = await fetch(url, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+    });
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    if (!rows || rows.length === 0) return null;
+
+    // Group by rack_name, take latest reading per rack
+    const rackMap = {};
+    const timeSeries = [];
+    rows.forEach(r => {
+      if (!rackMap[r.rack_name]) {
+        rackMap[r.rack_name] = r;
+      }
+    });
+
+    const racks = Object.values(rackMap).map(r => ({
+      name: r.rack_name,
+      power: Math.round(r.power_kw * 1000) / 1000, // keep as kW
+      inletTemp: r.inlet_temp_c || 22,
+      outletTemp: r.outlet_temp_c || 35,
+      isHotspot: (r.outlet_temp_c || 35) > 45,
+      coolingType: r.cooling_type || 'Air',
+      cpuTemp: r.cpu_temp_c,
+      cpuPercent: r.cpu_percent,
+      memoryPercent: r.memory_percent,
+      hostname: r.hostname,
+      lastSeen: r.created_at,
+    }));
+
+    // Build time series from last 24 readings
+    const uniqueTimes = [];
+    const seen = new Set();
+    rows.forEach(r => {
+      const hour = new Date(r.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (!seen.has(hour) && uniqueTimes.length < 24) {
+        seen.add(hour);
+        const sameTime = rows.filter(row => {
+          const h = new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          return h === hour;
+        });
+        const avgPower = sameTime.reduce((s, row) => s + (row.power_kw || 0), 0);
+        const avgOutlet = sameTime.reduce((s, row) => s + (row.outlet_temp_c || 30), 0) / sameTime.length;
+        const avgInlet = sameTime.reduce((s, row) => s + (row.inlet_temp_c || 22), 0) / sameTime.length;
+        uniqueTimes.push({
+          time: hour,
+          totalITPower: +avgPower.toFixed(2),
+          totalFacilityPower: +(avgPower * 1.5).toFixed(2),
+          pue: 1.5,
+          avgInletTemp: +avgInlet.toFixed(1),
+          avgOutletTemp: +avgOutlet.toFixed(1),
+          carbonEmissions: +(avgPower * 1.5 * 0.42 / 1000).toFixed(3),
+        });
+      }
+    });
+
+    const totalITPower = racks.reduce((s, r) => s + r.power, 0);
+    const avgOutletTemp = racks.length > 0 ? +(racks.reduce((s, r) => s + r.outletTemp, 0) / racks.length).toFixed(1) : 0;
+    const hotspots = racks.filter(r => r.isHotspot);
+    const pue = 1.5; // Will be calculated from facility config
+    const totalFacility = totalITPower * pue;
+
+    return {
+      metrics: {
+        pue: pue.toFixed(2),
+        totalITPower: +totalITPower.toFixed(2),
+        coolingPower: +((totalFacility - totalITPower)).toFixed(2),
+        avgOutletTemp,
+        hotspots: hotspots.length,
+        annualCarbonTonnes: +((totalFacility * 8760 * 0.42) / 1000000).toFixed(1),
+        uptime: '—',
+        wasteHeatRecoverable: +(totalITPower * 0.95 * 0.6).toFixed(0),
+        wue: '—',
+      },
+      racks,
+      timeSeries: uniqueTimes.reverse(),
+      hotspots,
+      source: 'live',
+      lastReading: rows[0]?.created_at,
+      totalReadings: rows.length,
+    };
+  } catch (e) {
+    console.error('Failed to fetch live data:', e);
+    return null;
+  }
+}
 
 // Generate simulated data based on facility parameters
 function generateFacilityData(facility) {
@@ -392,19 +488,53 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [dataSource, setDataSource] = useState('simulated');
   const [importError, setImportError] = useState('');
+  const [liveLoading, setLiveLoading] = useState(false);
 
   const refresh = useCallback(() => {
     if (dataSource === 'simulated') {
       setData(generateFacilityData(facility));
       setLastUpdate(new Date());
+    } else if (dataSource === 'live') {
+      loadLiveData();
     }
   }, [facility, dataSource]);
 
+  const loadLiveData = useCallback(async () => {
+    setLiveLoading(true);
+    const facilityId = facility.facilityId || facility.clientName?.toLowerCase().replace(/\s+/g, '-');
+    const liveData = await fetchLiveData(facilityId);
+    if (liveData && liveData.racks.length > 0) {
+      // Apply facility's alert threshold to hotspot detection
+      const threshold = parseFloat(facility.alertTempThreshold) || 45;
+      liveData.racks.forEach(r => { r.isHotspot = r.outletTemp > threshold; });
+      liveData.hotspots = liveData.racks.filter(r => r.isHotspot);
+      liveData.metrics.hotspots = liveData.hotspots.length;
+      // Use facility's PUE if available
+      const pue = parseFloat(facility.currentPUE) || 1.5;
+      const totalIT = liveData.metrics.totalITPower;
+      liveData.metrics.pue = pue.toFixed(2);
+      liveData.metrics.coolingPower = +((totalIT * pue) - totalIT).toFixed(2);
+      setData(liveData);
+      setDataSource('live');
+      setLastUpdate(new Date());
+      setImportError('');
+    } else {
+      setImportError('No live data found for this facility. Make sure the agent is running and using facility ID: ' +
+        (facility.facilityId || facility.clientName?.toLowerCase().replace(/\s+/g, '-')));
+    }
+    setLiveLoading(false);
+  }, [facility]);
+
   useEffect(() => {
-    if (dataSource !== 'simulated') return;
-    const interval = setInterval(refresh, 15000);
-    return () => clearInterval(interval);
-  }, [refresh, dataSource]);
+    if (dataSource === 'live') {
+      const interval = setInterval(loadLiveData, 30000); // refresh live data every 30s
+      return () => clearInterval(interval);
+    }
+    if (dataSource === 'simulated') {
+      const interval = setInterval(refresh, 15000);
+      return () => clearInterval(interval);
+    }
+  }, [dataSource, refresh, loadLiveData]);
 
   const handleCSVImport = (e) => {
     const file = e.target.files?.[0];
@@ -474,10 +604,10 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
               }}>{facility.status || 'Active'}</span>
               <span style={{
                 padding: '2px 8px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 700,
-                background: dataSource === 'imported' ? 'rgba(6,182,212,0.15)' : 'rgba(100,116,139,0.15)',
-                color: dataSource === 'imported' ? 'var(--accent)' : 'var(--text-dim)',
-                border: `1px solid ${dataSource === 'imported' ? 'rgba(6,182,212,0.3)' : 'rgba(100,116,139,0.3)'}`,
-              }}>{dataSource === 'imported' ? `IMPORTED (${racks.length} racks)` : 'SIMULATED'}</span>
+                background: dataSource === 'live' ? 'rgba(16,185,129,0.15)' : dataSource === 'imported' ? 'rgba(6,182,212,0.15)' : 'rgba(100,116,139,0.15)',
+                color: dataSource === 'live' ? 'var(--success)' : dataSource === 'imported' ? 'var(--accent)' : 'var(--text-dim)',
+                border: `1px solid ${dataSource === 'live' ? 'rgba(16,185,129,0.3)' : dataSource === 'imported' ? 'rgba(6,182,212,0.3)' : 'rgba(100,116,139,0.3)'}`,
+              }}>{dataSource === 'live' ? `LIVE (${racks.length} agents)` : dataSource === 'imported' ? `IMPORTED (${racks.length} racks)` : 'SIMULATED'}</span>
             </div>
             <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>
               {facility.facilityLocation} — Updated: {lastUpdate.toLocaleTimeString()}
@@ -485,14 +615,17 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button onClick={loadLiveData} disabled={liveLoading} className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.8rem', opacity: liveLoading ? 0.7 : 1 }}>
+            <Cloud size={14} /> {liveLoading ? 'Loading...' : 'Live Data'}
+          </button>
           <button onClick={downloadCSVTemplate} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
             <Download size={14} /> Template
           </button>
-          <label className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer' }}>
-            <Upload size={14} /> Import CSV
+          <label className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer' }}>
+            <Upload size={14} /> CSV
             <input type="file" accept=".csv,.txt" onChange={handleCSVImport} style={{ display: 'none' }} />
           </label>
-          {dataSource === 'imported' ? (
+          {dataSource !== 'simulated' ? (
             <button onClick={switchToSimulated} className="btn btn-outline" style={{ padding: '6px 14px', fontSize: '0.8rem' }}>
               <RefreshCw size={14} /> Simulated
             </button>
@@ -736,7 +869,7 @@ export default function Monitor() {
   const [viewing, setViewing] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [newFacility, setNewFacility] = useState({
-    clientName: '', facilityLocation: '', rackCount: '100', avgPowerPerRack: '20',
+    clientName: '', facilityId: '', facilityLocation: '', rackCount: '100', avgPowerPerRack: '20',
     currentPUE: '1.58', targetPUE: '1.20', coolingType: 'Air', alertTempThreshold: '45', status: 'Active',
   });
 
@@ -749,7 +882,7 @@ export default function Monitor() {
     if (!newFacility.clientName.trim()) return;
     save([...facilities, { ...newFacility, id: Date.now() }]);
     setNewFacility({
-      clientName: '', facilityLocation: '', rackCount: '100', avgPowerPerRack: '20',
+      clientName: '', facilityId: '', facilityLocation: '', rackCount: '100', avgPowerPerRack: '20',
       currentPUE: '1.58', targetPUE: '1.20', coolingType: 'Air', alertTempThreshold: '45', status: 'Active',
     });
     setShowAdd(false);
@@ -798,6 +931,10 @@ export default function Monitor() {
                     <div>
                       <label>Client Name *</label>
                       <input value={newFacility.clientName} onChange={(e) => setNewFacility({ ...newFacility, clientName: e.target.value })} placeholder="Flexential" />
+                    </div>
+                    <div>
+                      <label>Facility ID (for agent linking)</label>
+                      <input value={newFacility.facilityId} onChange={(e) => setNewFacility({ ...newFacility, facilityId: e.target.value })} placeholder="flexential-clt-01" />
                     </div>
                     <div>
                       <label>Location</label>
