@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -7,6 +7,18 @@ import Dashboard from './pages/Dashboard';
 import Tracker from './pages/Tracker';
 import Report from './pages/Report';
 import Contact from './pages/Contact';
+
+function NotFound() {
+  return (
+    <main style={{ paddingTop: '72px', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ textAlign: 'center' }}>
+        <h1 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '12px' }}>404</h1>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Page not found.</p>
+        <Link to="/" className="btn btn-primary">Go Home</Link>
+      </div>
+    </main>
+  );
+}
 
 function App() {
   return (
@@ -19,6 +31,7 @@ function App() {
         <Route path="/tracker" element={<Tracker />} />
         <Route path="/report" element={<Report />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
     </Router>

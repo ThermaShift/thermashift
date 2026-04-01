@@ -227,18 +227,30 @@ export default function Report() {
   const [form, setForm] = useState({
     clientName: '',
     facilityLocation: '',
-    rackCount: 50,
-    avgPowerPerRack: 30,
-    currentPUE: 1.5,
-    electricityRate: 0.08,
+    rackCount: '50',
+    avgPowerPerRack: '30',
+    currentPUE: '1.5',
+    electricityRate: '0.08',
   });
   const [generated, setGenerated] = useState(false);
 
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const handleGenerate = () => {
-    const doc = generateReport(form);
-    const filename = `ThermaShift_Cooling_Roadmap_${form.clientName.replace(/\s+/g, '_') || 'Report'}.pdf`;
+    if (!form.clientName.trim() || !form.facilityLocation.trim()) {
+      alert('Please enter both Client Name and Facility Location.');
+      return;
+    }
+    const reportData = {
+      ...form,
+      rackCount: Math.max(1, parseInt(form.rackCount) || 50),
+      avgPowerPerRack: Math.max(1, parseFloat(form.avgPowerPerRack) || 30),
+      currentPUE: Math.max(1.0, parseFloat(form.currentPUE) || 1.5),
+      electricityRate: Math.max(0.01, parseFloat(form.electricityRate) || 0.08),
+    };
+    const doc = generateReport(reportData);
+    const safeName = form.clientName.trim().replace(/[^a-zA-Z0-9\s-]/g, '').replace(/\s+/g, '_') || 'Report';
+    const filename = `ThermaShift_Cooling_Roadmap_${safeName}.pdf`;
     doc.save(filename);
     setGenerated(true);
   };
@@ -257,7 +269,7 @@ export default function Report() {
 
           <div className="card" style={{ padding: '36px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
                   <label><Building size={14} style={{ display: 'inline', marginRight: '6px' }} />Client Name</label>
                   <input value={form.clientName} onChange={(e) => set('clientName', e.target.value)} placeholder="Flexential" />
@@ -268,25 +280,25 @@ export default function Report() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
                   <label><Thermometer size={14} style={{ display: 'inline', marginRight: '6px' }} />Number of Racks</label>
-                  <input type="number" value={form.rackCount} onChange={(e) => set('rackCount', Math.max(1, parseInt(e.target.value) || 1))} />
+                  <input type="number" value={form.rackCount} onChange={(e) => set('rackCount', e.target.value)} />
                 </div>
                 <div>
                   <label>Avg Power per Rack (kW)</label>
-                  <input type="number" value={form.avgPowerPerRack} onChange={(e) => set('avgPowerPerRack', Math.max(1, parseFloat(e.target.value) || 1))} />
+                  <input type="number" value={form.avgPowerPerRack} onChange={(e) => set('avgPowerPerRack', e.target.value)} />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
                   <label><DollarSign size={14} style={{ display: 'inline', marginRight: '6px' }} />Current PUE</label>
-                  <input type="number" step="0.01" value={form.currentPUE} onChange={(e) => set('currentPUE', Math.max(1.0, parseFloat(e.target.value) || 1.5))} />
+                  <input type="number" step="0.01" value={form.currentPUE} onChange={(e) => set('currentPUE', e.target.value)} />
                 </div>
                 <div>
                   <label>Electricity Rate ($/kWh)</label>
-                  <input type="number" step="0.01" value={form.electricityRate} onChange={(e) => set('electricityRate', Math.max(0.01, parseFloat(e.target.value) || 0.08))} />
+                  <input type="number" step="0.01" value={form.electricityRate} onChange={(e) => set('electricityRate', e.target.value)} />
                 </div>
               </div>
 

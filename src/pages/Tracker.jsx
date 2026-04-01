@@ -45,7 +45,11 @@ export default function Tracker() {
 
   const save = (updated) => {
     setProspects(updated);
-    localStorage.setItem('thermashift_prospects', JSON.stringify(updated));
+    try {
+      localStorage.setItem('thermashift_prospects', JSON.stringify(updated));
+    } catch {
+      // localStorage full or unavailable — state still updates in memory
+    }
   };
 
   const addProspect = () => {
@@ -57,6 +61,7 @@ export default function Tracker() {
   };
 
   const deleteProspect = (id) => {
+    if (!confirm('Delete this prospect?')) return;
     save(prospects.filter(p => p.id !== id));
   };
 
@@ -67,6 +72,11 @@ export default function Tracker() {
 
   const saveEdit = () => {
     save(prospects.map(p => p.id === editingId ? editForm : p));
+    setEditingId(null);
+  };
+
+  const handleFilterChange = (status) => {
+    setFilterStatus(status);
     setEditingId(null);
   };
 
@@ -106,7 +116,7 @@ export default function Tracker() {
           {/* Pipeline summary */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
             <button
-              onClick={() => setFilterStatus('All')}
+              onClick={() => handleFilterChange('All')}
               style={{
                 padding: '6px 14px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 600,
                 background: filterStatus === 'All' ? 'var(--accent)' : 'var(--surface)',
@@ -119,7 +129,7 @@ export default function Tracker() {
             {STATUSES.map(s => (
               <button
                 key={s}
-                onClick={() => setFilterStatus(s)}
+                onClick={() => handleFilterChange(s)}
                 style={{
                   padding: '6px 14px', borderRadius: '100px', fontSize: '0.8rem', fontWeight: 600,
                   background: filterStatus === s ? STATUS_COLORS[s] + '20' : 'var(--surface)',
@@ -228,8 +238,8 @@ export default function Tracker() {
                         <td style={{ padding: '12px 16px' }}>
                           <span style={{
                             padding: '3px 10px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 700,
-                            background: STATUS_COLORS[p.status] + '15', color: STATUS_COLORS[p.status],
-                            border: `1px solid ${STATUS_COLORS[p.status]}30`,
+                            background: (STATUS_COLORS[p.status] || '#64748b') + '15', color: STATUS_COLORS[p.status] || '#64748b',
+                            border: `1px solid ${(STATUS_COLORS[p.status] || '#64748b')}30`,
                           }}>{p.status}</span>
                         </td>
                         <td style={{ padding: '12px 16px', color: 'var(--text-dim)', fontSize: '0.85rem', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.notes}</td>

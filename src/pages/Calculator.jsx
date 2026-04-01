@@ -104,7 +104,7 @@ export default function CalculatorPage() {
       <section style={{ paddingBottom: '80px' }}>
         <div className="container" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '40px', alignItems: 'start' }}>
           {/* Inputs */}
-          <div className="card" style={{ position: 'sticky', top: '90px' }}>
+          <div className="card">
             <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '24px' }}>Your Facility</h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>

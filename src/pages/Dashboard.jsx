@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import {
   Activity, Thermometer, Droplets, Zap, Leaf, AlertTriangle,
@@ -36,7 +36,7 @@ function RackHeatMap({ racks }) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: '8px' }}>
       {racks.map((rack) => (
         <div
           key={rack.name}
@@ -115,13 +115,13 @@ export default function Dashboard() {
             <MetricCard icon={Zap} label="IT Power" value={metrics.totalITPower} unit="kW" color="var(--warning)" />
             <MetricCard icon={Wind} label="Cooling Load" value={metrics.coolingPower} unit="kW" color="var(--accent)" />
             <MetricCard icon={Thermometer} label="Avg Outlet" value={metrics.avgOutletTemp} unit="°C" color={metrics.avgOutletTemp > 40 ? 'var(--danger)' : 'var(--success)'} />
-            <MetricCard icon={AlertTriangle} label="Hotspots" value={metrics.hotspots} color={metrics.hotspots > 0 ? 'var(--danger)' : 'var(--success)'} sub={metrics.hotspots > 0 ? 'Action required' : 'All clear'} />
+            <MetricCard icon={AlertTriangle} label="Hotspots" value={hotspots.length} color={hotspots.length > 0 ? 'var(--danger)' : 'var(--success)'} sub={hotspots.length > 0 ? 'Action required' : 'All clear'} />
             <MetricCard icon={Leaf} label="Carbon" value={metrics.annualCarbonTonnes} unit="kt/yr" color="var(--success)" />
             <MetricCard icon={Server} label="Uptime" value={metrics.uptime} unit="%" color="var(--success)" />
           </div>
 
           {/* Charts row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             <div className="card">
               <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '16px' }}>PUE Trend (24h)</h3>
               <ResponsiveContainer width="100%" height={220}>
@@ -151,7 +151,7 @@ export default function Dashboard() {
           </div>
 
           {/* Temperature + carbon charts */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             <div className="card">
               <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '16px' }}>Temperature (24h)</h3>
               <ResponsiveContainer width="100%" height={220}>
