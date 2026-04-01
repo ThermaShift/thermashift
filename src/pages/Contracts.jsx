@@ -10,9 +10,9 @@ const PRICING = {
     label: 'Thermal Intelligence Platform (SaaS)',
     unit: 'rack/month',
     tiers: [
-      { name: 'Standard', maxRacks: 50, pricePerRack: 25, features: ['Real-time monitoring', 'PUE/WUE/Carbon reporting', 'Rack thermal mapping', 'CSV data import'] },
-      { name: 'Professional', maxRacks: 200, pricePerRack: 20, features: ['Everything in Standard', 'AI thermal intelligence', 'Hotspot prediction', 'Custom alert thresholds', 'API access'] },
-      { name: 'Enterprise', maxRacks: 9999, pricePerRack: 15, features: ['Everything in Professional', 'Dedicated support', 'Custom integrations', 'SLA guarantee', 'Multi-facility'] },
+      { name: 'Standard', maxRacks: 50, pricePerRack: 18, features: ['Real-time monitoring', 'PUE/WUE/Carbon reporting', 'Rack thermal mapping', 'CSV data import'] },
+      { name: 'Professional', maxRacks: 200, pricePerRack: 15, features: ['Everything in Standard', 'AI thermal intelligence', 'Hotspot prediction', 'Custom alert thresholds', 'API access'] },
+      { name: 'Enterprise', maxRacks: 9999, pricePerRack: 10, features: ['Everything in Professional', 'Dedicated support', 'Custom integrations', 'SLA guarantee', 'Multi-facility'] },
     ],
   },
   // ESG Consulting - per engagement
@@ -30,9 +30,9 @@ const PRICING = {
     label: 'Cooling Assessment & Design',
     unit: 'per facility',
     options: [
-      { name: 'Cooling Efficiency Review', price: 15000, description: 'On-site thermal audit, PUE validation, infrared imaging, recommendations report' },
-      { name: 'Full Engineering Design', price: 35000, description: 'Detailed cooling system design, equipment specification, layout drawings, implementation plan' },
-      { name: 'Assessment + Design Bundle', price: 45000, description: 'Combined audit and design package with 10% bundle discount' },
+      { name: 'Cooling Efficiency Review', price: 5000, description: 'On-site thermal audit, PUE validation, infrared imaging, recommendations report' },
+      { name: 'Full Engineering Design', price: 25000, description: 'Detailed cooling system design, equipment specification, layout drawings, implementation plan' },
+      { name: 'Assessment + Design Bundle', price: 27000, description: 'Combined audit and design package with 10% bundle discount' },
     ],
   },
   // Waste Heat Recovery - per facility
@@ -414,7 +414,7 @@ export default function Contracts() {
                       >
                         <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '4px' }}>{opt.name}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)' }}>
-                          {key === 'monitoring' ? `$15-25/rack/month based on volume` : opt.isRevenueShare ? '15% revenue share' : `$${opt.price.toLocaleString()}`}
+                          {key === 'monitoring' ? `$10-18/rack/month based on volume` : opt.isRevenueShare ? '15% revenue share' : `$${opt.price.toLocaleString()}`}
                         </div>
                       </button>
                     ))}
