@@ -23,7 +23,7 @@ function generateReport(data) {
   doc.text('Cooling Intelligence. Environmental Impact.', margin, 30);
   doc.setFontSize(9);
   doc.setTextColor(...gray);
-  doc.text('thermashift.net | info@thermashift.net | Harrisburg, NC', margin, 38);
+  doc.text('thermashift.net | info@thermashift.net', margin, 38);
 
   y = 55;
 
@@ -168,9 +168,9 @@ function generateReport(data) {
   const heatText = [
     `Your facility produces approximately ${(totalIT * 0.95).toFixed(0)} kW of waste heat continuously. At outlet temperatures of 32-43°C, this heat is directly usable for:`,
     '',
-    '• Greenhouse / Vertical Farm Heating — A 2,000m² greenhouse can operate entirely on data center waste heat. Partners in the Charlotte agricultural corridor could benefit.',
+    '• Greenhouse / Vertical Farm Heating — A 2,000m² greenhouse can operate entirely on data center waste heat. Local agricultural partners near your facility could benefit.',
     '',
-    '• District Heating — Municipal utilities in the Charlotte metro area are beginning to explore waste heat purchasing. ThermaShift can broker these agreements.',
+    '• District Heating — Municipal utilities across the US and Europe are actively exploring waste heat purchasing agreements. ThermaShift can broker these deals.',
     '',
     '• Algae Bioreactor Carbon Capture — A 100m³ algae pond captures ~14,000 kg CO₂/year, producing biofuel or supplements as a secondary revenue stream.',
     '',

@@ -100,7 +100,7 @@ export default function Dashboard() {
                 }}>DEMO</span>
               </div>
               <p style={{ color: 'var(--text-dim)', fontSize: '0.85rem' }}>
-                Charlotte Metro Facility — Last updated: {lastUpdate.toLocaleTimeString()}
+                Demo Facility — Last updated: {lastUpdate.toLocaleTimeString()}
               </p>
             </div>
             <button onClick={refresh} className="btn btn-outline" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>

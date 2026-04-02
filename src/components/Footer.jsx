@@ -46,7 +46,7 @@ export default function Footer() {
             &copy; {new Date().getFullYear()} ThermaShift. All rights reserved.
           </p>
           <p style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>
-            Harrisburg, NC
+            US-based | Serving data centers worldwide
           </p>
         </div>
       </div>

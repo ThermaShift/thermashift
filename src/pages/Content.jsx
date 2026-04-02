@@ -44,7 +44,7 @@ const POST_LIBRARY = [
     posts: [
       {
         title: 'Free cooling efficiency review',
-        content: `Offering free 30-minute cooling efficiency reviews for data center operators in the Charlotte, Research Triangle, and Northern Virginia markets.\n\nWhat you get:\n✅ PUE baseline assessment\n✅ Liquid cooling options for your rack density\n✅ Waste heat monetization estimate\n✅ ESG compliance gap analysis\n✅ Actionable next steps\n\nNo obligation. No sales pitch. Just data.\n\n30 minutes could save your facility $200K+ per year.\n\nBook yours: thermashift.net/contact\n\n#DataCenter #Cooling #FreeAssessment #Charlotte #RTP #NoVA`,
+        content: `Offering free 30-minute cooling efficiency reviews for data center operators anywhere in the US, UK, and beyond.\n\nWhat you get:\n✅ PUE baseline assessment\n✅ Liquid cooling options for your rack density\n✅ Waste heat monetization estimate\n✅ ESG compliance gap analysis\n✅ Actionable next steps\n\nNo obligation. No sales pitch. Just data.\n\n30 minutes could save your facility $200K+ per year.\n\nBook yours: thermashift.net/contact\n\n#DataCenter #Cooling #FreeAssessment #EnergyEfficiency`,
       },
       {
         title: 'AI-powered thermal monitoring',
@@ -52,7 +52,7 @@ const POST_LIBRARY = [
       },
       {
         title: 'Case study template: cooling ROI',
-        content: `Just ran the numbers for a 200-rack facility in Charlotte:\n\nCurrent state:\n- PUE: 1.58\n- Annual cooling cost: $1.4M\n- Waste heat: vented to atmosphere\n\nAfter ThermaShift optimization:\n- PUE: 1.20\n- Annual cooling cost: $880K\n- Waste heat revenue: $150K/year\n- Carbon reduction: 2,400 tonnes CO₂/year\n\nTotal annual value: $670K\nPayback period: 8 months\n\nThese aren't projections. This is what liquid cooling + thermal intelligence delivers.\n\nRun your own numbers: thermashift.net/calculator\n\n#DataCenter #ROI #Cooling #Sustainability #CaseStudy`,
+        content: `Just ran the numbers for a 200-rack facility:\n\nCurrent state:\n- PUE: 1.58\n- Annual cooling cost: $1.4M\n- Waste heat: vented to atmosphere\n\nAfter ThermaShift optimization:\n- PUE: 1.20\n- Annual cooling cost: $880K\n- Waste heat revenue: $150K/year\n- Carbon reduction: 2,400 tonnes CO₂/year\n\nTotal annual value: $670K\nPayback period: 8 months\n\nThese aren't projections. This is what liquid cooling + thermal intelligence delivers.\n\nRun your own numbers: thermashift.net/calculator\n\n#DataCenter #ROI #Cooling #Sustainability #CaseStudy`,
       },
     ],
   },

@@ -97,7 +97,7 @@ function generateContract(data) {
   doc.text('Cooling Intelligence. Environmental Impact.', margin, 30);
   doc.setFontSize(9);
   doc.setTextColor(...gray);
-  doc.text('thermashift.net | info@thermashift.net | Harrisburg, NC', margin, 38);
+  doc.text('thermashift.net | info@thermashift.net', margin, 38);
 
   y = 55;
 
@@ -240,9 +240,9 @@ function generateContract(data) {
     'Warranty: ThermaShift warrants that services will be performed in a professional and workmanlike manner consistent with industry standards. Client must notify ThermaShift of any warranty claims within 30 days of deliverable receipt. ThermaShift will re-perform deficient work at no additional cost.',
     'Insurance: ThermaShift maintains professional liability (E&O) insurance with minimum coverage of $1,000,000 per occurrence.',
     'Non-Solicitation: During the contract term and for 12 months thereafter, neither party shall directly solicit or hire employees or subcontractors of the other party who were involved in delivering services under this agreement.',
-    'Dispute Resolution: The parties agree to attempt resolution through good-faith negotiation for 30 days, then non-binding mediation administered by the American Arbitration Association in Mecklenburg County, North Carolina, before pursuing litigation. The prevailing party in any legal action shall be entitled to recover reasonable attorney fees.',
+    'Dispute Resolution: The parties agree to attempt resolution through good-faith negotiation for 30 days, then non-binding mediation administered by the American Arbitration Association, before pursuing litigation. The prevailing party in any legal action shall be entitled to recover reasonable attorney fees.',
     'Force Majeure: Neither party is liable for delays or failure to perform caused by circumstances beyond reasonable control, including but not limited to natural disasters, pandemics, government actions, utility failures, cyberattacks, or supply chain disruptions. Affected party must notify the other within 5 business days.',
-    'Governing Law: This agreement is governed by and construed in accordance with the laws of the State of North Carolina, without regard to conflict of law principles. Exclusive jurisdiction and venue shall be in the state or federal courts located in Mecklenburg County, North Carolina.',
+    'Governing Law: This agreement is governed by and construed in accordance with the laws of the State of North Carolina, without regard to conflict of law principles.',
     'Entire Agreement: This document constitutes the entire agreement between the parties and supersedes all prior discussions, proposals, and agreements. Modifications require written consent signed by both parties.',
     'Severability: If any provision of this agreement is found invalid or unenforceable, the remaining provisions shall continue in full force and effect.',
     'Assignment: Neither party may assign this agreement without prior written consent of the other party, except ThermaShift may assign to a successor entity in the event of merger, acquisition, or reorganization.',

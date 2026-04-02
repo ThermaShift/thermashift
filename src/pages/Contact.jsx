@@ -72,7 +72,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Location</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Harrisburg, NC — Serving Charlotte, Research Triangle, and Northern Virginia</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Headquartered in NC — Serving data centers across the US, UK, and worldwide</div>
                 </div>
               </div>
 
@@ -238,7 +238,7 @@ export default function Contact() {
                   name="message"
                   value={form.message}
                   onChange={(e) => set('message', e.target.value)}
-                  placeholder="We're looking to support 80kW racks in our Charlotte facility..."
+                  placeholder="We're looking to support 80kW racks in our facility..."
                 />
               </div>
 
