@@ -11,6 +11,7 @@ import Report from './pages/Report';
 import Proposal from './pages/Proposal';
 import Monitor from './pages/Monitor';
 import Contracts from './pages/Contracts';
+import Content from './pages/Content';
 import ClientPortal from './pages/ClientPortal';
 import Contact from './pages/Contact';
 
@@ -49,6 +50,8 @@ function AppLayout() {
         <Route path="/proposal" element={<ProtectedRoute><Proposal /></ProtectedRoute>} />
         <Route path="/monitor" element={<ProtectedRoute><Monitor /></ProtectedRoute>} />
         <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
+
+        <Route path="/content" element={<ProtectedRoute><Content /></ProtectedRoute>} />
 
         {/* Client portal */}
         <Route path="/portal" element={<ClientLogin />} />

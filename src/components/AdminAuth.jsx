@@ -78,6 +78,9 @@ export function AdminLogin() {
             <Link to="/contracts" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
               Contract Manager
             </Link>
+            <Link to="/content" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
+              LinkedIn Content Hub
+            </Link>
             <a href="/agent/INSTALL.html" target="_blank" rel="noopener noreferrer" style={{ padding: '12px 20px', background: 'var(--primary)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text-muted)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
               Agent Install Guide (share with clients)
             </a>
