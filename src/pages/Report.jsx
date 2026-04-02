@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, Download, Building, Thermometer, Leaf, DollarSign } from 'lucide-react';
+import { FileText, Download, Building, Thermometer, DollarSign } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 function generateReport(data) {

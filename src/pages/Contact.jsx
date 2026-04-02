@@ -253,7 +253,7 @@ export default function Contact() {
                 </div>
               )}
 
-              <button type="submit" disabled={state.submitting} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: state.submitting ? 0.7 : 1 }}>
+              <button type="submit" disabled={state.submitting || (state.errors && state.errors.length > 0)} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: state.submitting ? 0.7 : 1 }}>
                 <Send size={18} /> {state.submitting ? 'Sending...' : 'Request Free Review'}
               </button>
               <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', textAlign: 'center' }}>

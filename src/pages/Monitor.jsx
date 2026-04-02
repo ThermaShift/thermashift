@@ -855,8 +855,7 @@ function FacilityDashboard({ facility, onBack, onRefresh }) {
 
 const INITIAL_FACILITIES = [];
 
-// Supabase service key for client management (admin only)
-const SUPABASE_SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTA3NjE5OSwiZXhwIjoyMDkwNjUyMTk5fQ.J83H_6K5-TjjQO5e-ChlUiv1fp5H1HBGP3ftvFb8bQc';
+// Client management uses the same anon key — RLS policies allow admin operations
 
 function ClientManager() {
   const [clients, setClients] = useState([]);
@@ -868,7 +867,7 @@ function ClientManager() {
   const loadClients = async () => {
     try {
       const resp = await fetch(`${SUPABASE_URL}/clients?select=*&order=created_at.desc`, {
-        headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` },
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
       });
       if (resp.ok) setClients(await resp.json());
     } catch {}
@@ -884,8 +883,8 @@ function ClientManager() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': SUPABASE_SERVICE_KEY,
-          'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
           'Prefer': 'return=representation',
         },
         body: JSON.stringify({
@@ -909,8 +908,8 @@ function ClientManager() {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': SUPABASE_SERVICE_KEY,
-        'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
       },
       body: JSON.stringify({ status: newStatus }),
     });
@@ -921,7 +920,7 @@ function ClientManager() {
     if (!confirm(`Remove client "${client.client_name}"? Their agent will stop working.`)) return;
     await fetch(`${SUPABASE_URL}/clients?id=eq.${client.id}`, {
       method: 'DELETE',
-      headers: { 'apikey': SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${SUPABASE_SERVICE_KEY}` },
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
     });
     loadClients();
   };
