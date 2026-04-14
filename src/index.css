@@ -91,16 +91,15 @@ button {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #00e0ff, #00a3e0);
-  color: #000;
-  font-weight: 700;
+  background: var(--accent);
+  color: var(--primary);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #00f0ff, #00b8f0);
-  color: #000;
+  background: var(--accent-dark);
+  color: var(--primary);
   transform: translateY(-1px);
-  box-shadow: 0 4px 24px rgba(0, 163, 224, 0.5);
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3);
 }
 
 .btn-outline {
@@ -216,6 +215,12 @@ label {
 .nav-links a:hover,
 .nav-links a.active {
   color: var(--accent);
+}
+
+.nav-links .btn-primary {
+  color: #000 !important;
+  font-weight: 700;
+  padding: 10px 20px;
 }
 
 .nav-toggle {
