@@ -14,6 +14,7 @@ import Contracts from './pages/Contracts';
 import Content from './pages/Content';
 import ClientPortal from './pages/ClientPortal';
 import Contact from './pages/Contact';
+import ChatWidget from './components/ChatWidget';
 
 function NotFound() {
   return (
@@ -60,6 +61,7 @@ function AppLayout() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       {!isPortal && <Footer />}
+      {!isPortal && <ChatWidget />}
     </>
   );
 }

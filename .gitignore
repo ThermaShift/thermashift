@@ -12,6 +12,21 @@ dist
 dist-ssr
 *.local
 
+# Environment variables (secrets)
+.env
+.env.local
+.env.production
+
+# Social media tracking data
+src/social/content/tracking.json
+src/social/logs/
+
+# Sensitive docs
+docs/Linkedinpassword.rtf
+
+# VPS deploy script (contains credentials)
+server/vps-deploy.js
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

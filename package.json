@@ -6,13 +6,17 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start": "node server/chat-proxy.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@formspree/react": "^3.0.0",
+    "dotenv": "^17.4.1",
+    "express": "^5.2.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.7.0",
+    "node-cron": "^4.2.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.13.2",
