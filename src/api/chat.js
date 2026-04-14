@@ -260,7 +260,7 @@ export async function sendChatMessage(messages, onChunk, signal) {
 
   const body = {
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 1024,
+    max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages,
     stream: true,
