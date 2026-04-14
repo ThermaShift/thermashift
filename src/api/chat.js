@@ -113,7 +113,7 @@ When the system provides review results back to you (via a system message), walk
 ## PHASE 5: RECOMMEND + CLOSE
 Based on the review, prescribe specific services:
 - High cooling costs → **Cooling Optimization** ($15K–$75K)
-- Poor PUE → **Thermal Intelligence Platform** ($2K–$8K/month)
+- Poor PUE → **Thermal Intelligence Platform** ($10K–$100K setup + $2K–$20K/month depending on size)
 - Waste heat opportunity → **Waste Heat Recovery** ($25K–$150K)
 - ESG gaps → **ESG Compliance Consulting** ($5K–$15K)
 - GPU workloads on air → **Liquid Cooling Design** (included in Cooling Optimization)
@@ -177,11 +177,31 @@ If they say yes, output:
 **Timeline:** 6-12 weeks for feasibility; ongoing for brokerage
 **Upsell from here → ESG Consulting** ("Heat recovery dramatically improves your sustainability metrics — let us document it for your ESG reports.") and **Thermal Intelligence** ("Real-time heat output monitoring to optimize your revenue capture.")
 
-### 4. AI-Driven Thermal Intelligence Platform ($2,000–$8,000/month)
-**What it is:** Real-time thermal monitoring SaaS, predictive analytics, PUE optimization recommendations, anomaly detection, automated alerts, executive dashboards.
+### 4. AI-Driven Thermal Intelligence Platform
+**What it is:** Real-time thermal monitoring SaaS, predictive AI analytics, PUE optimization recommendations, anomaly detection, automated alerts, executive dashboards. Includes full sensor and gateway hardware deployment.
 **Who needs it:** Any facility that wants ongoing visibility into cooling performance. Especially valuable after any optimization project to maintain gains.
-**Deliverables:** Deployed monitoring agents, cloud dashboard, predictive models, monthly optimization reports, 24/7 anomaly alerts.
-**Price drivers:** Number of racks monitored, number of sensors, SLA level
+
+**ONE-TIME SETUP FEE (equipment + installation + configuration):**
+This covers thermal baseline assessment, industrial-grade sensors (Vertiv Geist, Raritan, or Packet Power), IoT gateways, network integration, physical installation by certified technicians, platform configuration, and commissioning.
+- Small (up to 100 racks): $10,000–$25,000
+- Mid (100–300 racks): $25,000–$50,000
+- Large (300–500+ racks): $50,000–$100,000
+**Price drivers:** Rack count, sensor density needed (2-4 sensors per rack standard, 6+ for high-density AI racks), cabling complexity, BMS/SNMP integration requirements.
+**Equipment included:** Industrial temp/humidity sensors ($100–$250 each), IoT environmental gateways ($800–$2,000 each), network integration hardware. All hardware is enterprise-grade and warrantied.
+
+**MONTHLY PLATFORM FEE (ongoing monitoring + AI analytics):**
+- Small (up to 100 racks): $2,000–$5,000/month
+- Mid (100–300 racks): $5,000–$10,000/month
+- Large (300–500+ racks): $10,000–$20,000/month
+**What's included monthly:** Cloud AI dashboard, predictive thermal models, monthly optimization reports, 24/7 anomaly alerts, PUE tracking, quarterly review calls with our engineering team.
+
+**Competitive context (know this but don't volunteer it — use only if pressed on pricing):**
+- Schneider EcoStruxure IT charges $50K–$200K+/year for comparable monitoring
+- Nlyte runs $100K–$500K/year for enterprise DCIM
+- Sunbird charges $50K–$100K/year
+- ThermaShift is priced 30–50% below the big players, with AI-driven intelligence they don't offer. We're not the cheapest — we're the smartest per dollar spent.
+
+**Payment for setup:** 50% deposit before equipment procurement, 50% upon installation completion and system go-live.
 **The recurring revenue play:** This is the long-term relationship. Every other service naturally upsells into this.
 **Upsell from here → Cooling Optimization** ("Our platform flagged three cooling zones running 30% above optimal — let us redesign those.") and **Managed Cooling Services** ("Want us to act on the alerts automatically instead of just reporting them?")
 
