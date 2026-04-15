@@ -3,6 +3,7 @@ import { MessageCircle, X, Send, Bot } from 'lucide-react';
 import {
   sendChatMessage, extractLeadData, extractAuditData, extractProposalData,
   cleanResponseText, saveLead, saveConversation, submitAudit, getAuditStatus, submitProposal,
+  lookupReturningVisitor,
 } from '../api/chat.js';
 
 const GREETING = "Hey there — I'm Alex from ThermaShift. Fun fact: most data centers we talk to are losing $200K–$500K a year in cooling inefficiency without even realizing it. Whether you're dealing with rising cooling costs, planning a liquid cooling transition, or tackling ESG compliance, I can point you in the right direction.\n\nBetter yet — we offer a **free cooling efficiency review**. I just need a few details about your facility and I'll generate a personalized report with savings estimates, PUE improvement targets, and waste heat revenue potential. Takes about 5 minutes.\n\nWhat brings you here today?";
@@ -27,6 +28,7 @@ export default function ChatWidget() {
   const leadDataRef = useRef(null);
   const auditSubmittedRef = useRef(false);
   const auditIdRef = useRef(null);
+  const returningCheckedRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,6 +36,25 @@ export default function ChatWidget() {
 
   useEffect(() => { scrollToBottom(); }, [messages, isTyping, scrollToBottom]);
   useEffect(() => { if (isOpen && inputRef.current) inputRef.current.focus(); }, [isOpen]);
+
+  // Check for returning visitor via localStorage email
+  useEffect(() => {
+    if (!isOpen || returningCheckedRef.current) return;
+    returningCheckedRef.current = true;
+    const savedEmail = localStorage.getItem('thermashift_email');
+    if (!savedEmail) return;
+
+    lookupReturningVisitor(savedEmail).then(data => {
+      if (data?.found && data.name) {
+        leadCapturedRef.current = true;
+        leadDataRef.current = { email: savedEmail, name: data.name, company: data.company };
+        const welcomeBack = data.last_audit?.estimated_annual_savings
+          ? `Welcome back, ${data.name}! Last time we identified **$${data.last_audit.estimated_annual_savings.toLocaleString()}/year in potential savings** for ${data.company || 'your facility'}. Want to pick up where we left off, or is there something new I can help with?`
+          : `Welcome back, ${data.name}! Good to see you again. What can I help you with today?`;
+        setMessages([{ role: 'assistant', content: welcomeBack }]);
+      }
+    }).catch(() => {});
+  }, [isOpen]);
 
   // Save conversation after each assistant response
   const persistConversation = useCallback((msgs, lead) => {
@@ -161,6 +182,7 @@ export default function ChatWidget() {
             if (lead?.email) {
               leadCapturedRef.current = true;
               leadDataRef.current = lead;
+              try { localStorage.setItem('thermashift_email', lead.email); } catch {}
               saveLead({ ...lead, source: 'chat_widget' }).then(result => {
                 if (result?.lead_id) leadDataRef.current = { ...lead, id: result.lead_id };
                 persistConversation(finalMsgs, leadDataRef.current);

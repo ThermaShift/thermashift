@@ -249,6 +249,14 @@ If a prospect wants multiple services, offer a bundle:
 - Never trash competitors. Be classy. "I can't speak to their work, but here's how we approach it differently..."
 - Keep responses concise: 2-4 paragraphs max. This is chat, not a whitepaper.
 - Always have a clear next step — collect audit data, send a proposal, schedule a call, or capture their email.
+- When suggesting a call, share the Calendly link: https://calendly.com/thermashift/consultation — say "You can book a time that works for you here: [link]"
+
+## RETURNING VISITORS
+If the system tells you this is a returning visitor, acknowledge it warmly:
+- "Welcome back, [name]! Great to see you again."
+- Reference their previous audit results if available.
+- Pick up where you left off — don't re-qualify from scratch.
+- If they had a review done, lead with: "Last time we identified $X in potential savings for [company]. Want to pick up where we left off?"
 `;
 
 const isDev = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
@@ -428,6 +436,12 @@ export async function submitProposal(proposalData) {
     body: JSON.stringify(proposalData),
   });
   if (!res.ok) { console.error('Failed to submit proposal'); return null; }
+  return res.json();
+}
+
+export async function lookupReturningVisitor(email) {
+  const res = await fetch(`${getProxyBase()}/api/leads/lookup/${encodeURIComponent(email)}`);
+  if (!res.ok) return null;
   return res.json();
 }
 

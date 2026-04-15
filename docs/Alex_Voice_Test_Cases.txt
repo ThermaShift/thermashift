@@ -1,0 +1,491 @@
+============================================================
+ALEX AI VOICE ASSISTANT — PHONE CALL TEST CASES
+ThermaShift — (786) 605-6239
+============================================================
+Date: April 2026
+Purpose: Validate Alex's voice sales capabilities, natural
+         conversation flow, data collection, and pipeline
+         integration over the phone.
+
+Instructions: Call (786) 605-6239 and run each test case.
+Hang up and call back between tests for fresh conversations.
+
+============================================================
+SECTION 1: FIRST IMPRESSIONS
+============================================================
+
+TEST 1.1 — Greeting and Voice Quality
+--------------------------------------
+Just call and listen to Alex's greeting.
+
+EXPECTED:
+- Alex should say: "Hey there! Thanks for calling
+  ThermaShift. I'm Alex, our cooling consultant.
+  How can I help you today?"
+- Voice should sound natural, not robotic
+- No awkward pauses before the greeting
+- Background office ambiance should be subtle
+
+PASS CRITERIA:
+[ ] Greeting was clear and natural
+[ ] Voice quality was good (no glitches or artifacts)
+[ ] Response time was fast (under 2 seconds)
+[ ] Felt like talking to a real consultant
+[ ] Office background sound was subtle, not distracting
+
+--------------------------------------
+
+TEST 1.2 — Latency Check
+--------------------------------------
+Have a quick back-and-forth exchange. Say short things
+like "Yeah" and "Tell me more" to test response speed.
+
+PASS CRITERIA:
+[ ] Alex responded within 1-2 seconds each time
+[ ] No long awkward silences
+[ ] Didn't talk over you (interruption handling)
+[ ] Conversation felt natural pacing
+
+
+============================================================
+SECTION 2: BUYER TYPE DETECTION (VOICE)
+============================================================
+
+TEST 2.1 — "I Know What I Want" Buyer
+--------------------------------------
+YOU SAY: "I need help with ESG compliance reporting
+for our data center. What does that cost?"
+
+EXPECTED:
+- Alex should NOT push the free audit first
+- Should ask 2-3 qualifying questions
+- Should give pricing: five to fifteen thousand
+- Should offer a formal proposal
+- Responses should be 2-3 sentences, not long speeches
+
+PASS CRITERIA:
+[ ] Recognized you know what you want
+[ ] Gave pricing range verbally (not reading numbers)
+[ ] Kept responses short and conversational
+[ ] Did not monologue for 30+ seconds
+[ ] Offered clear next step
+
+--------------------------------------
+
+TEST 2.2 — "We Have a Problem" Buyer
+--------------------------------------
+YOU SAY: "Our cooling costs are out of control and
+we can't figure out why."
+
+EXPECTED:
+- Alex should ask diagnostic questions one at a time
+- Should share an insight between questions
+- Should recommend a specific service
+- Should offer the free review
+
+PASS CRITERIA:
+[ ] Asked ONE question at a time (not a list)
+[ ] Reacted with insight before next question
+[ ] Recommended Cooling Optimization
+[ ] Mentioned the free review naturally
+[ ] Stayed concise (not walls of text read aloud)
+
+--------------------------------------
+
+TEST 2.3 — "Just Browsing" Buyer
+--------------------------------------
+YOU SAY: "Hey, just wanted to learn about what you
+guys do."
+
+EXPECTED:
+- Should lead with a teaching insight
+- Should briefly explain services
+- Should steer toward free review
+- Should ask what brought you to call
+
+PASS CRITERIA:
+[ ] Led with a surprising stat
+[ ] Kept it brief (not listing all 4 services)
+[ ] Mentioned free review
+[ ] Asked a follow-up question
+[ ] Did not push for contact info too early
+
+--------------------------------------
+
+TEST 2.4 — Technical Engineer
+--------------------------------------
+YOU SAY: "We're running 500 racks at 40kW average
+with direct-to-chip liquid cooling. PUE is 1.25 but
+we want below 1.15."
+
+EXPECTED:
+- Should match your technical level
+- Should acknowledge 1.25 PUE is already good
+- Should discuss specific approaches
+- Should NOT oversimplify
+
+PASS CRITERIA:
+[ ] Matched technical depth in voice
+[ ] Did not talk down to you
+[ ] Acknowledged good PUE baseline
+[ ] Gave specific technical recommendations
+[ ] Sounded knowledgeable and confident
+
+
+============================================================
+SECTION 3: DATA COLLECTION OVER PHONE
+============================================================
+
+TEST 3.1 — Natural Name Collection
+--------------------------------------
+Chat for 2-3 exchanges about cooling challenges.
+Don't volunteer your name. Wait for Alex to ask.
+
+PASS CRITERIA:
+[ ] Alex asked "Who am I speaking with?" or similar
+[ ] Asked within first 3-4 exchanges
+[ ] Felt natural, not interrogative
+[ ] Smoothly transitioned back to topic after
+
+--------------------------------------
+
+TEST 3.2 — Email Capture
+--------------------------------------
+After giving your name, continue discussing. Wait
+for Alex to ask for email.
+
+EXPECTED:
+- Should offer to SEND something valuable first
+- "I can send you the review results directly"
+- Should NOT just say "What's your email?"
+
+PASS CRITERIA:
+[ ] Offered value before asking for email
+[ ] Framed it as doing you a favor
+[ ] Correctly heard and repeated the email back
+[ ] Did not feel like a data grab
+
+--------------------------------------
+
+TEST 3.3 — Facility Data Collection
+--------------------------------------
+Gradually provide facility data through conversation:
+- Location: Orlando, FL
+- 200 racks
+- 15kW average per rack
+- Air cooling with hot/cold aisle
+- PUE: 1.6
+- Challenge: can't support new GPU workloads
+- Timeline: next 6 months
+
+PASS CRITERIA:
+[ ] Asked questions one at a time
+[ ] Reacted to each answer with an insight
+[ ] Did not rapid-fire questions
+[ ] Covered all key fields naturally
+[ ] Conversation flowed, didn't feel like a survey
+
+--------------------------------------
+
+TEST 3.4 — Full Pipeline Trigger
+--------------------------------------
+Provide all info from Test 3.3 plus:
+- Name: Mike Thompson
+- Email: mike@testdatacenter.com
+- Company: SunCore Data
+
+EXPECTED:
+- Alex should say something like "I've got what I
+  need to run your free review"
+- Should confirm email delivery
+- The saveLead and submitAudit functions should fire
+
+PASS CRITERIA:
+[ ] Alex confirmed generating the review
+[ ] Mentioned sending results to your email
+[ ] Lead appeared in Supabase leads table
+[ ] Audit appeared in Supabase audits table
+[ ] Review generation triggered (check server logs)
+
+
+============================================================
+SECTION 4: OBJECTION HANDLING (VOICE)
+============================================================
+
+TEST 4.1 — "Just Looking"
+--------------------------------------
+YOU SAY: "I'm just browsing, not really looking to
+buy anything."
+
+PASS CRITERIA:
+[ ] Did not accept the brush-off
+[ ] Asked a follow-up question
+[ ] Mentioned free review
+[ ] Tone was warm, not pushy
+[ ] Response was short (not a sales pitch)
+
+--------------------------------------
+
+TEST 4.2 — "Too Expensive"
+--------------------------------------
+YOU SAY: "That sounds way too expensive for us."
+
+PASS CRITERIA:
+[ ] Reframed price against savings
+[ ] Used specific numbers spoken naturally
+[ ] Offered free review as zero-cost entry
+[ ] Did not get defensive
+[ ] Kept composure and stayed helpful
+
+--------------------------------------
+
+TEST 4.3 — "We Have a Vendor"
+--------------------------------------
+YOU SAY: "We already work with someone for that."
+
+PASS CRITERIA:
+[ ] Did not trash the competitor
+[ ] Positioned as complementary
+[ ] Offered free review as second opinion
+[ ] Stayed professional and classy
+
+--------------------------------------
+
+TEST 4.4 — "Send Me Info"
+--------------------------------------
+YOU SAY: "Can you just send me some info?"
+
+PASS CRITERIA:
+[ ] Used it to qualify interest area
+[ ] Asked what type of info (cooling, ESG, etc.)
+[ ] Captured email address
+[ ] Did not just say "check our website"
+
+--------------------------------------
+
+TEST 4.5 — "Need to Talk to My Team"
+--------------------------------------
+YOU SAY: "I need to run this by my team first."
+
+PASS CRITERIA:
+[ ] Validated the response
+[ ] Offered to send materials to share
+[ ] Asked about other stakeholders
+[ ] Captured email for follow-up
+
+
+============================================================
+SECTION 5: VOICE-SPECIFIC TESTS
+============================================================
+
+TEST 5.1 — Interruption Handling
+--------------------------------------
+Start saying something, then interrupt Alex mid-sentence
+with a new question.
+
+PASS CRITERIA:
+[ ] Alex stopped talking when interrupted
+[ ] Addressed your new question
+[ ] Did not restart the interrupted sentence
+[ ] Transition was smooth
+
+--------------------------------------
+
+TEST 5.2 — Silence Handling
+--------------------------------------
+After Alex asks a question, wait 10-15 seconds
+without saying anything.
+
+EXPECTED:
+- Alex should prompt you gently after ~10 seconds
+- "Still with me?" or "Take your time"
+
+PASS CRITERIA:
+[ ] Alex prompted after a reasonable pause
+[ ] Prompt was gentle, not aggressive
+[ ] Did not hang up too quickly
+
+--------------------------------------
+
+TEST 5.3 — Numbers and Pricing Spoken Naturally
+--------------------------------------
+Ask: "How much does cooling optimization cost?"
+
+EXPECTED:
+- Should say "fifteen to seventy-five thousand"
+- Should NOT say "$15,000 to $75,000"
+- Should NOT spell out numbers robotically
+- Numbers should sound natural in speech
+
+PASS CRITERIA:
+[ ] Prices spoken as words, not read as text
+[ ] Sounded natural (like a real consultant)
+[ ] Gave the range without dodging
+[ ] Anchored against ROI/savings
+
+--------------------------------------
+
+TEST 5.4 — "Are You a Bot?"
+--------------------------------------
+YOU SAY: "Wait, am I talking to a robot?"
+
+EXPECTED:
+- Should be honest about being AI
+- Should maintain credibility
+- Should redirect back to helping
+
+PASS CRITERIA:
+[ ] Was honest: "I'm ThermaShift's AI assistant"
+[ ] Mentioned working with the engineering team
+[ ] Redirected back to value
+[ ] Did not pretend to be human
+[ ] Maintained professional tone
+
+--------------------------------------
+
+TEST 5.5 — Off-Topic Question
+--------------------------------------
+YOU SAY: "What do you think about the weather today?"
+
+PASS CRITERIA:
+[ ] Acknowledged briefly
+[ ] Redirected to data center cooling
+[ ] Did not engage in extended off-topic chat
+[ ] Transition back felt natural
+
+--------------------------------------
+
+TEST 5.6 — Long Call Endurance (5+ minutes)
+--------------------------------------
+Have a full 5+ minute conversation covering multiple
+topics: facility challenges, pricing, timeline, etc.
+
+PASS CRITERIA:
+[ ] Alex maintained consistent personality throughout
+[ ] Did not repeat itself or loop
+[ ] Remembered earlier details from the call
+[ ] Call quality stayed stable
+[ ] Ended with a clear next step
+
+
+============================================================
+SECTION 6: END-TO-END VOICE PIPELINE
+============================================================
+
+TEST 6.1 — Complete Call: Browse to Review
+--------------------------------------
+Run a FULL call simulating a real prospect:
+
+1. Start vague: "Hi, I'm looking into cooling options"
+2. Answer Alex's questions gradually
+3. Provide facility data when asked
+4. Give name and email naturally
+5. Let Alex trigger the review
+6. Discuss next steps
+
+TRACK:
+[ ] Alex greeted professionally
+[ ] Led with an insight or stat
+[ ] Qualified correctly (asked right questions)
+[ ] Collected facility data naturally
+[ ] Captured name + email + company
+[ ] Triggered review generation
+[ ] Recommended specific services
+[ ] Offered clear next step
+[ ] Call felt like talking to a real consultant
+[ ] Data appeared in Supabase (leads + audits tables)
+
+POST-CALL VERIFICATION:
+[ ] Check Supabase leads table for the new lead
+[ ] Check Supabase audits table for the audit record
+[ ] Check if review email was sent (admin notification)
+[ ] Check Resend dashboard for sent email
+
+
+============================================================
+SECTION 7: EDGE CASES
+============================================================
+
+TEST 7.1 — Bad Audio / Mumbling
+--------------------------------------
+Speak quietly or mumble your facility details.
+
+PASS CRITERIA:
+[ ] Alex asked you to repeat or clarify
+[ ] Did not make up data it couldn't hear
+[ ] Handled gracefully
+
+--------------------------------------
+
+TEST 7.2 — Rapid-Fire Questions
+--------------------------------------
+Ask 3 questions in a row without pausing:
+"How much does it cost and how long does it take
+and do you do installations?"
+
+PASS CRITERIA:
+[ ] Addressed all 3 questions
+[ ] Did not get confused
+[ ] Answered in a logical order
+[ ] Kept responses concise
+
+--------------------------------------
+
+TEST 7.3 — Call from Non-Target Customer
+--------------------------------------
+YOU SAY: "I have a small server closet with 5 racks
+in my office building."
+
+EXPECTED:
+- Should still be helpful
+- May mention the free review
+- Should not push enterprise pricing on them
+
+PASS CRITERIA:
+[ ] Was still helpful and professional
+[ ] Adjusted expectations for small scale
+[ ] Did not dismiss the caller
+[ ] Found a way to provide value
+
+
+============================================================
+SCORING GUIDE
+============================================================
+
+For each test, rate 1-5:
+
+1 = Failed completely (wrong response, broke character,
+    or unintelligible)
+2 = Partially worked but major issues (long pauses,
+    robotic, read formatting aloud)
+3 = Acceptable but could be smoother
+4 = Good — felt natural and effective
+5 = Excellent — indistinguishable from a real consultant
+
+TARGET: Average score of 4+ across all tests
+
+============================================================
+SUPABASE VERIFICATION QUERIES
+============================================================
+
+After testing, run these in Supabase SQL Editor to verify
+data flowed through:
+
+-- Check new leads from voice calls
+SELECT id, name, email, company, source, status, created_at
+FROM leads ORDER BY created_at DESC LIMIT 5;
+
+-- Check audit submissions from voice calls
+SELECT id, lead_email, status, rack_count, cooling_type,
+       avg_power_per_rack_kw, created_at
+FROM audits ORDER BY created_at DESC LIMIT 5;
+
+-- Check if reviews were generated
+SELECT id, lead_email, status, estimated_annual_savings,
+       review_sent_at
+FROM audits WHERE status = 'completed'
+ORDER BY created_at DESC LIMIT 5;
+
+============================================================
+END OF VOICE TEST CASES
+============================================================

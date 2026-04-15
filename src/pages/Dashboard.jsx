@@ -5,7 +5,8 @@ import {
 } from 'recharts';
 import {
   Activity, Thermometer, Droplets, Zap, Leaf, AlertTriangle,
-  Server, Wind, TrendingDown, RefreshCw, Gauge,
+  Server, Wind, TrendingDown, RefreshCw, Gauge, Users, Phone,
+  FileText, DollarSign, Mail, TrendingUp,
 } from 'lucide-react';
 import { generateRackData, generateTimeSeriesData, generateFacilityMetrics } from '../data/simulatedSensors';
 
@@ -63,6 +64,109 @@ function RackHeatMap({ racks }) {
   );
 }
 
+function SalesPipeline() {
+  const [stats, setStats] = useState(null);
+  const [activity, setActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [statsRes, activityRes] = await Promise.all([
+          fetch('/api/admin/stats'),
+          fetch('/api/admin/activity'),
+        ]);
+        if (statsRes.ok) setStats(await statsRes.json());
+        if (activityRes.ok) setActivity(await activityRes.json());
+      } catch { /* ok */ }
+      setLoading(false);
+    }
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) return <div className="card" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-dim)' }}>Loading sales pipeline...</div>;
+  if (!stats) return null;
+
+  const tierColor = (score) => {
+    if (score >= 75) return '#ef4444';
+    if (score >= 50) return '#f59e0b';
+    if (score >= 25) return '#06b6d4';
+    return '#94a3b8';
+  };
+
+  const tierLabel = (score) => {
+    if (score >= 75) return 'HOT';
+    if (score >= 50) return 'WARM';
+    if (score >= 25) return 'COOL';
+    return 'COLD';
+  };
+
+  return (
+    <div style={{ marginBottom: '32px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+        <TrendingUp size={20} style={{ color: '#00a3e0' }} />
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 800 }}>Sales Pipeline</h2>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+        <MetricCard icon={Users} label="Total Leads" value={stats.total_leads} color="#00a3e0" sub={`${stats.new_leads_week} this week`} />
+        <MetricCard icon={AlertTriangle} label="Hot Leads" value={stats.hot_leads} color="#ef4444" sub={`${stats.warm_leads} warm`} />
+        <MetricCard icon={FileText} label="Audits Done" value={stats.audits_completed} color="#10b981" sub={`${stats.audits_pending} pending`} />
+        <MetricCard icon={DollarSign} label="Savings Found" value={`$${Math.round(stats.total_savings_identified / 1000)}K`} color="#10b981" />
+        <MetricCard icon={Mail} label="Proposals" value={stats.proposals_sent} color="#f59e0b" sub={`$${Math.round(stats.total_pipeline_value / 1000)}K pipeline`} />
+        <MetricCard icon={Phone} label="Voice Calls" value={stats.total_calls} color="#8b5cf6" sub={`${stats.total_call_minutes} min total`} />
+      </div>
+
+      {activity.length > 0 && (
+        <div className="card" style={{ padding: '16px' }}>
+          <h3 style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '12px', color: 'var(--text-dim)' }}>Recent Activity</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '300px', overflowY: 'auto' }}>
+            {activity.slice(0, 10).map((item, i) => (
+              <div key={i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '8px 12px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px',
+                border: '1px solid var(--border)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{
+                    padding: '2px 8px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 700,
+                    textTransform: 'uppercase',
+                    background: item.type === 'lead' ? 'rgba(0,163,224,0.15)' :
+                                item.type === 'audit' ? 'rgba(16,185,129,0.15)' :
+                                item.type === 'proposal' ? 'rgba(245,158,11,0.15)' :
+                                'rgba(139,92,246,0.15)',
+                    color: item.type === 'lead' ? '#00a3e0' :
+                           item.type === 'audit' ? '#10b981' :
+                           item.type === 'proposal' ? '#f59e0b' : '#8b5cf6',
+                  }}>{item.type}</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>
+                    {item.type === 'lead' && `${item.data.name || item.data.email} — ${item.data.company || 'No company'}`}
+                    {item.type === 'audit' && `Review for ${item.data.lead_email} — ${item.data.status}`}
+                    {item.type === 'proposal' && `$${(item.data.total_value || 0).toLocaleString()} proposal — ${item.data.status}`}
+                    {item.type === 'call' && `Call ${item.data.lead_phone || 'unknown'} — ${Math.round((item.data.duration_seconds || 0) / 60)}min`}
+                  </span>
+                  {item.type === 'lead' && item.data.lead_score > 0 && (
+                    <span style={{
+                      padding: '1px 6px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 800,
+                      background: `${tierColor(item.data.lead_score)}20`,
+                      color: tierColor(item.data.lead_score),
+                    }}>{tierLabel(item.data.lead_score)} {item.data.lead_score}</span>
+                  )}
+                </div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                  {new Date(item.time).toLocaleDateString()} {new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [metrics, setMetrics] = useState(generateFacilityMetrics());
   const [racks, setRacks] = useState(generateRackData());
@@ -107,6 +211,9 @@ export default function Dashboard() {
               <RefreshCw size={16} /> Refresh
             </button>
           </div>
+
+          {/* Sales Pipeline */}
+          <SalesPipeline />
 
           {/* Top metrics */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>

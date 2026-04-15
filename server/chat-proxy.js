@@ -5,6 +5,10 @@ import { dirname, join } from 'path';
 import { existsSync } from 'fs';
 import { sendLeadNotification, sendReviewNotification, sendProposalNotification } from './email.js';
 import { generateReview } from './review-generator.js';
+import { calculateLeadScore } from './lead-scoring.js';
+import { getFollowUpSchedule, processDueFollowUps } from './follow-ups.js';
+import { sendPostCallSMS } from './sms.js';
+import { generateReviewPDF } from './pdf-generator.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -154,7 +158,19 @@ app.post('/api/leads', async (req, res) => {
       catch (e) { console.error('Email failed:', e.message); }
     }
 
-    res.json({ success: true, lead_id: lead.id, is_new: !existing?.length });
+    // Score the lead
+    try {
+      const audits = await sb('audits', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=1`);
+      const scoring = calculateLeadScore(lead, audits?.[0] || null);
+      await sb('leads', 'PATCH', {
+        lead_score: scoring.score,
+        score_breakdown: JSON.stringify(scoring.breakdown),
+      }, `?email=eq.${encodeURIComponent(email)}`);
+      lead.lead_score = scoring.score;
+      console.log(`Lead ${email} scored: ${scoring.score}/100 (${scoring.tier})`);
+    } catch (e) { console.error('Scoring failed:', e.message); }
+
+    res.json({ success: true, lead_id: lead.id, is_new: !existing?.length, lead_score: lead.lead_score });
   } catch (err) {
     console.error('Lead error:', err.message);
     res.status(500).json({ error: 'Failed to save lead' });
@@ -261,11 +277,39 @@ app.post('/api/audits', async (req, res) => {
         await sb('leads', 'PATCH', { status: 'qualified', updated_at: new Date().toISOString() }, `?id=eq.${auditRecord.lead_id}`);
       }
 
+      // Re-score lead with audit data
+      try {
+        const leads = await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(audit.lead_email)}&limit=1`);
+        if (leads?.[0]) {
+          const scoring = calculateLeadScore(leads[0], { ...audit, ...review });
+          await sb('leads', 'PATCH', {
+            lead_score: scoring.score,
+            score_breakdown: JSON.stringify(scoring.breakdown),
+          }, `?id=eq.${leads[0].id}`);
+          console.log(`Lead ${audit.lead_email} re-scored after review: ${scoring.score}/100 (${scoring.tier})`);
+        }
+      } catch (e) { console.error('Re-scoring failed:', e.message); }
+
       // Email the review to the prospect
       try {
         await sendReviewNotification({ ...audit, ...review, audit_id: auditId });
         await sb('audits', 'PATCH', { review_sent_at: new Date().toISOString() }, `?id=eq.${auditId}`);
         console.log(`Review emailed to ${audit.lead_email}`);
+
+        // Schedule follow-up emails
+        try {
+          const followUps = getFollowUpSchedule(audit.lead_email, auditRecord.lead_id, auditId, {
+            name: audit.name, company: audit.company,
+            estimated_annual_savings: review.estimated_annual_savings,
+            target_pue: review.target_pue, current_pue: audit.current_pue,
+            waste_heat_revenue_potential: review.waste_heat_revenue_potential,
+            recommended_services: review.recommended_services,
+          });
+          for (const fu of followUps) {
+            await sb('follow_ups', 'POST', fu);
+          }
+          console.log(`Scheduled ${followUps.length} follow-up emails for ${audit.lead_email}`);
+        } catch (e) { console.error('Follow-up scheduling failed:', e.message); }
       } catch (e) { console.error('Review email failed:', e.message); }
 
     } catch (genErr) {
@@ -287,6 +331,30 @@ app.get('/api/audits/:id', async (req, res) => {
     res.json(result[0]);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch audit' });
+  }
+});
+
+// Get audit review as PDF
+app.get('/api/audits/:id/pdf', async (req, res) => {
+  try {
+    const result = await sb('audits', 'GET', null, `?id=eq.${req.params.id}&limit=1`);
+    if (!result?.length) return res.status(404).json({ error: 'Audit not found' });
+    const audit = result[0];
+    if (audit.status !== 'completed') return res.status(400).json({ error: 'Review not yet generated' });
+
+    let lead = null;
+    if (audit.lead_id) {
+      const leads = await sb('leads', 'GET', null, `?id=eq.${audit.lead_id}&limit=1`);
+      lead = leads?.[0];
+    }
+
+    const pdfBuffer = generateReviewPDF(audit, lead);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="ThermaShift-Review-${audit.id}.pdf"`);
+    res.send(Buffer.from(pdfBuffer));
+  } catch (err) {
+    console.error('PDF generation error:', err.message);
+    res.status(500).json({ error: 'Failed to generate PDF' });
   }
 });
 
@@ -497,20 +565,248 @@ app.get('/api/leads/:email/history', async (req, res) => {
   const email = decodeURIComponent(req.params.email);
   try {
     const leads = await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(email)}&limit=1`);
-    if (!leads?.length) return res.json({ lead: null, conversations: [], audits: [], proposals: [], invoices: [] });
+    if (!leads?.length) return res.json({ lead: null, conversations: [], audits: [], proposals: [], invoices: [], call_logs: [] });
 
-    const [conversations, audits, proposals, invoices] = await Promise.all([
+    const [conversations, audits, proposals, invoices, call_logs] = await Promise.all([
       sb('conversations', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=5`),
       sb('audits', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=3`),
       sb('proposals', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=3`),
       sb('invoices', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=10`),
+      sb('call_logs', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=5`).catch(() => []),
     ]);
 
-    res.json({ lead: leads[0], conversations, audits, proposals, invoices });
+    res.json({ lead: leads[0], conversations, audits, proposals, invoices, call_logs });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch history' });
   }
 });
+
+// ═══════════════════════════════════════════════════════════
+// VAPI VOICE CALL WEBHOOK
+// ═══════════════════════════════════════════════════════════
+app.post('/api/webhooks/vapi', async (req, res) => {
+  try {
+    const event = req.body;
+    const type = event.message?.type || event.type;
+    console.log(`Vapi webhook: ${type}`);
+
+    if (type === 'end-of-call-report') {
+      const report = event.message || event;
+      const callId = report.call?.id;
+      const transcript = report.transcript;
+      const summary = report.summary;
+      const duration = report.call?.duration || report.durationSeconds;
+      const endedReason = report.endedReason;
+      const cost = report.cost;
+      const recordingUrl = report.recordingUrl || report.call?.recordingUrl;
+      const customerNumber = report.call?.customer?.number;
+
+      // Try to find lead by phone number
+      let leadId = null;
+      let leadEmail = null;
+      if (customerNumber) {
+        try {
+          const leads = await sb('leads', 'GET', null, `?phone=eq.${encodeURIComponent(customerNumber)}&limit=1`);
+          if (leads?.[0]) {
+            leadId = leads[0].id;
+            leadEmail = leads[0].email;
+          }
+        } catch { /* ok */ }
+      }
+
+      // Save call log
+      const callLog = {
+        vapi_call_id: callId,
+        lead_id: leadId,
+        lead_email: leadEmail,
+        lead_phone: customerNumber,
+        phone_number: report.call?.phoneNumber?.number || '+17866056239',
+        direction: report.call?.direction || 'inbound',
+        duration_seconds: duration,
+        status: 'completed',
+        summary: summary,
+        transcript: JSON.stringify(transcript),
+        recording_url: recordingUrl,
+        assistant_id: report.call?.assistantId,
+        ended_reason: endedReason,
+        cost: cost,
+        created_at: new Date().toISOString(),
+      };
+
+      await sb('call_logs', 'POST', callLog);
+      console.log(`Call log saved: ${callId} (${duration}s, ${customerNumber || 'unknown'})`);
+
+      // Send post-call SMS follow-up
+      if (customerNumber && duration > 30) {
+        try {
+          const leadName = leadEmail ? (await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(leadEmail)}&limit=1`))?.[0]?.name : null;
+          await sendPostCallSMS(customerNumber, leadName);
+        } catch (e) { console.error('Post-call SMS failed:', e.message); }
+      }
+
+      // Notify Steve of the call
+      try {
+        const RESEND_KEY = process.env.RESEND_API_KEY;
+        if (RESEND_KEY) {
+          await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${RESEND_KEY}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              from: 'ThermaShift <notifications@thermashift.net>',
+              to: ['admin@thermashift.net'],
+              subject: `Voice Call: ${customerNumber || 'Unknown'} (${Math.round(duration / 60)}min)`,
+              html: `<div style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;">
+                <div style="background:#0a1628;color:#fff;padding:24px 32px;border-radius:12px 12px 0 0;">
+                  <h1 style="margin:0;font-size:20px;">Alex Handled a Phone Call</h1>
+                </div>
+                <div style="background:#f8fafc;padding:24px 32px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;">
+                  <p><strong>Caller:</strong> ${customerNumber || 'Unknown'}</p>
+                  <p><strong>Duration:</strong> ${Math.round(duration / 60)} minutes</p>
+                  <p><strong>Ended:</strong> ${endedReason || 'Normal'}</p>
+                  ${leadEmail ? `<p><strong>Lead:</strong> ${leadEmail}</p>` : ''}
+                  ${summary ? `<p><strong>Summary:</strong> ${summary}</p>` : ''}
+                  ${recordingUrl ? `<p><a href="${recordingUrl}">Listen to Recording</a></p>` : ''}
+                </div>
+              </div>`,
+            }),
+          });
+        }
+      } catch (e) { console.error('Call notification email failed:', e.message); }
+    }
+
+    res.json({ received: true });
+  } catch (err) {
+    console.error('Vapi webhook error:', err.message);
+    res.status(400).json({ error: 'Webhook processing failed' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// FOLLOW-UP EMAIL PROCESSOR
+// ═══════════════════════════════════════════════════════════
+app.post('/api/follow-ups/process', async (req, res) => {
+  try {
+    const result = await processDueFollowUps(sb);
+    res.json(result);
+  } catch (err) {
+    console.error('Follow-up processing error:', err.message);
+    res.status(500).json({ error: 'Failed to process follow-ups' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// ADMIN DASHBOARD API
+// ═══════════════════════════════════════════════════════════
+
+// Get all leads with scores, sorted by score
+app.get('/api/admin/leads', async (req, res) => {
+  try {
+    const leads = await sb('leads', 'GET', null, '?order=lead_score.desc.nullsfirst,created_at.desc&limit=50');
+    res.json(leads || []);
+  } catch { res.status(500).json({ error: 'Failed to fetch leads' }); }
+});
+
+// Get pipeline summary stats
+app.get('/api/admin/stats', async (req, res) => {
+  try {
+    const [leads, audits, proposals, invoices, callLogs] = await Promise.all([
+      sb('leads', 'GET', null, '?select=id,status,lead_score,created_at&order=created_at.desc&limit=500'),
+      sb('audits', 'GET', null, '?select=id,status,estimated_annual_savings,created_at&order=created_at.desc&limit=100'),
+      sb('proposals', 'GET', null, '?select=id,status,total_value,created_at&order=created_at.desc&limit=100'),
+      sb('invoices', 'GET', null, '?select=id,status,total,paid_at&order=created_at.desc&limit=100'),
+      sb('call_logs', 'GET', null, '?select=id,duration_seconds,created_at&order=created_at.desc&limit=100').catch(() => []),
+    ]);
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const thisWeek = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const stats = {
+      total_leads: leads?.length || 0,
+      new_leads_today: leads?.filter(l => l.created_at >= today).length || 0,
+      new_leads_week: leads?.filter(l => l.created_at >= thisWeek).length || 0,
+      hot_leads: leads?.filter(l => l.lead_score >= 75).length || 0,
+      warm_leads: leads?.filter(l => l.lead_score >= 50 && l.lead_score < 75).length || 0,
+      audits_completed: audits?.filter(a => a.status === 'completed').length || 0,
+      audits_pending: audits?.filter(a => a.status === 'generating' || a.status === 'collecting').length || 0,
+      total_savings_identified: audits?.reduce((sum, a) => sum + (a.estimated_annual_savings || 0), 0) || 0,
+      proposals_sent: proposals?.filter(p => p.status === 'sent').length || 0,
+      proposals_accepted: proposals?.filter(p => p.status === 'accepted').length || 0,
+      total_pipeline_value: proposals?.reduce((sum, p) => sum + (p.total_value || 0), 0) || 0,
+      invoices_paid: invoices?.filter(i => i.status === 'paid').length || 0,
+      total_revenue: invoices?.filter(i => i.status === 'paid').reduce((sum, i) => sum + (i.total || 0), 0) || 0,
+      total_calls: callLogs?.length || 0,
+      total_call_minutes: Math.round((callLogs?.reduce((sum, c) => sum + (c.duration_seconds || 0), 0) || 0) / 60),
+    };
+
+    res.json(stats);
+  } catch (err) {
+    console.error('Stats error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch stats' });
+  }
+});
+
+// Get recent activity feed for dashboard
+app.get('/api/admin/activity', async (req, res) => {
+  try {
+    const [leads, audits, proposals, calls] = await Promise.all([
+      sb('leads', 'GET', null, '?select=id,name,email,company,lead_score,status,created_at&order=created_at.desc&limit=10'),
+      sb('audits', 'GET', null, '?select=id,lead_email,status,estimated_annual_savings,created_at&order=created_at.desc&limit=10'),
+      sb('proposals', 'GET', null, '?select=id,lead_email,status,total_value,created_at&order=created_at.desc&limit=10'),
+      sb('call_logs', 'GET', null, '?select=id,lead_phone,lead_email,duration_seconds,summary,created_at&order=created_at.desc&limit=10').catch(() => []),
+    ]);
+
+    // Merge and sort by time
+    const activity = [
+      ...(leads || []).map(l => ({ type: 'lead', data: l, time: l.created_at })),
+      ...(audits || []).map(a => ({ type: 'audit', data: a, time: a.created_at })),
+      ...(proposals || []).map(p => ({ type: 'proposal', data: p, time: p.created_at })),
+      ...(calls || []).map(c => ({ type: 'call', data: c, time: c.created_at })),
+    ].sort((a, b) => new Date(b.time) - new Date(a.time)).slice(0, 20);
+
+    res.json(activity);
+  } catch { res.status(500).json({ error: 'Failed to fetch activity' }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// RETURNING VISITOR LOOKUP
+// ═══════════════════════════════════════════════════════════
+app.get('/api/leads/lookup/:email', async (req, res) => {
+  const email = decodeURIComponent(req.params.email);
+  try {
+    const leads = await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(email)}&limit=1`);
+    if (!leads?.length) return res.json({ found: false });
+
+    const lead = leads[0];
+    const audits = await sb('audits', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=1`).catch(() => []);
+
+    res.json({
+      found: true,
+      name: lead.name,
+      company: lead.company,
+      status: lead.status,
+      lead_score: lead.lead_score,
+      last_audit: audits?.[0] ? {
+        status: audits[0].status,
+        estimated_annual_savings: audits[0].estimated_annual_savings,
+        target_pue: audits[0].target_pue,
+        recommended_services: audits[0].recommended_services,
+      } : null,
+    });
+  } catch { res.json({ found: false }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// FOLLOW-UP CRON (runs every 5 minutes)
+// ═══════════════════════════════════════════════════════════
+setInterval(async () => {
+  try {
+    const result = await processDueFollowUps(sb);
+    if (result.processed > 0) {
+      console.log(`Follow-up cron: sent ${result.processed} emails`);
+    }
+  } catch (e) { console.error('Follow-up cron error:', e.message); }
+}, 5 * 60 * 1000); // Every 5 minutes
 
 // ═══════════════════════════════════════════════════════════
 // STATIC FILES (production — serves the built React app)
@@ -546,7 +842,18 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('  PAYMENTS');
   console.log('    POST /api/payments/create-checkout — Stripe checkout session');
   console.log('    POST /api/webhooks/stripe         — Stripe payment webhook');
+  console.log('  VOICE');
+  console.log('    POST /api/webhooks/vapi           — Vapi call transcript webhook');
+  console.log('  FOLLOW-UPS');
+  console.log('    POST /api/follow-ups/process      — Process due follow-up emails');
+  console.log('  ADMIN');
+  console.log('    GET  /api/admin/leads             — All leads with scores');
+  console.log('    GET  /api/admin/stats             — Pipeline summary stats');
+  console.log('    GET  /api/admin/activity          — Recent activity feed');
+  console.log('    GET  /api/leads/lookup/:email     — Returning visitor lookup');
   console.log('');
   console.log(`  Stripe: ${STRIPE_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED (add STRIPE_SECRET_KEY to .env)'}`);
+  console.log(`  Resend: ${process.env.RESEND_API_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
+  console.log('  Follow-up cron: running every 5 minutes');
   console.log('');
 });

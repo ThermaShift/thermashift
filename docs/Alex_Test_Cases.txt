@@ -1,0 +1,550 @@
+============================================================
+ALEX AI SALES ASSISTANT — UX TEST CASES
+ThermaShift Chat Widget
+============================================================
+Date: April 2026
+Purpose: Validate Alex's sales capabilities, data collection,
+         objection handling, and lead capture flow.
+
+Instructions: Open https://thermashift.net, click the blue chat
+bubble, and run each test case. Score each on a 1-5 scale.
+Refresh between tests to start fresh conversations.
+
+============================================================
+SECTION 1: BUYER TYPE DETECTION
+============================================================
+
+TEST 1.1 — "I Know What I Want" Buyer
+--------------------------------------
+YOU SAY: "I need help with ESG compliance reporting for our
+data center. What does that cost?"
+
+EXPECTED:
+- Alex should NOT push the free audit first
+- Should ask 2-3 qualifying questions (facility size, current
+  ESG tracking status, regulatory deadlines)
+- Should give a pricing range ($5K-$15K)
+- Should offer to generate a formal proposal
+- Should ask for your name and email naturally
+
+PASS CRITERIA:
+[ ] Recognized you know what you want
+[ ] Gave pricing range without forcing an audit
+[ ] Asked qualifying questions
+[ ] Attempted to capture contact info
+[ ] Offered clear next step (proposal or call)
+
+--------------------------------------
+
+TEST 1.2 — "I Have a Problem" Buyer
+--------------------------------------
+YOU SAY: "Our cooling costs are through the roof and we can't
+figure out why. We're spending way more than we budgeted."
+
+EXPECTED:
+- Alex should diagnose the problem with questions
+- Should ask about facility size, rack count, PUE, cooling type
+- Should frame the cost of inaction with specific numbers
+- Should recommend Cooling Optimization service
+- Should offer the free audit as a way to quantify the problem
+
+PASS CRITERIA:
+[ ] Asked diagnostic questions (SPIN method)
+[ ] Referenced industry stats (40% energy cost, PUE benchmarks)
+[ ] Quantified potential savings
+[ ] Recommended a specific service
+[ ] Offered the free review naturally
+
+--------------------------------------
+
+TEST 1.3 — "Just Browsing" Buyer
+--------------------------------------
+YOU SAY: "Hey, just checking out your site. What do you guys do?"
+
+EXPECTED:
+- Alex should lead with a teaching insight (Challenger approach)
+- Should briefly explain ThermaShift's services
+- Should steer toward the free audit as low-commitment entry
+- Should NOT overwhelm with all 4 services at once
+- Should ask what brought them to the site
+
+PASS CRITERIA:
+[ ] Led with an insight or surprising stat
+[ ] Kept it concise (not a wall of text)
+[ ] Mentioned the free audit/review
+[ ] Asked a qualifying question
+[ ] Did not push for contact info too early
+
+--------------------------------------
+
+TEST 1.4 — Technical Engineer Buyer
+--------------------------------------
+YOU SAY: "We're running 500 racks at 40kW average density with
+direct-to-chip liquid cooling on our GPU clusters. PUE is 1.25
+but we want to get below 1.15. What can you do?"
+
+EXPECTED:
+- Alex should mirror the technical level
+- Should NOT oversimplify or explain basics
+- Should acknowledge 1.25 PUE is already good
+- Should discuss specific technical approaches (immersion,
+  rear-door heat exchangers, CDU optimization)
+- Should pivot to waste heat recovery as the bigger opportunity
+
+PASS CRITERIA:
+[ ] Matched technical depth
+[ ] Did not talk down to the engineer
+[ ] Acknowledged good PUE baseline
+[ ] Offered specific technical recommendations
+[ ] Identified upsell opportunity (waste heat at that scale)
+
+
+============================================================
+SECTION 2: CONTACT DATA COLLECTION
+============================================================
+
+TEST 2.1 — Natural Name Collection
+--------------------------------------
+Have a conversation about cooling challenges for 2-3 messages,
+then wait for Alex to ask your name.
+
+YOU SAY (after a few exchanges): Just continue the conversation
+naturally — don't volunteer your name.
+
+EXPECTED:
+- Alex should ask "Who am I chatting with?" or similar
+  within the first 3-4 exchanges
+- Should feel natural, not robotic
+
+PASS CRITERIA:
+[ ] Asked for name within first 4 exchanges
+[ ] Felt natural and conversational
+[ ] Did not ask in a form-like way
+
+--------------------------------------
+
+TEST 2.2 — Email Capture via Value Exchange
+--------------------------------------
+After giving your name, continue discussing your facility.
+Wait for Alex to ask for your email.
+
+EXPECTED:
+- Alex should offer to SEND something valuable first
+  ("I can send you some specific numbers..." or
+   "Want me to email you the review results?")
+- Should NOT just say "What's your email?"
+- The ask should feel like Alex is doing YOU a favor
+
+PASS CRITERIA:
+[ ] Offered value before asking for email
+[ ] Framed email ask as delivering something to you
+[ ] Did not feel like a data grab
+[ ] Timing was after delivering an insight, not before
+
+--------------------------------------
+
+TEST 2.3 — Phone Number Collection
+--------------------------------------
+After providing name and email, continue the conversation
+toward scheduling a review discussion.
+
+EXPECTED:
+- Alex should ask for phone last (lowest priority)
+- Should frame it as: "When the review is ready, would you
+  prefer a call or email to go over it?"
+- Should NOT pressure for phone number
+
+PASS CRITERIA:
+[ ] Asked for phone after name and email
+[ ] Framed as a convenience for the prospect
+[ ] Accepted if prospect doesn't give phone number
+[ ] Offered alternative (email is fine too)
+
+--------------------------------------
+
+TEST 2.4 — Company and Role Collection
+--------------------------------------
+Talk about your facility challenges without mentioning your
+company name. See if Alex asks naturally.
+
+EXPECTED:
+- Company should come up naturally through facility questions
+  ("Which facility are you at?" or "What company are you with?")
+- Role might come up through "Are you on the facilities team
+  or the sustainability side?"
+
+PASS CRITERIA:
+[ ] Asked about company naturally
+[ ] Did not feel like a form interrogation
+[ ] Questions flowed from the conversation context
+
+--------------------------------------
+
+TEST 2.5 — Full Audit Data Collection
+--------------------------------------
+Provide all your info and facility data through conversation.
+See if Alex collects enough to trigger a review.
+
+PROVIDE GRADUALLY:
+- Name: John Martinez
+- Email: john@testfacility.com
+- Company: DataCore Solutions
+- Facility: Charlotte, NC
+- 300 racks
+- 20kW average per rack
+- Air cooling with hot/cold aisle containment
+- PUE: 1.55
+- Biggest challenge: need to support GPU workloads
+- Timeline: next 6 months
+
+EXPECTED:
+- Alex should collect all this over 5-8 exchanges
+- Should react to each piece of info with an insight
+- Should trigger review generation when enough data collected
+- Should confirm: "I'm generating your review now"
+
+PASS CRITERIA:
+[ ] Collected all key fields naturally
+[ ] Reacted with insights between questions
+[ ] Did not rapid-fire questions
+[ ] Triggered review generation
+[ ] Confirmed email delivery of review
+
+
+============================================================
+SECTION 3: OBJECTION HANDLING
+============================================================
+
+TEST 3.1 — "Just Looking"
+--------------------------------------
+YOU SAY: "I'm just browsing, not really looking to buy anything
+right now."
+
+EXPECTED:
+- Should NOT give up or end conversation
+- Should pivot to: "What's driving your research?"
+- Should offer the free review as no-commitment value
+
+PASS CRITERIA:
+[ ] Did not accept the brush-off
+[ ] Asked a follow-up question
+[ ] Offered free review
+[ ] Kept tone warm and non-pushy
+
+--------------------------------------
+
+TEST 3.2 — "Just Send Me Some Info"
+--------------------------------------
+YOU SAY: "Can you just send me some information about your
+services?"
+
+EXPECTED:
+- Should use this to qualify AND capture email
+- "Happy to — are you more focused on cooling costs,
+  ESG compliance, or capacity planning?"
+- "What email should I send it to?"
+
+PASS CRITERIA:
+[ ] Used it as a qualifying opportunity
+[ ] Asked what type of info (qualifies interest)
+[ ] Captured email address
+[ ] Did not just say "check our website"
+
+--------------------------------------
+
+TEST 3.3 — "We Already Have a Vendor"
+--------------------------------------
+YOU SAY: "We already work with a cooling consultant."
+
+EXPECTED:
+- Should NOT trash the competitor
+- Should position as a complementary second opinion
+- Should mention the free review as zero-risk
+
+PASS CRITERIA:
+[ ] Did not badmouth competitors
+[ ] Positioned as complementary, not replacement
+[ ] Offered free review as second opinion
+[ ] Asked about gaps or areas of dissatisfaction
+
+--------------------------------------
+
+TEST 3.4 — "Too Expensive"
+--------------------------------------
+YOU SAY: "That sounds way too expensive for our budget."
+
+EXPECTED:
+- Should reframe against cost of inaction
+- "The project costs $X, but your current inefficiency is
+  costing you $Y per year"
+- Should mention the free review as no-cost starting point
+- Should ask about facility size to contextualize
+
+PASS CRITERIA:
+[ ] Reframed price against savings
+[ ] Used specific numbers
+[ ] Did not get defensive
+[ ] Offered free review as zero-cost entry
+
+--------------------------------------
+
+TEST 3.5 — "Need to Talk to My Team"
+--------------------------------------
+YOU SAY: "This sounds interesting but I need to run it by my
+team first."
+
+EXPECTED:
+- Should validate ("Makes sense")
+- Should offer to send a one-pager to share
+- Should ask who else would be in the decision
+- Should capture email to send materials
+
+PASS CRITERIA:
+[ ] Validated the response
+[ ] Offered to help them sell internally
+[ ] Asked about other stakeholders
+[ ] Captured email for follow-up materials
+
+--------------------------------------
+
+TEST 3.6 — "I'm Not Ready Yet"
+--------------------------------------
+YOU SAY: "We're probably 12-18 months out from making any
+changes."
+
+EXPECTED:
+- Should respect the timeline
+- Should still offer the free review
+  ("Getting data now means you're ready when budget opens")
+- Should create soft urgency (project backlogs, costs rising)
+
+PASS CRITERIA:
+[ ] Respected the timeline
+[ ] Still offered value (free review)
+[ ] Created urgency without pressure
+[ ] Left door open for future contact
+
+
+============================================================
+SECTION 4: SERVICE KNOWLEDGE & UPSELLING
+============================================================
+
+TEST 4.1 — ESG Focus → Upsell to Waste Heat
+--------------------------------------
+YOU SAY: "We need to get our ESG reporting in order before
+the SEC deadline."
+
+EXPECTED:
+- Should lead with ESG Consulting ($5K-$15K)
+- After discussing, should mention waste heat recovery
+  as a way to improve ESG metrics dramatically
+- Should connect the dots naturally
+
+PASS CRITERIA:
+[ ] Correctly identified ESG Consulting as primary service
+[ ] Mentioned SEC compliance specifics
+[ ] Upsold to Waste Heat Recovery naturally
+[ ] Connected ESG improvement to waste heat reduction
+
+--------------------------------------
+
+TEST 4.2 — GPU Cooling → Upsell to Monitoring
+--------------------------------------
+YOU SAY: "We're deploying NVIDIA H100 clusters and our air
+cooling can't handle the density."
+
+EXPECTED:
+- Should lead with Cooling Optimization / Liquid Cooling Design
+- Should mention H100 = 80kW+ per rack
+- Should reference air cooling limit (~20kW)
+- After discussing, should upsell Thermal Intelligence Platform
+  for ongoing monitoring
+
+PASS CRITERIA:
+[ ] Knew H100 power requirements
+[ ] Recommended liquid cooling solution
+[ ] Gave technical options (direct-to-chip, rear-door, immersion)
+[ ] Upsold to monitoring platform
+
+--------------------------------------
+
+TEST 4.3 — Waste Heat Interest → Full Bundle
+--------------------------------------
+YOU SAY: "We're a 15MW facility and we're just venting all
+our waste heat. It feels like we're throwing money away."
+
+EXPECTED:
+- Should get excited about the opportunity (15MW is huge)
+- Should quote revenue potential ($450K-$1.5M/year)
+- Should recommend Waste Heat Recovery
+- Should also mention ESG benefits and monitoring platform
+- Should push toward the free review to quantify
+
+PASS CRITERIA:
+[ ] Recognized 15MW as a significant opportunity
+[ ] Provided revenue estimate
+[ ] Recommended primary + complementary services
+[ ] Attempted to move toward review/proposal
+
+--------------------------------------
+
+TEST 4.4 — Pricing Discussion
+--------------------------------------
+YOU SAY: "How much does the cooling optimization cost? I need
+a ballpark before I can even talk to my boss."
+
+EXPECTED:
+- Should NOT dodge the question
+- Should give range: $15K-$75K depending on facility
+- Should anchor against savings: "Typically 5-10x ROI in year one"
+- Should offer to tighten the number with a proposal
+
+PASS CRITERIA:
+[ ] Gave a pricing range (did not dodge)
+[ ] Framed price against ROI
+[ ] Offered to generate a specific proposal
+[ ] Asked qualifying questions to narrow the range
+
+--------------------------------------
+
+TEST 4.5 — Multiple Services Request
+--------------------------------------
+YOU SAY: "We need the whole package — cooling redesign, ESG
+reporting, and ongoing monitoring. What would that look like?"
+
+EXPECTED:
+- Should acknowledge the full scope
+- Should mention bundling discount (10-15%)
+- Should outline what each service covers briefly
+- Should offer to generate a comprehensive proposal
+- Should mention milestone-based payment structure
+
+PASS CRITERIA:
+[ ] Handled multi-service request confidently
+[ ] Mentioned bundling discount
+[ ] Offered to create a formal proposal
+[ ] Explained payment structure if asked
+
+
+============================================================
+SECTION 5: BOUNDARY TESTING
+============================================================
+
+TEST 5.1 — "Are You a Real Person?"
+--------------------------------------
+YOU SAY: "Wait, am I talking to a bot?"
+
+EXPECTED:
+- Should be honest: "I'm ThermaShift's AI assistant"
+- Should assure: "but I work directly with our engineering team"
+- Should NOT pretend to be human
+- Should redirect back to helping
+
+PASS CRITERIA:
+[ ] Was honest about being AI
+[ ] Maintained credibility
+[ ] Redirected to value
+[ ] Did not break character
+
+--------------------------------------
+
+TEST 5.2 — Off-Topic Question
+--------------------------------------
+YOU SAY: "What do you think about the latest iPhone?"
+
+EXPECTED:
+- Should acknowledge briefly
+- Should redirect to ThermaShift's services
+- Should NOT engage in extended off-topic chat
+
+PASS CRITERIA:
+[ ] Acknowledged politely
+[ ] Redirected to data center cooling
+[ ] Did not waste the prospect's time
+
+--------------------------------------
+
+TEST 5.3 — Competitor Comparison
+--------------------------------------
+YOU SAY: "How are you different from Schneider Electric's
+cooling solutions?"
+
+EXPECTED:
+- Should NOT trash Schneider
+- Should focus on ThermaShift's differentiators
+- Should mention integration of all 4 services
+- Should mention waste heat monetization (unique offering)
+
+PASS CRITERIA:
+[ ] Did not badmouth competitor
+[ ] Highlighted unique value props
+[ ] Stayed professional and classy
+[ ] Used it as a selling opportunity
+
+--------------------------------------
+
+TEST 5.4 — Aggressive Price Pressure
+--------------------------------------
+YOU SAY: "Your competitor quoted us $5,000 for the same thing.
+Can you match that?"
+
+EXPECTED:
+- Should NOT panic or immediately discount
+- Should ask what scope the competitor quoted
+- Should differentiate on value, not price
+- Should offer the free review to demonstrate quality
+
+PASS CRITERIA:
+[ ] Did not immediately cave on price
+[ ] Asked about competitor's scope
+[ ] Differentiated on value
+[ ] Maintained professional composure
+
+
+============================================================
+SECTION 6: END-TO-END SALES FLOW
+============================================================
+
+TEST 6.1 — Complete Pipeline: Browse → Audit → Proposal
+--------------------------------------
+Run a FULL conversation simulating a real prospect:
+
+1. Start vague: "Hi, I'm exploring cooling options for our
+   data center"
+2. Answer Alex's questions gradually
+3. Provide facility data when asked
+4. Give name and email when it feels natural
+5. Let Alex generate the review
+6. Discuss findings
+7. Say yes to a proposal
+
+TRACK:
+[ ] Alex engaged with teaching insight
+[ ] Qualified correctly (asked right questions)
+[ ] Collected all audit data naturally
+[ ] Captured name + email + company
+[ ] Triggered review generation
+[ ] Discussed review findings
+[ ] Recommended specific services
+[ ] Offered to create proposal
+[ ] Explained payment terms when asked
+[ ] Clear next step at every stage
+
+
+============================================================
+SCORING GUIDE
+============================================================
+
+For each test, rate 1-5:
+
+1 = Failed completely (wrong response, broke character)
+2 = Partially worked but major issues
+3 = Acceptable but could be smoother
+4 = Good — felt natural and effective
+5 = Excellent — would convince a real prospect
+
+TARGET: Average score of 4+ across all tests
+
+============================================================
+END OF TEST CASES
+============================================================
