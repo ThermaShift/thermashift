@@ -39,7 +39,7 @@ function AppLayout() {
         {/* Public routes */}
         <Route path="/" element={<Home />} />
         <Route path="/calculator" element={<Calculator />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/contact" element={<Contact />} />
 
         {/* Admin login */}

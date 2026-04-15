@@ -695,11 +695,26 @@ app.post('/api/follow-ups/process', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// ADMIN DASHBOARD API
+// ADMIN DASHBOARD API (protected)
 // ═══════════════════════════════════════════════════════════
 
+// Admin auth middleware — checks password hash in x-admin-token header
+const ADMIN_HASH = '6a1cf8ff6fa4491a4b3d9e22d6ef2ea31f2873c631fce4401ee49d6be788762f';
+async function adminAuth(req, res, next) {
+  const token = req.headers['x-admin-token'];
+  if (!token) return res.status(401).json({ error: 'Admin authentication required' });
+  try {
+    const crypto = await import('crypto');
+    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    if (hash !== ADMIN_HASH) return res.status(403).json({ error: 'Invalid admin credentials' });
+    next();
+  } catch {
+    return res.status(500).json({ error: 'Auth check failed' });
+  }
+}
+
 // Get all leads with scores, sorted by score
-app.get('/api/admin/leads', async (req, res) => {
+app.get('/api/admin/leads', adminAuth, async (req, res) => {
   try {
     const leads = await sb('leads', 'GET', null, '?order=lead_score.desc.nullsfirst,created_at.desc&limit=50');
     res.json(leads || []);
@@ -707,7 +722,7 @@ app.get('/api/admin/leads', async (req, res) => {
 });
 
 // Get pipeline summary stats
-app.get('/api/admin/stats', async (req, res) => {
+app.get('/api/admin/stats', adminAuth, async (req, res) => {
   try {
     const [leads, audits, proposals, invoices, callLogs] = await Promise.all([
       sb('leads', 'GET', null, '?select=id,status,lead_score,created_at&order=created_at.desc&limit=500'),
@@ -747,7 +762,7 @@ app.get('/api/admin/stats', async (req, res) => {
 });
 
 // Get recent activity feed for dashboard
-app.get('/api/admin/activity', async (req, res) => {
+app.get('/api/admin/activity', adminAuth, async (req, res) => {
   try {
     const [leads, audits, proposals, calls] = await Promise.all([
       sb('leads', 'GET', null, '?select=id,name,email,company,lead_score,status,created_at&order=created_at.desc&limit=10'),

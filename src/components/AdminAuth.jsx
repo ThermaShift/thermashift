@@ -19,6 +19,7 @@ export function AuthProvider({ children }) {
     const hash = await sha256(password);
     if (hash === HASH) {
       sessionStorage.setItem('ts_admin', 'true');
+      sessionStorage.setItem('ts_admin_pw', password);
       setAuthed(true);
       return true;
     }
@@ -27,6 +28,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     sessionStorage.removeItem('ts_admin');
+    sessionStorage.removeItem('ts_admin_pw');
     setAuthed(false);
   };
 
@@ -63,6 +65,9 @@ export function AdminLogin() {
             You have access to internal tools. Use the links below or navigate directly.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+            <Link to="/dashboard" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
+              Sales Pipeline Dashboard
+            </Link>
             <Link to="/tracker" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
               CRM Tracker
             </Link>

@@ -72,9 +72,11 @@ function SalesPipeline() {
   useEffect(() => {
     async function load() {
       try {
+        const adminPw = sessionStorage.getItem('ts_admin_pw') || '';
+        const headers = { 'x-admin-token': adminPw };
         const [statsRes, activityRes] = await Promise.all([
-          fetch('/api/admin/stats'),
-          fetch('/api/admin/activity'),
+          fetch('/api/admin/stats', { headers }),
+          fetch('/api/admin/activity', { headers }),
         ]);
         if (statsRes.ok) setStats(await statsRes.json());
         if (activityRes.ok) setActivity(await activityRes.json());
