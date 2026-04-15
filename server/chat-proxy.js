@@ -9,6 +9,7 @@ import { calculateLeadScore } from './lead-scoring.js';
 import { getFollowUpSchedule, processDueFollowUps } from './follow-ups.js';
 import { sendPostCallSMS } from './sms.js';
 import { generateReviewPDF } from './pdf-generator.js';
+import { addProspects, processDueOutreach } from './outreach.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -812,8 +813,76 @@ app.get('/api/leads/lookup/:email', async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
-// FOLLOW-UP CRON (runs every 5 minutes)
+// COLD EMAIL OUTREACH (protected)
 // ═══════════════════════════════════════════════════════════
+
+// Add prospects to outreach pipeline
+app.post('/api/outreach/prospects', adminAuth, async (req, res) => {
+  const { prospects } = req.body;
+  if (!prospects || !Array.isArray(prospects)) return res.status(400).json({ error: 'prospects array required' });
+  try {
+    const results = await addProspects(prospects, sb);
+    res.json({ success: true, results });
+  } catch (err) {
+    console.error('Outreach error:', err.message);
+    res.status(500).json({ error: 'Failed to add prospects' });
+  }
+});
+
+// Get all prospects with status
+app.get('/api/outreach/prospects', adminAuth, async (req, res) => {
+  try {
+    const prospects = await sb('outreach_prospects', 'GET', null, '?order=created_at.desc&limit=100');
+    res.json(prospects || []);
+  } catch { res.status(500).json({ error: 'Failed to fetch prospects' }); }
+});
+
+// Update prospect status (e.g., mark as replied, opted out)
+app.patch('/api/outreach/prospects/:id', adminAuth, async (req, res) => {
+  try {
+    const result = await sb('outreach_prospects', 'PATCH', {
+      ...req.body,
+      updated_at: new Date().toISOString(),
+    }, `?id=eq.${req.params.id}`);
+    res.json(result?.[0] || { success: true });
+  } catch { res.status(500).json({ error: 'Failed to update prospect' }); }
+});
+
+// Get outreach stats
+app.get('/api/outreach/stats', adminAuth, async (req, res) => {
+  try {
+    const [prospects, emails] = await Promise.all([
+      sb('outreach_prospects', 'GET', null, '?select=id,status&limit=500'),
+      sb('outreach_emails', 'GET', null, '?select=id,status,template&limit=1000'),
+    ]);
+    res.json({
+      total_prospects: prospects?.length || 0,
+      queued: prospects?.filter(p => p.status === 'queued').length || 0,
+      contacted: prospects?.filter(p => p.status === 'contacted').length || 0,
+      replied: prospects?.filter(p => p.status === 'replied').length || 0,
+      converted: prospects?.filter(p => p.status === 'converted').length || 0,
+      opted_out: prospects?.filter(p => p.status === 'opted_out').length || 0,
+      emails_sent: emails?.filter(e => e.status === 'sent').length || 0,
+      emails_pending: emails?.filter(e => e.status === 'pending').length || 0,
+    });
+  } catch { res.status(500).json({ error: 'Failed to fetch stats' }); }
+});
+
+// Manually trigger outreach processing
+app.post('/api/outreach/process', adminAuth, async (req, res) => {
+  try {
+    const result = await processDueOutreach(sb);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to process outreach' });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+// CRON JOBS
+// ═══════════════════════════════════════════════════════════
+
+// Follow-up emails (post-review) — every 5 minutes
 setInterval(async () => {
   try {
     const result = await processDueFollowUps(sb);
@@ -821,7 +890,17 @@ setInterval(async () => {
       console.log(`Follow-up cron: sent ${result.processed} emails`);
     }
   } catch (e) { console.error('Follow-up cron error:', e.message); }
-}, 5 * 60 * 1000); // Every 5 minutes
+}, 5 * 60 * 1000);
+
+// Cold email outreach — every 15 minutes
+setInterval(async () => {
+  try {
+    const result = await processDueOutreach(sb);
+    if (result.processed > 0) {
+      console.log(`Outreach cron: sent ${result.processed} cold emails`);
+    }
+  } catch (e) { console.error('Outreach cron error:', e.message); }
+}, 15 * 60 * 1000);
 
 // ═══════════════════════════════════════════════════════════
 // STATIC FILES (production — serves the built React app)

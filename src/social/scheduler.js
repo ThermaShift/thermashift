@@ -117,7 +117,7 @@ function startScheduler() {
   console.log('\n  Active Schedule');
   console.log('  ===============');
   if (isPlatformEnabled('linkedin')) {
-    console.log('  LinkedIn:   Tue, Thu at 9:00 AM EST');
+    console.log('  LinkedIn:   Mon, Tue, Wed, Thu at 9:00 AM EST');
   }
   if (isPlatformEnabled('twitter')) {
     console.log('  Twitter:    Daily at 8:00 AM, 12:00 PM, 5:00 PM EST');
@@ -219,7 +219,7 @@ Usage:
   node src/social/scheduler.js --help    Show this help message
 
 Schedule:
-  LinkedIn:   Tuesday & Thursday at 9:00 AM EST
+  LinkedIn:   Monday-Thursday at 9:00 AM EST
   Twitter:    Daily at 8:00 AM, 12:00 PM, 5:00 PM EST
   Reddit:     Monday, Wednesday, Friday at 10:00 AM EST
   Facebook:   Monday, Wednesday, Friday at 9:00 AM EST

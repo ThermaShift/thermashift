@@ -69,10 +69,10 @@ export const platforms = {
 
 export const schedule = {
   linkedin: {
-    days: [2, 4],            // Tuesday, Thursday (0=Sun)
+    days: [1, 2, 3, 4],     // Monday, Tuesday, Wednesday, Thursday (0=Sun)
     times: ['09:00'],        // 9 AM EST
     timezone: 'America/New_York',
-    cron: '0 9 * * 2,4',
+    cron: '0 9 * * 1,2,3,4',
   },
   twitter: {
     days: [0, 1, 2, 3, 4, 5, 6], // Daily
