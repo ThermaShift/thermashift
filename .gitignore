@@ -27,6 +27,17 @@ docs/Linkedinpassword.rtf
 # VPS deploy script (contains credentials)
 server/vps-deploy.js
 
+# Outreach data — contains personal contact info, never commit
+apollo-contacts-export.csv
+prospects-apollo.csv
+prospects-research.json
+Apollo password.txt
+*password*.txt
+*password*.rtf
+
+# VNC / debug screenshots may show internal system state
+screenshots/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

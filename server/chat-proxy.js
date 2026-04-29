@@ -10,6 +10,7 @@ import { getFollowUpSchedule, processDueFollowUps } from './follow-ups.js';
 import { sendPostCallSMS } from './sms.js';
 import { generateReviewPDF } from './pdf-generator.js';
 import { addProspects, processDueOutreach } from './outreach.js';
+import { processSensorWebhook, evaluateAlertRules, generateApiKey } from './monitoring.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -879,6 +880,83 @@ app.post('/api/outreach/process', adminAuth, async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// MONITORING SAAS — sensor ingestion + alert engine (Phase 2)
+// ═══════════════════════════════════════════════════════════
+
+// Public webhook endpoint — sensor vendors POST here.
+// URL pattern: /webhook/sensor/:vendor?key=<client_api_key>
+// Vendors: monnit, sensorpush, disruptive, generic
+app.post('/webhook/sensor/:vendor', async (req, res) => {
+  const apiKey = req.query.key || req.headers['x-thermashift-key'];
+  const result = await processSensorWebhook(sb, req.params.vendor, req.body, apiKey);
+  if (result.error) return res.status(result.status || 400).json(result);
+  res.json(result);
+});
+
+// Admin: register a monitoring client (issues an api_key for their webhooks)
+app.post('/api/monitoring/clients', adminAuth, async (req, res) => {
+  try {
+    const apiKey = generateApiKey();
+    const created = await sb('monitoring_clients', 'POST', { ...req.body, api_key: apiKey });
+    res.json(created?.[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/sites', adminAuth, async (req, res) => {
+  try { res.json((await sb('monitoring_sites', 'POST', req.body))?.[0]); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/sensors', adminAuth, async (req, res) => {
+  try { res.json((await sb('monitoring_sensors', 'POST', req.body))?.[0]); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/alert-rules', adminAuth, async (req, res) => {
+  try { res.json((await sb('monitoring_alert_rules', 'POST', req.body))?.[0]); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin testing — manually inject a reading (skips vendor parsing)
+app.post('/api/monitoring/readings/manual', adminAuth, async (req, res) => {
+  try {
+    const { sensor_id, value, unit, recorded_at } = req.body;
+    const sensors = await sb('monitoring_sensors', 'GET', null, `?id=eq.${sensor_id}&limit=1`);
+    const sensor = sensors?.[0];
+    if (!sensor) return res.status(404).json({ error: 'sensor_not_found' });
+    const ts = recorded_at || new Date().toISOString();
+    await sb('monitoring_readings', 'POST', {
+      sensor_id, client_id: sensor.client_id, recorded_at: ts, value, unit: unit || sensor.unit || '',
+    });
+    await sb('monitoring_sensors', 'PATCH',
+      { last_reading_at: ts, last_reading_value: value, updated_at: new Date().toISOString() },
+      `?id=eq.${sensor_id}`);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Admin: client overview (sites, sensors, recent incidents)
+app.get('/api/monitoring/clients/:id/overview', adminAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const [client, sites, sensors, incidents] = await Promise.all([
+      sb('monitoring_clients', 'GET', null, `?id=eq.${id}&limit=1`),
+      sb('monitoring_sites', 'GET', null, `?client_id=eq.${id}&order=created_at.desc`),
+      sb('monitoring_sensors', 'GET', null, `?client_id=eq.${id}&order=created_at.desc`),
+      sb('monitoring_incidents', 'GET', null, `?client_id=eq.${id}&order=opened_at.desc&limit=20`),
+    ]);
+    res.json({ client: client?.[0], sites, sensors, incidents });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/monitoring/incidents', adminAuth, async (req, res) => {
+  try {
+    const status = req.query.status ? `&status=eq.${req.query.status}` : '';
+    res.json(await sb('monitoring_incidents', 'GET', null, `?order=opened_at.desc&limit=100${status}`));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
 // CRON JOBS
 // ═══════════════════════════════════════════════════════════
 
@@ -901,6 +979,16 @@ setInterval(async () => {
     }
   } catch (e) { console.error('Outreach cron error:', e.message); }
 }, 15 * 60 * 1000);
+
+// Monitoring SaaS alert evaluator — every 60 seconds
+setInterval(async () => {
+  try {
+    const result = await evaluateAlertRules(sb);
+    if (result.triggered > 0 || result.recovered > 0) {
+      console.log(`Alert eval: ${result.evaluated} rules, ${result.triggered} triggered, ${result.recovered} recovered`);
+    }
+  } catch (e) { console.error('Alert eval cron error:', e.message); }
+}, 60 * 1000);
 
 // ═══════════════════════════════════════════════════════════
 // STATIC FILES (production — serves the built React app)
@@ -945,9 +1033,20 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('    GET  /api/admin/stats             — Pipeline summary stats');
   console.log('    GET  /api/admin/activity          — Recent activity feed');
   console.log('    GET  /api/leads/lookup/:email     — Returning visitor lookup');
+  console.log('  MONITORING SAAS');
+  console.log('    POST /webhook/sensor/:vendor      — Sensor webhook ingestion (monnit/sensorpush/disruptive/generic)');
+  console.log('    POST /api/monitoring/clients      — Register monitoring client (admin)');
+  console.log('    POST /api/monitoring/sites        — Add site for client (admin)');
+  console.log('    POST /api/monitoring/sensors      — Register sensor (admin)');
+  console.log('    POST /api/monitoring/alert-rules  — Create alert rule (admin)');
+  console.log('    POST /api/monitoring/readings/manual — Inject test reading (admin)');
+  console.log('    GET  /api/monitoring/clients/:id/overview — Client overview');
+  console.log('    GET  /api/monitoring/incidents    — All incidents');
   console.log('');
   console.log(`  Stripe: ${STRIPE_SECRET ? 'CONFIGURED' : 'NOT CONFIGURED (add STRIPE_SECRET_KEY to .env)'}`);
   console.log(`  Resend: ${process.env.RESEND_API_KEY ? 'CONFIGURED' : 'NOT CONFIGURED'}`);
   console.log('  Follow-up cron: running every 5 minutes');
+  console.log('  Outreach cron: running every 15 minutes');
+  console.log('  Alert eval cron: running every 60 seconds');
   console.log('');
 });
