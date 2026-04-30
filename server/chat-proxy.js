@@ -12,6 +12,8 @@ import { generateReviewPDF } from './pdf-generator.js';
 import { addProspects, processDueOutreach } from './outreach.js';
 import { processSensorWebhook, evaluateAlertRules, generateApiKey } from './monitoring.js';
 import { generateAdvice } from './monitoring-advisor.js';
+import { pollInbox } from './ai-closer-inbound.js';
+import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -882,6 +884,60 @@ app.post('/api/webhooks/resend', express.json({ verify: (req, _res, buf) => { re
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+// AI SALES CLOSER — admin endpoints (Phase 6)
+// ═══════════════════════════════════════════════════════════
+
+// List pending AI drafts awaiting Steve's review
+app.get('/api/closer/drafts', adminAuth, async (req, res) => {
+  try {
+    const status = req.query.status || 'pending_review';
+    const drafts = await sb('prospect_messages', 'GET', null,
+      `?direction=eq.outbound&ai_generated=eq.true&status=eq.${status}&order=created_at.desc&limit=50`);
+    // Pull thread context for each
+    const enriched = [];
+    for (const d of drafts || []) {
+      const thread = await sb('prospect_messages', 'GET', null,
+        `?prospect_id=eq.${d.prospect_id}&order=created_at.asc&limit=20`);
+      const prospects = await sb('outreach_prospects', 'GET', null,
+        `?id=eq.${d.prospect_id}&limit=1`);
+      enriched.push({ draft: d, thread, prospect: prospects?.[0] });
+    }
+    res.json(enriched);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Approve + send a draft (optionally with edits)
+app.post('/api/closer/drafts/:id/send', adminAuth, async (req, res) => {
+  try {
+    const result = await sendDraft(sb, req.params.id, {
+      editedBody: req.body?.body,
+      approvedBy: req.body?.approvedBy || 'steve',
+    });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/closer/drafts/:id/reject', adminAuth, async (req, res) => {
+  try {
+    res.json(await rejectDraft(sb, req.params.id, req.body?.reason));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Manual trigger of inbox poll (useful for testing)
+app.post('/api/closer/poll-inbox', adminAuth, async (req, res) => {
+  try { res.json(await pollInbox(sb)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// List scheduled outbound calls
+app.get('/api/closer/scheduled-calls', adminAuth, async (req, res) => {
+  try {
+    const calls = await sb('scheduled_calls', 'GET', null, '?order=scheduled_at.asc&limit=50');
+    res.json(calls || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post('/api/monitoring/client/advisor', clientAuth, async (req, res) => {
   try {
     const { context = 'overview', incident_id } = req.body || {};
@@ -1183,6 +1239,26 @@ setInterval(async () => {
   } catch (e) { console.error('Alert eval cron error:', e.message); }
 }, 60 * 1000);
 
+// AI sales closer — poll Gmail inbox for replies every 5 minutes
+setInterval(async () => {
+  try {
+    const result = await pollInbox(sb);
+    if (result.processed > 0 || result.errors > 0) {
+      console.log(`Closer inbox: ${result.processed} processed, ${result.drafted} drafted, ${result.errors} errors`);
+    }
+  } catch (e) { console.error('Closer inbox cron error:', e.message); }
+}, 5 * 60 * 1000);
+
+// AI sales closer — place due outbound calls every 60 seconds
+setInterval(async () => {
+  try {
+    const result = await placeDueCalls(sb);
+    if (result.placed > 0 || result.errors > 0) {
+      console.log(`Outbound calls: placed ${result.placed}${result.errors ? ', errors ' + result.errors : ''}`);
+    }
+  } catch (e) { console.error('Outbound call cron error:', e.message); }
+}, 60 * 1000);
+
 // ═══════════════════════════════════════════════════════════
 // STATIC FILES (production — serves the built React app)
 // ═══════════════════════════════════════════════════════════
@@ -1241,5 +1317,7 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('  Follow-up cron: running every 5 minutes');
   console.log('  Outreach cron: running every 15 minutes');
   console.log('  Alert eval cron: running every 60 seconds');
+  console.log('  AI closer inbox poll: every 5 minutes (' + (process.env.IMAP_USER ? 'IMAP CONFIGURED' : 'IMAP NOT CONFIGURED — set IMAP_USER + IMAP_PASSWORD to activate') + ')');
+  console.log('  AI closer outbound call cron: every 60 seconds');
   console.log('');
 });
