@@ -2,17 +2,15 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { AuthProvider, ProtectedRoute, AdminLogin } from './components/AdminAuth';
-import { ClientAuthProvider, ClientProtectedRoute, ClientLogin } from './components/ClientAuth';
 import Home from './pages/Home';
 import Calculator from './pages/Calculator';
 import Dashboard from './pages/Dashboard';
 import Tracker from './pages/Tracker';
 import Report from './pages/Report';
 import Proposal from './pages/Proposal';
-import Monitor from './pages/Monitor';
 import Contracts from './pages/Contracts';
 import Content from './pages/Content';
-import ClientPortal from './pages/ClientPortal';
+import Saas from './pages/Saas';
 import Contact from './pages/Contact';
 import ChatWidget from './components/ChatWidget';
 
@@ -30,11 +28,11 @@ function NotFound() {
 
 function AppLayout() {
   const location = useLocation();
-  const isPortal = location.pathname.startsWith('/portal');
+  const isSaas = location.pathname.startsWith('/saas');
 
   return (
     <>
-      {!isPortal && <Navbar />}
+      {!isSaas && <Navbar />}
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<Home />} />
@@ -49,19 +47,17 @@ function AppLayout() {
         <Route path="/tracker" element={<ProtectedRoute><Tracker /></ProtectedRoute>} />
         <Route path="/report" element={<ProtectedRoute><Report /></ProtectedRoute>} />
         <Route path="/proposal" element={<ProtectedRoute><Proposal /></ProtectedRoute>} />
-        <Route path="/monitor" element={<ProtectedRoute><Monitor /></ProtectedRoute>} />
         <Route path="/contracts" element={<ProtectedRoute><Contracts /></ProtectedRoute>} />
 
         <Route path="/content" element={<ProtectedRoute><Content /></ProtectedRoute>} />
 
-        {/* Client portal */}
-        <Route path="/portal" element={<ClientLogin />} />
-        <Route path="/portal/dashboard" element={<ClientProtectedRoute><ClientPortal /></ClientProtectedRoute>} />
+        {/* Monitoring SaaS — api_key based, no auth wrapper (page handles its own) */}
+        <Route path="/saas" element={<Saas />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-      {!isPortal && <Footer />}
-      {!isPortal && <ChatWidget />}
+      {!isSaas && <Footer />}
+      {!isSaas && <ChatWidget />}
     </>
   );
 }
@@ -70,9 +66,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ClientAuthProvider>
-          <AppLayout />
-        </ClientAuthProvider>
+        <AppLayout />
       </AuthProvider>
     </Router>
   );

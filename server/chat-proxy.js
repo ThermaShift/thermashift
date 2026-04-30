@@ -11,6 +11,7 @@ import { sendPostCallSMS } from './sms.js';
 import { generateReviewPDF } from './pdf-generator.js';
 import { addProspects, processDueOutreach } from './outreach.js';
 import { processSensorWebhook, evaluateAlertRules, generateApiKey } from './monitoring.js';
+import { generateAdvice } from './monitoring-advisor.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -714,6 +715,132 @@ async function adminAuth(req, res, next) {
     return res.status(500).json({ error: 'Auth check failed' });
   }
 }
+
+// Client (monitoring SaaS) auth — Bearer <api_key> in Authorization header,
+// or ?key=<api_key> query param. Looks up monitoring_clients, attaches req.client.
+async function clientAuth(req, res, next) {
+  const auth = req.headers['authorization'] || '';
+  const bearer = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  const apiKey = bearer || req.query.key || req.headers['x-thermashift-key'];
+  if (!apiKey) return res.status(401).json({ error: 'Missing api_key' });
+  try {
+    const rows = await sb('monitoring_clients', 'GET', null,
+      `?api_key=eq.${encodeURIComponent(apiKey)}&status=eq.active&limit=1`);
+    if (!rows?.[0]) return res.status(403).json({ error: 'Invalid or inactive api_key' });
+    req.client = rows[0];
+    next();
+  } catch (e) {
+    res.status(500).json({ error: 'Auth check failed' });
+  }
+}
+
+// ─── Client SaaS endpoints (api_key auth) ───────────────────
+
+app.get('/api/monitoring/client/me', clientAuth, (req, res) => {
+  const { id, company, primary_contact_name, primary_contact_email, tier, timezone } = req.client;
+  res.json({ id, company, primary_contact_name, primary_contact_email, tier, timezone });
+});
+
+app.get('/api/monitoring/client/overview', clientAuth, async (req, res) => {
+  try {
+    const cid = req.client.id;
+    const [sites, sensors, openIncidents] = await Promise.all([
+      sb('monitoring_sites', 'GET', null, `?client_id=eq.${cid}&order=name`),
+      sb('monitoring_sensors', 'GET', null, `?client_id=eq.${cid}&order=created_at`),
+      sb('monitoring_incidents', 'GET', null, `?client_id=eq.${cid}&status=in.(open,acknowledged)&order=opened_at.desc`),
+    ]);
+    res.json({ client: req.client, sites, sensors, openIncidents });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/monitoring/client/sensors/:id/readings', clientAuth, async (req, res) => {
+  try {
+    const sensorId = req.params.id;
+    const hours = Math.min(parseInt(req.query.hours) || 24, 24 * 30);
+    // Verify the sensor belongs to this client
+    const sensors = await sb('monitoring_sensors', 'GET', null,
+      `?id=eq.${sensorId}&client_id=eq.${req.client.id}&limit=1`);
+    if (!sensors?.[0]) return res.status(404).json({ error: 'sensor_not_found' });
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const readings = await sb('monitoring_readings', 'GET', null,
+      `?sensor_id=eq.${sensorId}&recorded_at=gte.${since}&order=recorded_at.asc&limit=2000`);
+    res.json({ sensor: sensors[0], readings: readings || [] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/monitoring/client/incidents', clientAuth, async (req, res) => {
+  try {
+    const status = req.query.status ? `&status=eq.${req.query.status}` : '';
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const incidents = await sb('monitoring_incidents', 'GET', null,
+      `?client_id=eq.${req.client.id}&order=opened_at.desc&limit=${limit}${status}`);
+    res.json(incidents || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/monitoring/client/rules', clientAuth, async (req, res) => {
+  try {
+    const rules = await sb('monitoring_alert_rules', 'GET', null,
+      `?client_id=eq.${req.client.id}&order=created_at.desc`);
+    res.json(rules || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/client/rules', clientAuth, async (req, res) => {
+  try {
+    const created = await sb('monitoring_alert_rules', 'POST', { ...req.body, client_id: req.client.id });
+    res.json(created?.[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/monitoring/client/rules/:id', clientAuth, async (req, res) => {
+  try {
+    // Verify the rule belongs to this client
+    const own = await sb('monitoring_alert_rules', 'GET', null,
+      `?id=eq.${req.params.id}&client_id=eq.${req.client.id}&limit=1`);
+    if (!own?.[0]) return res.status(404).json({ error: 'rule_not_found' });
+    const updated = await sb('monitoring_alert_rules', 'PATCH',
+      { ...req.body, updated_at: new Date().toISOString() },
+      `?id=eq.${req.params.id}`);
+    res.json(updated?.[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete('/api/monitoring/client/rules/:id', clientAuth, async (req, res) => {
+  try {
+    const own = await sb('monitoring_alert_rules', 'GET', null,
+      `?id=eq.${req.params.id}&client_id=eq.${req.client.id}&limit=1`);
+    if (!own?.[0]) return res.status(404).json({ error: 'rule_not_found' });
+    await sb('monitoring_alert_rules', 'DELETE', null, `?id=eq.${req.params.id}`);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/client/advisor', clientAuth, async (req, res) => {
+  try {
+    const { context = 'overview', incident_id } = req.body || {};
+    const advice = await generateAdvice(sb, req.client.id, { context, incident_id });
+    res.json(advice);
+  } catch (e) {
+    console.error('Advisor error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/monitoring/client/incidents/:id/ack', clientAuth, async (req, res) => {
+  try {
+    const own = await sb('monitoring_incidents', 'GET', null,
+      `?id=eq.${req.params.id}&client_id=eq.${req.client.id}&limit=1`);
+    if (!own?.[0]) return res.status(404).json({ error: 'incident_not_found' });
+    const updated = await sb('monitoring_incidents', 'PATCH', {
+      status: 'acknowledged',
+      acked_at: new Date().toISOString(),
+      acked_by: req.body?.acked_by || req.client.primary_contact_email,
+      updated_at: new Date().toISOString(),
+    }, `?id=eq.${req.params.id}`);
+    res.json(updated?.[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // Get all leads with scores, sorted by score
 app.get('/api/admin/leads', adminAuth, async (req, res) => {
