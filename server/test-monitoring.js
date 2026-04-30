@@ -30,15 +30,18 @@ async function main() {
   console.log(`\n▶ End-to-end monitoring test (tag=${tag})\n`);
 
   // 1. Create test client with api_key
+  // Set TEST_NOTIFY_EMAIL env var to receive a real email when the incident triggers.
+  const notifyEmail = process.env.TEST_NOTIFY_EMAIL || `${tag}@test.thermashift.net`;
   const apiKey = 'tsk_e2e_' + crypto.randomBytes(8).toString('hex');
   const [client] = await sb('monitoring_clients', 'POST', {
     company: `${tag} Test Co`,
-    primary_contact_email: `${tag}@test.thermashift.net`,
+    primary_contact_name: 'Test Contact',
+    primary_contact_email: notifyEmail,
     api_key: apiKey,
     tier: 'guard',
-    notes: 'Phase 2 E2E test',
+    notes: 'Phase 3 E2E test',
   });
-  log(`✓ client id=${client.id} api_key=${apiKey}`);
+  log(`✓ client id=${client.id} email=${notifyEmail} api_key=${apiKey}`);
 
   // 2. Create site
   const [site] = await sb('monitoring_sites', 'POST', {
@@ -78,8 +81,10 @@ async function main() {
     debounce_count: 2,
     active: true,
     notify_email: true,
+    notify_sms: false,   // skip — no Twilio configured
+    notify_voice: false, // skip — don't want a real phone call during tests
   });
-  log(`✓ rule id=${rule.id} ABOVE 80°F debounce=2`);
+  log(`✓ rule id=${rule.id} ABOVE 80°F debounce=2 notify_email=true`);
 
   // 5. Send a SAFE reading (75°F) — should NOT trigger
   console.log('\n— Phase A: ingest SAFE reading (75°F) —');
@@ -145,7 +150,21 @@ async function main() {
     return;
   }
 
-  console.log('\n✅ ALL PHASES PASSED — ingest, trigger, recover.\n');
+  // 11. Verify notifications were dispatched (Phase 3)
+  console.log('\n— Phase D: verify notifications logged —');
+  const notifs = await sb('monitoring_alert_notifications', 'GET', null,
+    `?incident_id=eq.${incidents[0].id}&order=created_at.desc`);
+  log(`notifications logged: ${notifs.length}`);
+  for (const n of notifs) {
+    log(`  channel=${n.channel} status=${n.status} recipient=${n.recipient}${n.error ? ' error=' + n.error : ''}${n.provider_id ? ' id=' + n.provider_id : ''}`);
+  }
+  if (!notifs.length) {
+    console.log('\n⚠ Phase 3 WARNING — incident triggered but no notifications were logged. Check Resend/Vapi config.');
+  } else {
+    log(`✓ ${notifs.filter(n => n.status === 'sent').length}/${notifs.length} notifications sent successfully`);
+  }
+
+  console.log('\n✅ ALL PHASES PASSED — ingest, trigger, recover, notify.\n');
   console.log(`Cleanup query (run if you want to drop the test data):`);
   console.log(`  DELETE FROM monitoring_incidents WHERE alert_rule_id = ${rule.id};`);
   console.log(`  DELETE FROM monitoring_readings WHERE sensor_id = ${sensor.id};`);

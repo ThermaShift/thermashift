@@ -16,6 +16,7 @@
  */
 
 import crypto from 'crypto';
+import { notifyIncident } from './monitoring-notify.js';
 
 // ═══════════════════════════════════════════════════════════
 // VENDOR ADAPTERS — translate webhook payloads to canonical readings
@@ -245,7 +246,7 @@ export async function evaluateAlertRules(sb) {
 
       if (verdict === 'trigger') {
         const triggerValue = readings?.[0]?.value ?? null;
-        await sb('monitoring_incidents', 'POST', {
+        const created = await sb('monitoring_incidents', 'POST', {
           client_id: rule.client_id,
           alert_rule_id: rule.id,
           sensor_id: rule.sensor_id,
@@ -259,16 +260,23 @@ export async function evaluateAlertRules(sb) {
           summary: `${rule.name}: ${rule.rule_type} ${rule.threshold_value} (saw ${triggerValue})`,
         });
         triggered++;
+        // Phase 3: dispatch notifications (don't await — fire-and-forget so the cron stays fast)
+        const newIncident = created?.[0];
+        if (newIncident) {
+          dispatchNotificationsAsync(sb, newIncident, rule, 'triggered');
+        }
       } else if (verdict === 'recover' && openIncident) {
         const opened = new Date(openIncident.opened_at).getTime();
         const duration = Math.floor((Date.now() - opened) / 1000);
-        await sb('monitoring_incidents', 'PATCH', {
+        const resolved = await sb('monitoring_incidents', 'PATCH', {
           status: 'resolved',
           resolved_at: new Date().toISOString(),
           duration_seconds: duration,
           updated_at: new Date().toISOString(),
         }, `?id=eq.${openIncident.id}`);
         recovered++;
+        const updated = resolved?.[0] || { ...openIncident, status: 'resolved', duration_seconds: duration };
+        dispatchNotificationsAsync(sb, updated, rule, 'recovered');
       } else if (verdict === 'noop' && openIncident && readings?.[0]) {
         // Track peak value while incident is still open
         const v = Number(readings[0].value);
@@ -286,6 +294,37 @@ export async function evaluateAlertRules(sb) {
     }
   }
   return { evaluated: rules.length, triggered, recovered };
+}
+
+// ═══════════════════════════════════════════════════════════
+// NOTIFICATION DISPATCH (Phase 3) — fire and forget
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Resolve sensor/site/client for an incident, then call notifyIncident.
+ * Runs async — alert eval cron does not block on notifications.
+ */
+function dispatchNotificationsAsync(sb, incident, rule, eventType) {
+  (async () => {
+    try {
+      const [sensors, sites, clients] = await Promise.all([
+        sb('monitoring_sensors', 'GET', null, `?id=eq.${incident.sensor_id}&limit=1`),
+        incident.site_id ? sb('monitoring_sites', 'GET', null, `?id=eq.${incident.site_id}&limit=1`) : Promise.resolve([]),
+        sb('monitoring_clients', 'GET', null, `?id=eq.${incident.client_id}&limit=1`),
+      ]);
+      const sensor = sensors?.[0];
+      const site = sites?.[0];
+      const client = clients?.[0];
+      const results = await notifyIncident(sb, incident, rule, sensor, site, client, eventType);
+      const sent = results.filter(r => r.ok).length;
+      const failed = results.filter(r => !r.ok && r.status !== 'suppressed_quiet_hours').length;
+      if (sent || failed) {
+        console.log(`Incident #${incident.id} ${eventType}: notified via ${results.map(r => r.channel + (r.ok ? '✓' : '✗')).join(', ')}`);
+      }
+    } catch (e) {
+      console.error(`Notification dispatch failed for incident=${incident.id}:`, e.message);
+    }
+  })();
 }
 
 // ═══════════════════════════════════════════════════════════
