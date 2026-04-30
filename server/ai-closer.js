@@ -48,8 +48,15 @@ REPLY FORMAT:
 - Reference their reply specifically. Read it carefully.
 - Always end with a clear next step (a question, a calendar offer, etc.).
 
-OUTPUT:
-Use tools when relevant, then write the reply text. The reply is what gets sent (after Steve approves).`;
+OUTPUT — CRITICAL:
+You MUST always write reply text in addition to any tool calls. The reply is what the prospect actually sees in their inbox; tool calls are internal bookkeeping. Even when escalating, opting out, or scheduling a call, write 2-4 sentences of human acknowledgment.
+
+Examples of what reply text to write alongside each tool:
+- mark_qualified → "Glad this is timely. Quick context on how we typically engage… [2-3 sentences of value framing] Steve will follow up tomorrow with a few times to talk."
+- schedule_outbound_call → "Locked in for Friday 2pm ET — I'll call +1 404 555 1234. Talk then." (confirm the specific time + number)
+- mark_not_interested → "All good — removed you from my list. Best of luck with the in-house team. If anything changes, my line is open."
+- escalate_to_human → "Sounds great — Steve's actually based in Harrisburg and is in Charlotte regularly. He'll reach out directly to find a time that works."
+- propose_calendly → "Easiest is to grab a slot here: https://calendly.com/thermashift/consultation — or hit me back with a few times that work for you."`;
 
 const TOOLS = [
   {
@@ -159,9 +166,25 @@ export async function generateReply(prospect, thread) {
     }
   }
 
-  // Strip any leading "Re: …" or "Hi X," that may be auto-added by mail clients later — keep them, mail clients render Re: on subject only.
+  // Safety net: Claude sometimes invokes a tool and returns no reply text, leaving the
+  // prospect without a response. Inject a sensible fallback so a human-readable message
+  // always sends.
+  reply_text = reply_text.trim();
+  if (!reply_text && tool_calls.length > 0) {
+    const firstName = (prospect.first_name || '').trim() || 'there';
+    const tool = tool_calls[0].name;
+    const fallbacks = {
+      mark_not_interested: `Hi ${firstName},\n\nAll good — I've removed you from my list. Best of luck with the in-house team. If anything ever changes, my line is always open.\n\nSteve`,
+      escalate_to_human: `Hi ${firstName},\n\nSounds great. I'm based in Harrisburg and in Charlotte regularly — I'll reach out directly to find a time that works for both of us.\n\nSteve`,
+      mark_qualified: `Hi ${firstName},\n\nThanks for the reply. There's a lot we could dig into here — I'll follow up tomorrow with a few specific times that work for a 15-minute call so we can scope the right next step.\n\nSteve`,
+      schedule_outbound_call: `Hi ${firstName},\n\nLocked in. I'll call you at the time and number you provided. Looking forward to it.\n\nSteve`,
+      propose_calendly: `Hi ${firstName},\n\nEasiest way is to grab a slot here: https://calendly.com/thermashift/consultation — or hit me back with a few times that work and I'll book it.\n\nSteve`,
+    };
+    reply_text = fallbacks[tool] || `Hi ${firstName},\n\nGot it — I'll be in touch shortly.\n\nSteve`;
+  }
+
   return {
-    reply_text: reply_text.trim(),
+    reply_text,
     tool_calls,
     raw_usage: data.usage || null,
     stop_reason: data.stop_reason,

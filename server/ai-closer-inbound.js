@@ -6,7 +6,7 @@
  * Required env:
  *   IMAP_HOST=imap.gmail.com (default)
  *   IMAP_PORT=993 (default)
- *   IMAP_USER=luxorfy@gmail.com
+ *   IMAP_USER=thermashiftofficial@gmail.com
  *   IMAP_PASSWORD=<Gmail App Password — 16 chars, generated at https://myaccount.google.com/apppasswords>
  *
  * If IMAP_USER/IMAP_PASSWORD aren't set, the cron silently no-ops.
@@ -33,7 +33,7 @@ const env = () => ({
   user: process.env.IMAP_USER,
   pass: process.env.IMAP_PASSWORD,
   resendKey: process.env.RESEND_API_KEY,
-  steveEmail: process.env.STEVE_NOTIFY_EMAIL || 'luxorfy@gmail.com',
+  steveEmail: process.env.STEVE_NOTIFY_EMAIL || 'admin@thermashift.net',
 });
 
 const SUPABASE_REVIEW_URL = 'https://thermashift.net/dashboard'; // Steve's admin dashboard
