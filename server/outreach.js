@@ -4,7 +4,8 @@
  * Manages follow-up sequences and tracks engagement.
  */
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
+// Read at call time — chat-proxy.js calls dotenv.config() AFTER imports resolve.
+const getResendKey = () => process.env.RESEND_API_KEY;
 const FROM_EMAIL = 'Steve Betancur <steve@thermashift.net>';
 const CALENDLY_LINK = 'https://calendly.com/thermashift/consultation';
 
@@ -141,8 +142,13 @@ export async function addProspects(prospects, sb) {
  * Called by cron every 15 minutes.
  */
 export async function processDueOutreach(sb) {
+  const RESEND_API_KEY = getResendKey();
   if (!RESEND_API_KEY) {
+    console.error('Outreach cron: RESEND_API_KEY missing in env');
     return { processed: 0, note: 'RESEND_API_KEY not configured' };
+  }
+  if (process.env.OUTREACH_PAUSED === '1') {
+    return { processed: 0, note: 'OUTREACH_PAUSED' };
   }
 
   const now = new Date().toISOString();
@@ -184,7 +190,7 @@ export async function processDueOutreach(sb) {
       // Send via Resend
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${getResendKey()}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from: FROM_EMAIL,
           to: [prospect.email],

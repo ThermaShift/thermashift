@@ -816,6 +816,68 @@ app.delete('/api/monitoring/client/rules/:id', clientAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Resend webhooks — receives email lifecycle events (delivered/opened/clicked/bounced/complained)
+// Configure in Resend dashboard: https://resend.com/webhooks
+// Set RESEND_WEBHOOK_SECRET in .env to enable signature verification (Svix format).
+app.post('/api/webhooks/resend', express.json({ verify: (req, _res, buf) => { req.rawBody = buf; } }), async (req, res) => {
+  try {
+    const secret = process.env.RESEND_WEBHOOK_SECRET;
+    if (secret) {
+      const svixId = req.headers['svix-id'];
+      const svixTs = req.headers['svix-timestamp'];
+      const svixSig = req.headers['svix-signature'];
+      if (svixId && svixTs && svixSig && req.rawBody) {
+        const crypto = await import('crypto');
+        const signedContent = `${svixId}.${svixTs}.${req.rawBody.toString()}`;
+        const sk = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+        const expected = 'v1,' + crypto.createHmac('sha256', Buffer.from(sk, 'base64')).update(signedContent).digest('base64');
+        const valid = svixSig.split(' ').some(s => s === expected);
+        if (!valid) return res.status(401).json({ error: 'invalid_signature' });
+      }
+    }
+
+    const { type, data } = req.body || {};
+    const emailId = data?.email_id || data?.id;
+    if (!type || !emailId) return res.json({ ok: true, ignored: true });
+
+    const ts = data?.created_at || new Date().toISOString();
+    const patch = {};
+    let prospectUpdate = null;
+
+    switch (type) {
+      case 'email.delivered':       patch.status = 'sent'; break; // reinforce
+      case 'email.opened':          patch.opened_at = ts; break;
+      case 'email.clicked':         patch.clicked_at = ts; break;
+      case 'email.bounced':
+        patch.status = 'bounced';
+        prospectUpdate = { status: 'opted_out', notes: 'auto-marked: bounced delivery' };
+        break;
+      case 'email.complained':
+        patch.status = 'complained';
+        prospectUpdate = { status: 'opted_out', notes: 'auto-marked: spam complaint' };
+        break;
+      default:
+        return res.json({ ok: true, ignored_type: type });
+    }
+
+    const updated = await sb('outreach_emails', 'PATCH', patch, `?resend_id=eq.${emailId}`);
+
+    if (prospectUpdate && updated?.[0]?.prospect_email) {
+      await sb('outreach_prospects', 'PATCH', prospectUpdate,
+        `?email=eq.${encodeURIComponent(updated[0].prospect_email)}`);
+      // Also cancel any future scheduled emails for this prospect
+      await sb('outreach_emails', 'PATCH', { status: 'skipped' },
+        `?prospect_email=eq.${encodeURIComponent(updated[0].prospect_email)}&status=eq.pending`);
+    }
+
+    console.log(`Resend webhook: ${type} → email ${emailId}${prospectUpdate ? ' + prospect opted_out' : ''}`);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Resend webhook error:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/monitoring/client/advisor', clientAuth, async (req, res) => {
   try {
     const { context = 'overview', incident_id } = req.body || {};
