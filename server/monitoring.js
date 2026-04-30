@@ -188,9 +188,70 @@ export async function processSensorWebhook(sb, vendor, payload, apiKey) {
  * - 'recover': last reading is no longer in violation (single-sample recovery for now).
  * - 'noop': no state change.
  */
-function evaluateRule(rule, readings, hasOpenIncident) {
+// Phase 7C: time-of-day check (returns true if rule is currently within its active window)
+function inActiveWindow(rule, tz = 'America/New_York') {
+  if (rule.active_hour_start == null && rule.active_hour_end == null && !rule.active_days_of_week?.length) return true;
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false, weekday: 'short' });
+  const parts = fmt.formatToParts(now);
+  const hour = Number(parts.find(p => p.type === 'hour').value);
+  const dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const day = dayMap[parts.find(p => p.type === 'weekday').value];
+
+  if (rule.active_days_of_week?.length && !rule.active_days_of_week.includes(day)) return false;
+  if (rule.active_hour_start != null && rule.active_hour_end != null) {
+    const s = rule.active_hour_start, e = rule.active_hour_end;
+    if (s <= e) return hour >= s && hour < e;
+    return hour >= s || hour < e; // wraps midnight
+  }
+  return true;
+}
+
+// Phase 7C: evaluate a single sub-condition (a chunk of a composite rule)
+function evalSingleCondition(cond, readings) {
+  if (!readings.length) return cond.rule_type === 'missing';
+  const latest = readings[0];
+  const v = Number(latest.value);
+  switch (cond.rule_type || 'above') {
+    case 'above': return v > Number(cond.threshold_value);
+    case 'below': return v < Number(cond.threshold_value);
+    case 'delta': {
+      const oldest = readings[readings.length - 1];
+      return Math.abs(v - Number(oldest.value)) > Number(cond.delta_value);
+    }
+    case 'missing': return false; // handled above
+    default: return false;
+  }
+}
+
+function evaluateRule(rule, readings, hasOpenIncident, getReadingsForSensor) {
+  // Phase 7C: time-of-day gate. Outside active window: never trigger; if open incident, can still recover.
+  if (!inActiveWindow(rule)) {
+    if (!hasOpenIncident) return 'noop';
+    // outside window with open incident — keep it open until normal recover logic decides
+  }
+
+  // Phase 7C: composite rule (multiple conditions across same or related sensors)
+  if (rule.composite_logic && Array.isArray(rule.conditions) && rule.conditions.length > 0) {
+    const subResults = [];
+    for (const cond of rule.conditions) {
+      let r;
+      if (cond.sensor_id && cond.sensor_id !== rule.sensor_id && getReadingsForSensor) {
+        r = getReadingsForSensor(cond.sensor_id) || [];
+      } else {
+        r = readings;
+      }
+      subResults.push(evalSingleCondition(cond, r));
+    }
+    const triggered = rule.composite_logic === 'OR'
+      ? subResults.some(Boolean) : subResults.every(Boolean);
+    if (triggered && !hasOpenIncident) return 'trigger';
+    if (!triggered && hasOpenIncident) return 'recover';
+    return 'noop';
+  }
+
+  // Original simple rule path
   if (!readings.length) {
-    // 'missing' rule: trigger if no readings within window
     if (rule.rule_type === 'missing' && rule.missing_after_minutes) {
       return hasOpenIncident ? 'noop' : 'trigger';
     }
@@ -203,7 +264,6 @@ function evaluateRule(rule, readings, hasOpenIncident) {
       case 'above':   return Number(r.value) > Number(rule.threshold_value);
       case 'below':   return Number(r.value) < Number(rule.threshold_value);
       case 'delta': {
-        // simple delta: compare latest to oldest within window
         const oldest = readings[readings.length - 1];
         return Math.abs(Number(latest.value) - Number(oldest.value)) > Number(rule.delta_value);
       }
@@ -242,7 +302,24 @@ export async function evaluateAlertRules(sb) {
         `?alert_rule_id=eq.${rule.id}&status=in.(open,acknowledged)&order=opened_at.desc&limit=1`);
       const openIncident = open?.[0];
 
-      const verdict = evaluateRule(rule, readings || [], !!openIncident);
+      // Phase 7C: provide a readings fetcher for cross-sensor composite conditions
+      const readingsCache = new Map();
+      readingsCache.set(rule.sensor_id, readings || []);
+      const getReadingsForSensor = (sid) => {
+        if (readingsCache.has(sid)) return readingsCache.get(sid);
+        return null;
+      };
+      // Pre-fetch readings for related sensors if composite
+      if (rule.composite_logic && Array.isArray(rule.conditions)) {
+        for (const cond of rule.conditions) {
+          if (cond.sensor_id && cond.sensor_id !== rule.sensor_id && !readingsCache.has(cond.sensor_id)) {
+            const r = await sb('monitoring_readings', 'GET', null,
+              `?sensor_id=eq.${cond.sensor_id}&recorded_at=gte.${windowAgo}&order=recorded_at.desc&limit=20`);
+            readingsCache.set(cond.sensor_id, r || []);
+          }
+        }
+      }
+      const verdict = evaluateRule(rule, readings || [], !!openIncident, getReadingsForSensor);
 
       if (verdict === 'trigger') {
         const triggerValue = readings?.[0]?.value ?? null;

@@ -6,8 +6,10 @@ import {
 import {
   Activity, Thermometer, Droplets, Zap, AlertTriangle, Server,
   RefreshCw, Building, Clock, CheckCircle, XCircle, ArrowLeft, Bell,
-  Sparkles, Plus, Edit3, Trash2, Save,
+  Sparkles, Plus, Edit3, Trash2, Save, MessageSquare, Send, TrendingUp,
+  CreditCard, LayoutDashboard,
 } from 'lucide-react';
+import CustomDashboard from './CustomDashboard';
 
 // ─── Visual helpers ─────────────────────────────────────────
 
@@ -923,6 +925,288 @@ function CoolingAITab({ apiKey, clientTier }) {
   );
 }
 
+// ─── AI Advisor multi-turn chat (Phase 7F) ─────────────────
+
+function AdvisorChat({ apiKey, clientTier, incidentId }) {
+  const [chats, setChats] = useState(null);
+  const [activeChat, setActiveChat] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const isPro = clientTier === 'pro' || clientTier === 'enterprise';
+
+  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+
+  const reload = useCallback(async () => {
+    if (!isPro) return;
+    const list = await fetch('/api/monitoring/client/advisor/chats', { headers }).then(r => r.json());
+    setChats(Array.isArray(list) ? list : []);
+  }, [apiKey, isPro]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const startNew = async () => {
+    const r = await fetch('/api/monitoring/client/advisor/chats', {
+      method: 'POST', headers,
+      body: JSON.stringify({ incident_id: incidentId, title: incidentId ? `Incident #${incidentId}` : 'New chat' }),
+    }).then(r => r.json());
+    setActiveChat(r);
+    setMessages(r.messages || []);
+    reload();
+  };
+
+  const openChat = async (id) => {
+    const r = await fetch(`/api/monitoring/client/advisor/chats/${id}`, { headers }).then(r => r.json());
+    setActiveChat(r);
+    setMessages(r.messages || []);
+  };
+
+  const send = async () => {
+    if (!activeChat || !input.trim()) return;
+    const userMsg = input.trim();
+    setMessages(m => [...m, { role: 'user', content: userMsg, ts: new Date().toISOString() }]);
+    setInput('');
+    setSending(true);
+    try {
+      const r = await fetch(`/api/monitoring/client/advisor/chats/${activeChat.id}/msg`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ message: userMsg }),
+      }).then(r => r.json());
+      if (r?.reply) setMessages(m => [...m, { role: 'assistant', content: r.reply, ts: new Date().toISOString() }]);
+      else if (r?.error) setMessages(m => [...m, { role: 'assistant', content: `[error: ${r.error}]`, ts: new Date().toISOString() }]);
+    } finally { setSending(false); }
+  };
+
+  if (!isPro) return <UpgradeCard feature="Multi-Turn Advisor Chat" currentTier={clientTier} />;
+
+  if (!chats) return <div style={{ padding: 30 }}>Loading…</div>;
+
+  if (!activeChat) {
+    return (
+      <>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <h3 style={{ margin: 0 }}>Conversations with the AI Advisor</h3>
+          <button onClick={startNew} className="btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
+            <Plus size={14} /> New chat
+          </button>
+        </div>
+        {chats.length === 0 ? (
+          <div className="card" style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>
+            No conversations yet. Click "New chat" to start asking the AI Advisor anything about your environment.
+          </div>
+        ) : chats.map(c => (
+          <div key={c.id} onClick={() => openChat(c.id)} className="card"
+            style={{ padding: 12, marginBottom: 8, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <strong>{c.title}</strong>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {c.message_count} messages · {fmtRelative(c.updated_at)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <button onClick={() => setActiveChat(null)} className="btn" style={{ padding: '4px 10px' }}>
+          <ArrowLeft size={14} /> Back
+        </button>
+        <h3 style={{ margin: 0, flex: 1, fontSize: '1rem' }}>{activeChat.title}</h3>
+      </div>
+
+      <div className="card" style={{ padding: 0, marginBottom: 10, maxHeight: 500, overflowY: 'auto' }}>
+        {messages.length === 0 ? (
+          <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+            Ask about a sensor, an incident, your cooling efficiency, or anything else. The AI has context for your environment.
+          </div>
+        ) : messages.map((m, i) => (
+          <div key={i} style={{
+            padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)',
+            background: m.role === 'user' ? 'transparent' : 'rgba(134,59,255,0.04)',
+          }}>
+            <div style={{ fontSize: '0.7rem', color: m.role === 'user' ? 'var(--text-muted)' : '#863bff', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              {m.role === 'user' ? 'You' : '✨ AI Advisor'}
+            </div>
+            <div style={{ fontSize: '0.92rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{m.content}</div>
+          </div>
+        ))}
+        {sending && (
+          <div style={{ padding: 12, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+            <Sparkles size={14} style={{ verticalAlign: 'middle', color: '#863bff' }} /> AI is thinking…
+          </div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
+          placeholder="Ask the advisor anything…"
+          style={{ flex: 1 }} />
+        <button onClick={send} disabled={sending || !input.trim()} className="btn btn-primary"
+          style={{ padding: '8px 14px' }}>
+          <Send size={14} /> Send
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Sales escalations tab (Phase 7G) ───────────────────────
+
+function EscalationsTab({ apiKey, clientTier }) {
+  const [items, setItems] = useState(null);
+  const isPro = clientTier === 'pro' || clientTier === 'enterprise';
+  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+
+  const reload = useCallback(async () => {
+    if (!isPro) return;
+    const r = await fetch('/api/monitoring/client/escalations', { headers }).then(r => r.json());
+    setItems(Array.isArray(r) ? r : []);
+  }, [apiKey, isPro]);
+
+  useEffect(() => { reload(); }, [reload]);
+
+  const decide = async (id, decision) => {
+    if (decision === 'yes' && !confirm("Send to Steve for a quote? He'll reach out within 24 hours.")) return;
+    await fetch(`/api/monitoring/client/escalations/${id}/decide`, {
+      method: 'POST', headers, body: JSON.stringify({ decision }),
+    });
+    reload();
+  };
+
+  if (!isPro) return <UpgradeCard feature="AI Sales Recommendations" currentTier={clientTier} />;
+  if (!items) return <div style={{ padding: 30 }}>Loading…</div>;
+  if (items.length === 0) return (
+    <div className="card" style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)' }}>
+      <TrendingUp size={28} style={{ color: '#10b981', marginBottom: 10 }} />
+      <div>No active recommendations. AI scans your data every 6 hours for upsell-worthy patterns.</div>
+    </div>
+  );
+
+  return items.map(e => (
+    <div key={e.id} className="card" style={{ padding: 16, marginBottom: 12, border: '1px solid rgba(134,59,255,0.2)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+        <Sparkles size={16} style={{ color: '#863bff' }} />
+        <strong>{e.recommended_service}</strong>
+        <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
+          ${e.estimated_value_low?.toLocaleString()} – ${e.estimated_value_high?.toLocaleString()}
+        </span>
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmtRelative(e.created_at)}</span>
+      </div>
+      <p style={{ fontSize: '0.9rem', lineHeight: 1.5, marginTop: 4, marginBottom: 10 }}>{e.ai_pitch_summary}</p>
+      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 12 }}>Pattern: {e.trigger_pattern}</div>
+      {e.status === 'pending_client' ? (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => decide(e.id, 'yes')} className="btn btn-primary" style={{ padding: '8px 14px' }}>
+            ✓ Yes — send me a quote
+          </button>
+          <button onClick={() => decide(e.id, 'no')} className="btn" style={{ padding: '8px 14px' }}>
+            Not now
+          </button>
+        </div>
+      ) : (
+        <div style={{ fontSize: '0.78rem', color: e.status === 'sent_to_steve' ? '#10b981' : 'var(--text-muted)' }}>
+          {e.status === 'sent_to_steve' ? '✓ Sent to Steve. Expect a reply within 24 hours.' : 'Declined.'}
+        </div>
+      )}
+    </div>
+  ));
+}
+
+// ─── Billing tab (Phase 5) ─────────────────────────────────
+
+function BillingTab({ apiKey, client }) {
+  const [loading, setLoading] = useState(false);
+  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+
+  const checkout = async (tier) => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/billing/create-checkout', {
+        method: 'POST', headers,
+        body: JSON.stringify({ tier }),
+      }).then(r => r.json());
+      if (r.url) window.location.href = r.url;
+      else alert(r.error || 'Could not start checkout');
+    } catch (e) { alert(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const portal = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/billing/portal-session', {
+        method: 'POST', headers, body: '{}',
+      }).then(r => r.json());
+      if (r.url) window.location.href = r.url;
+      else alert(r.error || 'Portal not available');
+    } catch (e) { alert(e.message); }
+    finally { setLoading(false); }
+  };
+
+  const tiers = [
+    { id: 'watch', name: 'Watch', price: 99, features: ['Email alerts', '3 sites', '30-day history', 'BYO sensors'] },
+    { id: 'guard', name: 'Guard', price: 299, features: ['Watch +', 'SMS + voice alerts', 'AI Cooling Advisor', '10 sites', '1-yr history'] },
+    { id: 'pro', name: 'Pro', price: 599, features: ['Guard +', 'AI auto-action', 'Custom dashboards', 'Audit log', 'Conversational AI', 'Unlimited sites'] },
+  ];
+
+  return (
+    <>
+      <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Current plan</div>
+        <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: 4, textTransform: 'capitalize' }}>{client.tier}</div>
+        {client.subscription_status && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Status: <strong>{client.subscription_status}</strong>
+            {client.current_period_end && ` · Renews ${new Date(client.current_period_end).toLocaleDateString()}`}
+          </div>
+        )}
+        {client.stripe_customer_id && (
+          <button onClick={portal} disabled={loading} className="btn" style={{ marginTop: 10, fontSize: '0.85rem' }}>
+            <CreditCard size={14} /> Manage in Stripe Portal
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+        {tiers.map(t => {
+          const isCurrent = client.tier === t.id;
+          return (
+            <div key={t.id} className="card" style={{
+              padding: 18, border: isCurrent ? '2px solid #863bff' : '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <strong style={{ fontSize: '1.05rem' }}>{t.name}</strong>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, marginTop: 6 }}>${t.price}<span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>/mo</span></div>
+              <ul style={{ fontSize: '0.8rem', lineHeight: 1.6, color: 'var(--text-muted)', marginTop: 10, paddingLeft: 16 }}>
+                {t.features.map(f => <li key={f}>{f}</li>)}
+              </ul>
+              {!isCurrent && (
+                <button onClick={() => checkout(t.id)} disabled={loading}
+                  className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 12, fontSize: '0.9rem' }}>
+                  {client.tier && t.id !== client.tier ? 'Switch to ' + t.name : 'Subscribe'}
+                </button>
+              )}
+              {isCurrent && (
+                <div style={{ marginTop: 12, textAlign: 'center', fontSize: '0.78rem', color: '#863bff', fontWeight: 700 }}>Your current plan</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 14 }}>
+        Need Enterprise (white-label, SLA, SOC 2)? <a href="https://thermashift.net/contact" style={{ color: '#0ea5e9' }}>Contact sales</a>.
+      </div>
+    </>
+  );
+}
+
 // ─── Main page ──────────────────────────────────────────────
 
 export default function Saas() {
@@ -987,9 +1271,13 @@ export default function Saas() {
           <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
             {[
               { key: 'overview', label: 'Overview' },
+              { key: 'custom', label: 'Custom Dashboard' },
               { key: 'incidents', label: 'Incidents' },
               { key: 'rules', label: 'Rules' },
               { key: 'cooling-ai', label: 'Cooling AI', proOnly: true },
+              { key: 'chat', label: 'Chat with AI', proOnly: true },
+              { key: 'escalations', label: 'Recommendations', proOnly: true },
+              { key: 'billing', label: 'Billing' },
             ].map(t => {
               const isPro = data.client.tier === 'pro' || data.client.tier === 'enterprise';
               return (
@@ -1020,6 +1308,18 @@ export default function Saas() {
           {tab === 'incidents' && <IncidentsTab apiKey={apiKey} />}
           {tab === 'rules' && <RulesTab apiKey={apiKey} sensors={data.sensors} sites={data.sites} />}
           {tab === 'cooling-ai' && <CoolingAITab apiKey={apiKey} clientTier={data.client.tier} />}
+          {tab === 'custom' && (
+            <CustomDashboard
+              apiKey={apiKey}
+              sensors={data.sensors}
+              sites={data.sites}
+              openIncidents={data.openIncidents}
+              fetchReadings={(sid, hours) => api(apiKey).readings(sid, hours)}
+            />
+          )}
+          {tab === 'chat' && <AdvisorChat apiKey={apiKey} clientTier={data.client.tier} />}
+          {tab === 'escalations' && <EscalationsTab apiKey={apiKey} clientTier={data.client.tier} />}
+          {tab === 'billing' && <BillingTab apiKey={apiKey} client={data.client} />}
         </>
       )}
     </main>

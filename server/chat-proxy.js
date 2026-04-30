@@ -16,6 +16,13 @@ import {
   proposeAction, approveAction, rejectAction, expireStaleActions,
   listActionTypes, requireTier,
 } from './cooling-actions.js';
+import { createCheckoutSession, createPortalSession, processStripeWebhook, isStripeConfigured } from './billing-stripe.js';
+import { listChats, getChat, startChat, sendMessage as sendAdvisorMessage } from './advisor-chat.js';
+import { scanForEscalations, clientDecideEscalation } from './sales-escalation.js';
+import {
+  listDashboards, getDefaultDashboard, getDashboard, createDashboard,
+  updateDashboard, deleteDashboard, WIDGET_CATALOG,
+} from './dashboard-storage.js';
 import { pollInbox } from './ai-closer-inbound.js';
 import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 
@@ -1045,6 +1052,116 @@ app.get('/api/monitoring/client/cooling-audit', clientAuth, requireTier('pro'), 
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ═══════════════════════════════════════════════════════════
+// PHASE 7F — Advisor multi-turn chat (Pro)
+// ═══════════════════════════════════════════════════════════
+app.get('/api/monitoring/client/advisor/chats', clientAuth, requireTier('pro'), async (req, res) => {
+  try { res.json(await listChats(sb, req.client.id)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/monitoring/client/advisor/chats/:id', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const chat = await getChat(sb, req.client.id, req.params.id);
+    if (!chat) return res.status(404).json({ error: 'chat_not_found' });
+    res.json(chat);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/monitoring/client/advisor/chats', clientAuth, requireTier('pro'), async (req, res) => {
+  try { res.json(await startChat(sb, req.client.id, req.body || {})); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.post('/api/monitoring/client/advisor/chats/:id/msg', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const result = await sendAdvisorMessage(sb, req.client.id, req.params.id, req.body?.message || '');
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 7G — Sales escalations (Pro client visible / decide)
+// ═══════════════════════════════════════════════════════════
+app.get('/api/monitoring/client/escalations', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const status = req.query.status ? `&status=eq.${req.query.status}` : '';
+    res.json(await sb('sales_escalations', 'GET', null,
+      `?client_id=eq.${req.client.id}&order=created_at.desc&limit=50${status}`));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/monitoring/client/escalations/:id/decide', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const { decision, notes } = req.body || {};
+    if (!['yes', 'no'].includes(decision)) return res.status(400).json({ error: 'decision_must_be_yes_or_no' });
+    res.json(await clientDecideEscalation(sb, req.params.id, req.client.id, decision, notes));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 7B — Custom dashboards (any tier; widget gating per-widget)
+// ═══════════════════════════════════════════════════════════
+app.get('/api/monitoring/client/widget-catalog', clientAuth, (req, res) => {
+  res.json(WIDGET_CATALOG);
+});
+app.get('/api/monitoring/client/dashboards', clientAuth, async (req, res) => {
+  try { res.json(await listDashboards(sb, req.client.id)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/monitoring/client/dashboards/default', clientAuth, async (req, res) => {
+  try { res.json(await getDefaultDashboard(sb, req.client.id)); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/monitoring/client/dashboards/:id', clientAuth, async (req, res) => {
+  try {
+    const d = await getDashboard(sb, req.client.id, req.params.id);
+    if (!d) return res.status(404).json({ error: 'not_found' });
+    res.json(d);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/monitoring/client/dashboards', clientAuth, async (req, res) => {
+  try { res.json(await createDashboard(sb, req.client.id, req.body || {})); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.patch('/api/monitoring/client/dashboards/:id', clientAuth, async (req, res) => {
+  try { res.json(await updateDashboard(sb, req.client.id, req.params.id, req.body || {})); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete('/api/monitoring/client/dashboards/:id', clientAuth, async (req, res) => {
+  try { res.json(await deleteDashboard(sb, req.client.id, req.params.id)); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// ═══════════════════════════════════════════════════════════
+// PHASE 5 — Stripe billing
+// ═══════════════════════════════════════════════════════════
+app.post('/api/billing/create-checkout', clientAuth, async (req, res) => {
+  try {
+    if (!isStripeConfigured()) return res.status(503).json({ error: 'stripe_not_configured' });
+    const result = await createCheckoutSession(sb, {
+      client_id: req.client.id,
+      tier: req.body?.tier || 'guard',
+      success_url: req.body?.success_url,
+      cancel_url: req.body?.cancel_url,
+      customer_email: req.client.billing_email || req.client.primary_contact_email,
+    });
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/billing/portal-session', clientAuth, async (req, res) => {
+  try { res.json(await createPortalSession(sb, { client_id: req.client.id, return_url: req.body?.return_url })); }
+  catch (e) { res.status(500).json({ error: e.message }); }
+});
+// Stripe sends raw bytes; need raw body to verify signature. Use express.raw on this route.
+app.post('/api/webhooks/stripe-billing',
+  express.raw({ type: 'application/json' }),
+  async (req, res) => {
+    try {
+      const result = await processStripeWebhook(sb, req.body, req.headers['stripe-signature']);
+      res.json({ ok: true, ...result });
+    } catch (e) {
+      console.error('Stripe webhook error:', e.message);
+      res.status(400).json({ error: e.message });
+    }
+  });
+
 // Update client's webhook config (Pro only)
 app.patch('/api/monitoring/client/cooling-config', clientAuth, requireTier('pro'), async (req, res) => {
   try {
@@ -1381,6 +1498,14 @@ setInterval(async () => {
     if (r.expired > 0) console.log(`Cooling actions: expired ${r.expired} stale proposals`);
   } catch (e) { console.error('Action expiry cron error:', e.message); }
 }, 10 * 60 * 1000);
+
+// Phase 7G — sales escalation pattern scan, every 6 hours
+setInterval(async () => {
+  try {
+    const r = await scanForEscalations(sb);
+    if (r.escalations_created > 0) console.log(`Sales escalations: created ${r.escalations_created}`);
+  } catch (e) { console.error('Escalation scan error:', e.message); }
+}, 6 * 60 * 60 * 1000);
 
 // ═══════════════════════════════════════════════════════════
 // STATIC FILES (production — serves the built React app)
