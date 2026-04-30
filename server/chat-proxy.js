@@ -12,6 +12,10 @@ import { generateReviewPDF } from './pdf-generator.js';
 import { addProspects, processDueOutreach } from './outreach.js';
 import { processSensorWebhook, evaluateAlertRules, generateApiKey } from './monitoring.js';
 import { generateAdvice } from './monitoring-advisor.js';
+import {
+  proposeAction, approveAction, rejectAction, expireStaleActions,
+  listActionTypes, requireTier,
+} from './cooling-actions.js';
 import { pollInbox } from './ai-closer-inbound.js';
 import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 
@@ -949,6 +953,117 @@ app.post('/api/monitoring/client/advisor', clientAuth, async (req, res) => {
   }
 });
 
+// ═══════════════════════════════════════════════════════════
+// COOLING ACTIONS — Pro tier (Phase 7A)
+// ═══════════════════════════════════════════════════════════
+
+// List action catalog (any tier can read; helps Watch/Guard see what they're missing)
+app.get('/api/monitoring/client/action-catalog', clientAuth, (req, res) => {
+  res.json(listActionTypes());
+});
+
+// List cooling actions for this client (Pro only)
+app.get('/api/monitoring/client/cooling-actions', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const status = req.query.status ? `&status=eq.${req.query.status}` : '';
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const actions = await sb('cooling_actions', 'GET', null,
+      `?client_id=eq.${req.client.id}&order=created_at.desc&limit=${limit}${status}`);
+    res.json(actions || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Propose a cooling action (admin or AI-driven; Pro only)
+app.post('/api/monitoring/client/cooling-actions', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const action = await proposeAction(sb, { ...req.body, client_id: req.client.id });
+    res.json(action);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Approve / reject (Pro only)
+app.post('/api/monitoring/client/cooling-actions/:id/approve', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    // Verify ownership
+    const own = await sb('cooling_actions', 'GET', null, `?id=eq.${req.params.id}&client_id=eq.${req.client.id}&limit=1`);
+    if (!own?.[0]) return res.status(404).json({ error: 'action_not_found' });
+    const result = await approveAction(sb, req.params.id, {
+      actor: req.body?.actor || req.client.primary_contact_email,
+      actor_ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress,
+    });
+    res.json(result);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/client/cooling-actions/:id/reject', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const own = await sb('cooling_actions', 'GET', null, `?id=eq.${req.params.id}&client_id=eq.${req.client.id}&limit=1`);
+    if (!own?.[0]) return res.status(404).json({ error: 'action_not_found' });
+    const result = await rejectAction(sb, req.params.id, {
+      actor: req.body?.actor || req.client.primary_contact_email,
+      actor_ip: req.headers['x-forwarded-for']?.split(',')[0] || req.socket?.remoteAddress,
+      reason: req.body?.reason,
+    });
+    res.json(result);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Permission rules CRUD (Pro only)
+app.get('/api/monitoring/client/cooling-permissions', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    res.json(await sb('cooling_action_permissions', 'GET', null,
+      `?client_id=eq.${req.client.id}&order=created_at.desc`));
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/monitoring/client/cooling-permissions', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const created = await sb('cooling_action_permissions', 'POST', {
+      ...req.body, client_id: req.client.id,
+      created_by: req.client.primary_contact_email,
+    });
+    res.json(created?.[0]);
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.delete('/api/monitoring/client/cooling-permissions/:id', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const own = await sb('cooling_action_permissions', 'GET', null, `?id=eq.${req.params.id}&client_id=eq.${req.client.id}&limit=1`);
+    if (!own?.[0]) return res.status(404).json({ error: 'permission_not_found' });
+    await sb('cooling_action_permissions', 'DELETE', null, `?id=eq.${req.params.id}`);
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Audit log (Pro — own actions only)
+app.get('/api/monitoring/client/cooling-audit', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    const events = await sb('cooling_action_audit', 'GET', null,
+      `?client_id=eq.${req.client.id}&order=created_at.desc&limit=${limit}`);
+    res.json(events || []);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Update client's webhook config (Pro only)
+app.patch('/api/monitoring/client/cooling-config', clientAuth, requireTier('pro'), async (req, res) => {
+  try {
+    const { action_webhook_url, action_webhook_secret, actions_enabled } = req.body || {};
+    const patch = {};
+    if (action_webhook_url !== undefined) patch.action_webhook_url = action_webhook_url;
+    if (action_webhook_secret !== undefined) patch.action_webhook_secret = action_webhook_secret;
+    if (actions_enabled !== undefined) patch.actions_enabled = !!actions_enabled;
+    patch.updated_at = new Date().toISOString();
+    const updated = await sb('monitoring_clients', 'PATCH', patch, `?id=eq.${req.client.id}`);
+    const c = updated?.[0];
+    res.json({
+      action_webhook_url: c?.action_webhook_url,
+      actions_enabled: c?.actions_enabled,
+      has_secret: !!c?.action_webhook_secret,
+    });
+  } catch (e) { res.status(400).json({ error: e.message }); }
+});
+
 app.post('/api/monitoring/client/incidents/:id/ack', clientAuth, async (req, res) => {
   try {
     const own = await sb('monitoring_incidents', 'GET', null,
@@ -1258,6 +1373,14 @@ setInterval(async () => {
     }
   } catch (e) { console.error('Outbound call cron error:', e.message); }
 }, 60 * 1000);
+
+// Cooling actions — expire stale unapproved proposals every 10 minutes
+setInterval(async () => {
+  try {
+    const r = await expireStaleActions(sb);
+    if (r.expired > 0) console.log(`Cooling actions: expired ${r.expired} stale proposals`);
+  } catch (e) { console.error('Action expiry cron error:', e.message); }
+}, 10 * 60 * 1000);
 
 // ═══════════════════════════════════════════════════════════
 // STATIC FILES (production — serves the built React app)

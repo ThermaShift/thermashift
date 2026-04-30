@@ -65,6 +65,13 @@ function api(apiKey) {
     deleteRule: (id) => fetch(`/api/monitoring/client/rules/${id}`, { method: 'DELETE', headers }).then(r => r.json()),
     ackIncident: (id) => fetch(`/api/monitoring/client/incidents/${id}/ack`, { method: 'POST', headers, body: '{}' }).then(r => r.json()),
     advisor: (context, incidentId) => fetch('/api/monitoring/client/advisor', { method: 'POST', headers, body: JSON.stringify({ context, incident_id: incidentId }) }).then(r => r.json()),
+    actionCatalog: () => fetch('/api/monitoring/client/action-catalog', { headers }).then(r => r.json()),
+    coolingActions: (status) => fetch(`/api/monitoring/client/cooling-actions${status ? '?status=' + status : ''}`, { headers }).then(r => r.json()),
+    approveAction: (id) => fetch(`/api/monitoring/client/cooling-actions/${id}/approve`, { method: 'POST', headers, body: '{}' }).then(r => r.json()),
+    rejectAction: (id, reason) => fetch(`/api/monitoring/client/cooling-actions/${id}/reject`, { method: 'POST', headers, body: JSON.stringify({ reason }) }).then(r => r.json()),
+    coolingPermissions: () => fetch('/api/monitoring/client/cooling-permissions', { headers }).then(r => r.json()),
+    coolingAudit: () => fetch('/api/monitoring/client/cooling-audit', { headers }).then(r => r.json()),
+    coolingConfig: (config) => fetch('/api/monitoring/client/cooling-config', { method: 'PATCH', headers, body: JSON.stringify(config) }).then(r => r.json()),
   };
 }
 
@@ -315,10 +322,18 @@ function IncidentsTab({ apiKey }) {
 
 // ─── AI Advisor ─────────────────────────────────────────────
 
-function AdvisorPanel({ apiKey, context, incidentId, autoLoad = false, compact = false }) {
+function AdvisorPanel({ apiKey, context, incidentId, autoLoad = true, compact = false }) {
+  const collapseKey = `ts_advisor_collapsed_${context}`;
   const [advice, setAdvice] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [collapsed, setCollapsed] = useState(() => sessionStorage.getItem(collapseKey) === '1');
+
+  const setCollapsedPersisted = (v) => {
+    setCollapsed(v);
+    if (v) sessionStorage.setItem(collapseKey, '1');
+    else sessionStorage.removeItem(collapseKey);
+  };
 
   const generate = useCallback(async () => {
     setLoading(true); setError(null);
@@ -330,7 +345,22 @@ function AdvisorPanel({ apiKey, context, incidentId, autoLoad = false, compact =
     finally { setLoading(false); }
   }, [apiKey, context, incidentId]);
 
-  useEffect(() => { if (autoLoad) generate(); }, [autoLoad, generate]);
+  useEffect(() => { if (autoLoad && !collapsed) generate(); }, [autoLoad, generate, collapsed]);
+
+  if (collapsed) {
+    return (
+      <button onClick={() => setCollapsedPersisted(false)}
+        style={{
+          width: '100%', marginBottom: 16, padding: '10px 14px', borderRadius: 8,
+          background: 'linear-gradient(135deg, rgba(134,59,255,0.08), rgba(0,163,224,0.06))',
+          border: '1px solid rgba(134,59,255,0.25)', color: 'var(--text)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.85rem',
+        }}>
+        <Sparkles size={14} style={{ color: '#863bff' }} />
+        Show AI Cooling Advisor
+      </button>
+    );
+  }
 
   const cardBg = 'linear-gradient(135deg, rgba(134,59,255,0.08), rgba(0,163,224,0.06))';
   const border = '1px solid rgba(134,59,255,0.25)';
@@ -388,6 +418,11 @@ function AdvisorPanel({ apiKey, context, incidentId, autoLoad = false, compact =
         <div style={{ flex: 1 }} />
         <button onClick={generate} className="btn" style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
           <RefreshCw size={12} /> Refresh
+        </button>
+        <button onClick={() => setCollapsedPersisted(true)}
+          title="Hide AI advisor (you can show it again anytime)"
+          className="btn" style={{ padding: '4px 8px', fontSize: '0.75rem' }}>
+          ✕ Hide
         </button>
       </div>
 
@@ -649,6 +684,245 @@ function RulesTab({ apiKey, sensors, sites }) {
   );
 }
 
+// ─── Cooling AI Tab (Pro tier) ──────────────────────────────
+
+function UpgradeCard({ feature, currentTier, requiredTier = 'pro' }) {
+  return (
+    <div className="card" style={{
+      padding: 28, textAlign: 'center',
+      background: 'linear-gradient(135deg, rgba(134,59,255,0.08), rgba(0,163,224,0.06))',
+      border: '1px solid rgba(134,59,255,0.25)',
+    }}>
+      <Sparkles size={36} style={{ color: '#863bff', marginBottom: 12 }} />
+      <h3 style={{ margin: '0 0 8px' }}>{feature} — Pro tier</h3>
+      <p style={{ color: 'var(--text-muted)', maxWidth: 480, margin: '0 auto 18px', fontSize: '0.92rem' }}>
+        You're on <strong style={{ textTransform: 'capitalize' }}>{currentTier}</strong>. Upgrade to <strong>Pro ($599/mo)</strong> to let AI propose and take action on your cooling infrastructure — fan speeds, chilled water setpoints, pump VFDs, RDHX flow — with full audit logging and permission rules.
+      </p>
+      <a href="https://thermashift.net/contact" target="_blank" rel="noopener" className="btn btn-primary"
+        style={{ padding: '8px 18px', fontSize: '0.9rem', display: 'inline-flex', textDecoration: 'none' }}>
+        Upgrade to Pro →
+      </a>
+    </div>
+  );
+}
+
+function CoolingActionCard({ action, catalog, onApprove, onReject }) {
+  const meta = catalog?.[action.action_type] || { label: action.action_type, description: '' };
+  const statusColors = {
+    proposed: { bg: 'rgba(245,158,11,0.1)', fg: '#f59e0b' },
+    approved: { bg: 'rgba(59,130,246,0.1)', fg: '#3b82f6' },
+    completed: { bg: 'rgba(16,185,129,0.1)', fg: '#10b981' },
+    failed: { bg: 'rgba(239,68,68,0.1)', fg: '#ef4444' },
+    rejected: { bg: 'rgba(148,163,184,0.1)', fg: '#94a3b8' },
+    expired: { bg: 'rgba(148,163,184,0.1)', fg: '#94a3b8' },
+  };
+  const sc = statusColors[action.status] || statusColors.proposed;
+
+  return (
+    <div style={{
+      background: 'var(--surface, #0f172a)', border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 12, padding: 16, marginBottom: 14,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '0.7rem', color: '#863bff', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            ✨ AI proposed
+          </div>
+          <div style={{ fontWeight: 700, fontSize: '1.02rem', marginTop: 2 }}>
+            {meta.label}
+            {action.target_label && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}> · {action.target_label}</span>}
+          </div>
+        </div>
+        <span style={{
+          padding: '3px 10px', borderRadius: 12, fontSize: '0.7rem', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: 0.5,
+          background: sc.bg, color: sc.fg, border: `1px solid ${sc.fg}40`,
+        }}>{action.status}</span>
+      </div>
+
+      {Object.keys(action.parameters || {}).length > 0 && (
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 8,
+          background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 6, marginBottom: 10,
+        }}>
+          {Object.entries(action.parameters).map(([k, v]) => (
+            <div key={k}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{k.replace(/_/g, ' ')}</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, marginTop: 2 }}>{String(v)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {action.reasoning && (
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 12, fontStyle: 'italic' }}>
+          {action.reasoning}
+        </div>
+      )}
+
+      {action.status === 'proposed' && action.requires_permission && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => onApprove(action.id)}
+            style={{
+              flex: 1, padding: '10px', borderRadius: 8, border: 'none',
+              background: '#10b981', color: 'white', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer',
+            }}>
+            ✓ Approve & Execute
+          </button>
+          <button onClick={() => onReject(action.id, prompt('Reason for rejecting?') || '')}
+            style={{
+              padding: '10px 16px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)',
+              background: 'rgba(239,68,68,0.1)', color: '#ef4444', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
+            }}>
+            ✗ Reject
+          </button>
+        </div>
+      )}
+
+      {action.executed_at && (
+        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 8 }}>
+          Executed {new Date(action.executed_at).toLocaleString()} · HTTP {action.webhook_status_code || '—'}
+          {action.approved_by && ` · Approved by ${action.approved_by}`}
+        </div>
+      )}
+      {action.rejected_at && (
+        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 8 }}>
+          Rejected {new Date(action.rejected_at).toLocaleString()} by {action.rejected_by} — {action.rejection_reason}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CoolingAITab({ apiKey, clientTier }) {
+  const [actions, setActions] = useState(null);
+  const [catalog, setCatalog] = useState({});
+  const [config, setConfig] = useState(null);
+  const [editConfig, setEditConfig] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
+  const [actionsEnabled, setActionsEnabled] = useState(false);
+
+  const isPro = clientTier === 'pro' || clientTier === 'enterprise';
+
+  const reload = useCallback(async () => {
+    if (!isPro) return;
+    const [a, c] = await Promise.all([
+      api(apiKey).coolingActions(),
+      api(apiKey).actionCatalog(),
+    ]);
+    setActions(Array.isArray(a) ? a : []);
+    setCatalog(c || {});
+  }, [apiKey, isPro]);
+
+  useEffect(() => { reload(); }, [reload]);
+  useEffect(() => {
+    if (!isPro) return;
+    const t = setInterval(reload, 30000);
+    return () => clearInterval(t);
+  }, [reload, isPro]);
+
+  if (!isPro) {
+    return <UpgradeCard feature="AI Cooling Actions" currentTier={clientTier} />;
+  }
+
+  if (!actions) return <div style={{ padding: 40 }}>Loading…</div>;
+
+  const proposed = actions.filter(a => a.status === 'proposed');
+  const recent = actions.filter(a => a.status !== 'proposed').slice(0, 20);
+
+  const handleApprove = async (id) => {
+    if (!confirm('Approve and execute this action now?')) return;
+    await api(apiKey).approveAction(id);
+    reload();
+  };
+  const handleReject = async (id, reason) => {
+    await api(apiKey).rejectAction(id, reason);
+    reload();
+  };
+
+  const saveConfig = async () => {
+    await api(apiKey).coolingConfig({
+      action_webhook_url: webhookUrl,
+      action_webhook_secret: webhookSecret,
+      actions_enabled: actionsEnabled,
+    });
+    setEditConfig(false);
+    alert('Saved. Cooling actions will now POST to your webhook when approved.');
+  };
+
+  return (
+    <>
+      {/* Pending actions */}
+      <div className="card" style={{
+        padding: 18, marginBottom: 20,
+        background: 'linear-gradient(135deg, rgba(134,59,255,0.06), transparent)',
+        border: '1px solid rgba(134,59,255,0.2)',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem' }}>
+            <Sparkles size={16} style={{ color: '#863bff', verticalAlign: 'middle' }} /> AI Cooling Actions
+          </h3>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{proposed.length} pending</span>
+        </div>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '4px 0 0' }}>
+          AI proposes specific cooling adjustments based on incident patterns. Approve to execute via your webhook, or set auto-approval rules below.
+        </p>
+      </div>
+
+      {proposed.length === 0 ? (
+        <div className="card" style={{ padding: 30, textAlign: 'center', color: 'var(--text-muted)', marginBottom: 24 }}>
+          No pending action proposals. AI proposes actions when incidents match patterns it can act on.
+        </div>
+      ) : (
+        proposed.map(a => (
+          <CoolingActionCard key={a.id} action={a} catalog={catalog}
+            onApprove={handleApprove} onReject={handleReject} />
+        ))
+      )}
+
+      {/* Webhook config */}
+      <div className="card" style={{ padding: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <strong>Webhook configuration</strong>
+          <button className="btn" onClick={() => setEditConfig(!editConfig)} style={{ fontSize: '0.78rem', padding: '4px 10px' }}>
+            {editConfig ? 'Cancel' : 'Edit'}
+          </button>
+        </div>
+        {editConfig ? (
+          <>
+            <Field label="Webhook URL (your BMS or DCIM API endpoint)">
+              <input value={webhookUrl} onChange={e => setWebhookUrl(e.target.value)} placeholder="https://your-bms.example.com/api/cooling-action" />
+            </Field>
+            <Field label="HMAC signing secret (we sign every payload with this)">
+              <input value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)} placeholder="(leave blank to keep existing)" />
+            </Field>
+            <Toggle label="Actions enabled (master switch)" checked={actionsEnabled} onChange={setActionsEnabled} />
+            <button onClick={saveConfig} className="btn btn-primary" style={{ marginTop: 12 }}>Save</button>
+          </>
+        ) : (
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>
+            Configure your BMS/DCIM webhook URL so approved AI actions can be dispatched. We sign every payload with your secret so you can verify it came from us.
+          </p>
+        )}
+      </div>
+
+      {/* Action history */}
+      <h4 style={{ marginTop: 20, marginBottom: 8, fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        Recent actions ({recent.length})
+      </h4>
+      {recent.length === 0 ? (
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: 14 }}>None yet.</div>
+      ) : (
+        recent.map(a => (
+          <CoolingActionCard key={a.id} action={a} catalog={catalog}
+            onApprove={handleApprove} onReject={handleReject} />
+        ))
+      )}
+    </>
+  );
+}
+
 // ─── Main page ──────────────────────────────────────────────
 
 export default function Saas() {
@@ -710,16 +984,28 @@ export default function Saas() {
         <SensorChart apiKey={apiKey} sensor={selectedSensor} onBack={() => setSelectedSensor(null)} />
       ) : (
         <>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            {['overview', 'incidents', 'rules'].map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                style={{
-                  padding: '10px 16px', background: 'transparent', border: 'none', cursor: 'pointer',
-                  color: tab === t ? 'var(--accent)' : 'var(--text-muted)',
-                  borderBottom: `2px solid ${tab === t ? 'var(--accent)' : 'transparent'}`,
-                  fontWeight: 600, textTransform: 'capitalize', fontSize: '0.9rem',
-                }}>{t}</button>
-            ))}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.08)', overflowX: 'auto' }}>
+            {[
+              { key: 'overview', label: 'Overview' },
+              { key: 'incidents', label: 'Incidents' },
+              { key: 'rules', label: 'Rules' },
+              { key: 'cooling-ai', label: 'Cooling AI', proOnly: true },
+            ].map(t => {
+              const isPro = data.client.tier === 'pro' || data.client.tier === 'enterprise';
+              return (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  style={{
+                    padding: '10px 16px', background: 'transparent', border: 'none', cursor: 'pointer',
+                    color: tab === t.key ? 'var(--accent)' : 'var(--text-muted)',
+                    borderBottom: `2px solid ${tab === t.key ? 'var(--accent)' : 'transparent'}`,
+                    fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap',
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                  }}>
+                  {t.label}
+                  {t.proOnly && !isPro && <span style={{ fontSize: '0.65rem', padding: '1px 5px', background: 'rgba(134,59,255,0.15)', color: '#863bff', borderRadius: 8 }}>PRO</span>}
+                </button>
+              );
+            })}
             <div style={{ flex: 1 }} />
             <button className="btn" style={{ padding: '6px 12px', fontSize: '0.8rem' }} onClick={reload}>
               <RefreshCw size={14} /> Refresh
@@ -727,12 +1013,13 @@ export default function Saas() {
           </div>
           {tab === 'overview' && (
             <>
-              <AdvisorPanel apiKey={apiKey} context="overview" autoLoad={data.openIncidents.length > 0} />
+              <AdvisorPanel apiKey={apiKey} context="overview" autoLoad={true} />
               <Overview apiKey={apiKey} data={data} onSelectSensor={setSelectedSensor} onAckIncident={ackIncident} />
             </>
           )}
           {tab === 'incidents' && <IncidentsTab apiKey={apiKey} />}
           {tab === 'rules' && <RulesTab apiKey={apiKey} sensors={data.sensors} sites={data.sites} />}
+          {tab === 'cooling-ai' && <CoolingAITab apiKey={apiKey} clientTier={data.client.tier} />}
         </>
       )}
     </main>
