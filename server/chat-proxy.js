@@ -826,14 +826,18 @@ app.post('/api/webhooks/resend', express.json({ verify: (req, _res, buf) => { re
       const svixId = req.headers['svix-id'];
       const svixTs = req.headers['svix-timestamp'];
       const svixSig = req.headers['svix-signature'];
-      if (svixId && svixTs && svixSig && req.rawBody) {
-        const crypto = await import('crypto');
-        const signedContent = `${svixId}.${svixTs}.${req.rawBody.toString()}`;
-        const sk = secret.startsWith('whsec_') ? secret.slice(6) : secret;
-        const expected = 'v1,' + crypto.createHmac('sha256', Buffer.from(sk, 'base64')).update(signedContent).digest('base64');
-        const valid = svixSig.split(' ').some(s => s === expected);
-        if (!valid) return res.status(401).json({ error: 'invalid_signature' });
+      if (!svixId || !svixTs || !svixSig || !req.rawBody) {
+        return res.status(401).json({ error: 'missing_signature_headers' });
       }
+      const crypto = await import('crypto');
+      const signedContent = `${svixId}.${svixTs}.${req.rawBody.toString()}`;
+      const sk = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+      const expected = 'v1,' + crypto.createHmac('sha256', Buffer.from(sk, 'base64')).update(signedContent).digest('base64');
+      const valid = svixSig.split(' ').some(s => s === expected);
+      if (!valid) return res.status(401).json({ error: 'invalid_signature' });
+      // Reject replays older than 5 min
+      const ageMs = Date.now() - Number(svixTs) * 1000;
+      if (Math.abs(ageMs) > 5 * 60 * 1000) return res.status(401).json({ error: 'stale_timestamp' });
     }
 
     const { type, data } = req.body || {};
