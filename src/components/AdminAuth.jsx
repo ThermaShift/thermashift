@@ -77,6 +77,9 @@ export function AdminLogin() {
             <Link to="/proposal" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
               Proposal & SOW Generator
             </Link>
+            <Link to="/closer" style={{ padding: '12px 20px', background: 'linear-gradient(135deg, rgba(134,59,255,0.15), rgba(0,163,224,0.1))', borderRadius: '8px', border: '1px solid rgba(134,59,255,0.4)', color: '#863bff', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>
+              ✨ AI Sales Closer
+            </Link>
             <Link to="/contracts" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
               Contract Manager
             </Link>

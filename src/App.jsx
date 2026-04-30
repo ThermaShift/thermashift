@@ -11,6 +11,7 @@ import Proposal from './pages/Proposal';
 import Contracts from './pages/Contracts';
 import Content from './pages/Content';
 import Saas from './pages/Saas';
+import Closer from './pages/Closer';
 import Contact from './pages/Contact';
 import ChatWidget from './components/ChatWidget';
 
@@ -53,6 +54,9 @@ function AppLayout() {
 
         {/* Monitoring SaaS — api_key based, no auth wrapper (page handles its own) */}
         <Route path="/saas" element={<Saas />} />
+
+        {/* AI Sales Closer — admin-protected */}
+        <Route path="/closer" element={<ProtectedRoute><Closer /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
