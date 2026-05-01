@@ -26,7 +26,9 @@ const TEMPLATES = {
           <li>PUE improvement targets</li>
           <li>Waste heat revenue opportunity</li>
           <li>Specific recommendations for your cooling setup</li>
+          <li><strong>Section 179D tax deduction qualification</strong> — the deduction drops 73% after June 30, 2026 (from $1.88/sq ft to $0.50)</li>
         </ul>
+        <p>That last bullet is timely — the deadline is under 60 days out, and most operators we talk to haven't quantified what's at stake. For a typical 100,000 sq ft facility it's roughly $120K of federal tax value tied purely to project timing.</p>
         <p>No commitment, no sales pitch — just useful data. Interested?</p>
         <p>Steve Betancur<br>
         ThermaShift — Cooling Intelligence. Environmental Impact.<br>

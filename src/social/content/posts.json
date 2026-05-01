@@ -10,7 +10,9 @@
     "facebook_text": "The math on liquid cooling has changed. Facilities running high-density racks are seeing 40% cooling energy reductions with direct liquid cooling compared to traditional air systems. As AI workloads push rack densities higher, the question is shifting from 'if' to 'when' for most operators. #DataCenter #LiquidCooling\n\nCurious how your facility compares? We offer free 30-minute cooling efficiency reviews. Learn more at https://thermashift.net/contact",
     "bluesky_text": "Air cooling hits a wall at 30kW per rack. Direct liquid cooling now costs less per kW at scale and cuts cooling energy by 40%. The transition window for data centers is narrowing fast. #DataCenter #LiquidCooling Free cooling review at thermashift.net/contact",
     "usedBy": [
-      "bluesky"
+      "bluesky",
+      "facebook",
+      "linkedin"
     ]
   },
   {
@@ -25,7 +27,8 @@
     "bluesky_text": "A 10MW data center produces 3.4M BTU/hr of waste heat. Nordic facilities sell it for $300-500K/year via district heating. Most operators still vent it. That is leaving money on the table. #WasteHeat #DataCenter Learn more at thermashift.net/contact",
     "usedBy": [
       "linkedin",
-      "bluesky"
+      "bluesky",
+      "facebook"
     ]
   },
   {
@@ -41,7 +44,8 @@
     "usedBy": [
       "bluesky",
       "facebook"
-    ]
+    ],
+    "used": true
   },
   {
     "id": "pue-001",
@@ -55,7 +59,8 @@
     "bluesky_text": "Industry average PUE: 1.58. Best-in-class: 1.1. The gap is billions in wasted energy globally. The fixes are well-known. Systematic execution and measurement are the real challenges. #PUE #DataCenter Free cooling review at thermashift.net/contact",
     "usedBy": [
       "facebook",
-      "bluesky"
+      "bluesky",
+      "linkedin"
     ]
   },
   {
@@ -70,7 +75,8 @@
     "bluesky_text": "A rack of 8 DGX H100 systems = 80kW+ of heat. Traditional air cooling handles 20kW. The AI buildout is fundamentally a cooling problem that most facilities are not ready for. #AI #DataCenter Learn more at thermashift.net/contact",
     "usedBy": [
       "bluesky",
-      "facebook"
+      "facebook",
+      "linkedin"
     ]
   },
   {
@@ -83,7 +89,9 @@
     "reddit_body": "Immersion cooling vendors are quoting 95% cooling energy reduction and PUE of 1.02-1.03. The performance numbers are hard to argue with.\n\nBut I keep hearing that the real challenges are operational:\n- Hardware maintenance procedures change completely\n- Fluid management and monitoring requirements\n- Staff training and comfort level\n- Warranty implications with OEMs\n\nHas anyone here run immersion cooling in production? What were the unexpected challenges? How did your ops team adapt? Particularly interested in hearing about the transition period.",
     "facebook_text": "Immersion cooling technology can reduce data center cooling energy by up to 95% and achieve PUE as low as 1.02. The technology is proven. The real challenge now is operational -- training teams, adapting maintenance procedures, and building comfort with a fundamentally different approach to cooling. #ImmersionCooling #DataCenter\n\nThermaShift helps data center operators turn these challenges into advantages. Schedule a free assessment at https://thermashift.net/contact",
     "bluesky_text": "Immersion cooling: 95% cooling energy reduction, PUE of 1.02-1.03. The tech is proven. The real barrier is operational familiarity. Adoption is a people and process challenge now. #ImmersionCooling #DataCenter Free assessment at thermashift.net/contact",
-    "usedBy": []
+    "usedBy": [
+      "bluesky"
+    ]
   },
   {
     "id": "whr-002",
@@ -95,7 +103,9 @@
     "reddit_body": "European cities like Stockholm and Helsinki are requiring data centers to feed waste heat into district heating networks. Heat pumps upgrade the 30-40C reject heat to 70-90C with a COP of 3-4.\n\nThe economics seem solid for larger facilities, but I am not seeing much US adoption. Possible reasons:\n- Lack of district heating infrastructure in most US cities\n- Different regulatory frameworks\n- Lower energy costs reducing the ROI\n\nAnyone working on waste heat recovery projects in the US? What alternative heat sinks are viable where district heating does not exist? Agricultural, industrial process heat, building heating?",
     "facebook_text": "Data center waste heat at 30-40C seems useless, but industrial heat pumps can upgrade it to 70-90C efficiently. European cities are already requiring data centers to feed waste heat into district heating networks. This turns a cooling expense into a revenue stream. The US market is behind but the economics are catching up. #WasteHeat #HeatPumps #DataCenter\n\nCurious how your facility compares? We offer free 30-minute cooling efficiency reviews. Learn more at https://thermashift.net/contact",
     "bluesky_text": "Heat pumps upgrade data center waste heat from 35C to 70-90C. Stockholm now requires data centers to feed district heating. Turning a cooling expense into revenue. US market catching up. #WasteHeat #DataCenter Free cooling review at thermashift.net/contact",
-    "usedBy": []
+    "usedBy": [
+      "bluesky"
+    ]
   },
   {
     "id": "esg-002",
@@ -107,7 +117,9 @@
     "reddit_body": "PUE gets all the headlines, but water usage is becoming a bigger issue. A 50MW evaporative-cooled facility can consume over a million gallons per day.\n\nCommunities in water-stressed markets (Phoenix, Dallas, parts of Virginia) are increasingly pushing back on new data center developments.\n\nWhat are you seeing in terms of:\n- WUE targets in new builds?\n- Regulatory pressure around water consumption?\n- Practical alternatives to evaporative cooling that maintain efficiency?\n- Customer/tenant requirements around water metrics?\n\nFeels like water could become the bigger constraint than power in some markets.",
     "facebook_text": "Data center water consumption is an underappreciated sustainability challenge. A large facility with evaporative cooling can use over a million gallons of water per day. As water scarcity grows in key markets, operators need to rethink their cooling strategies. Closed-loop liquid cooling and dry cooling systems offer paths to dramatically reduce water dependence. #WUE #DataCenter #Sustainability\n\nWant to explore what this means for your operation? Book a free consultation at https://thermashift.net/contact",
     "bluesky_text": "A 50MW evaporative-cooled data center uses 1M+ gallons of water daily. Communities in water-stressed markets are pushing back. WUE is the next frontier of data center sustainability. #WUE #DataCenter Learn more at thermashift.net/contact",
-    "usedBy": []
+    "usedBy": [
+      "bluesky"
+    ]
   },
   {
     "id": "pue-002",
@@ -119,7 +131,9 @@
     "reddit_body": "Theory says northern US and European data centers should get 5,000-7,000 free cooling hours per year. But many facilities are running well under 3,000 because of conservative switchover settings, poor humidity controls, or running mechanical cooling unnecessarily alongside economizers.\n\nQuestions for operators:\n- What percentage of your annual cooling hours are economizer/free cooling?\n- What is your economizer switchover setpoint?\n- Are you using dry-bulb or dew-point-based controls?\n- What was the most impactful change you made to increase free cooling hours?\n\nThe savings potential here seems massive for relatively low capital investment.",
     "facebook_text": "Many data centers are leaving money on the table with their free cooling systems. Facilities in northern climates could operate on free cooling for 5,000+ hours per year, but poor economizer configuration often limits them to under 3,000 hours. Optimizing economizer controls is one of the highest-ROI improvements a data center can make -- often paying for itself in weeks. #FreeCooling #DataCenter #EnergyEfficiency\n\nThermaShift helps data center operators turn these challenges into advantages. Schedule a free assessment at https://thermashift.net/contact",
     "bluesky_text": "Northern US data centers could run free cooling 5,000+ hrs/year. Most achieve under 3,000 due to poor economizer configs. Optimization costs under $50K, saves $400-600K annually at 5MW. #FreeCooling #DataCenter Free assessment at thermashift.net/contact",
-    "usedBy": []
+    "usedBy": [
+      "bluesky"
+    ]
   },
   {
     "id": "ai-002",
@@ -131,7 +145,9 @@
     "reddit_body": "Thermal throttling in GPU clusters is a bigger issue than many operators realize. A 20% throttle rate across a 1,000 GPU cluster effectively wastes 200 GPUs of compute capacity.\n\nAt current H100 pricing, that is potentially $3.5M/year in lost performance.\n\nFor those running large GPU deployments:\n- How are you monitoring thermal throttling at the per-GPU level?\n- What cooling approach keeps junction temps consistently below throttle points?\n- Are you seeing correlations between workload patterns and thermal issues?\n- How do you handle hot spots in large liquid cooling deployments?\n\nSeems like this is an area where cooling infrastructure directly impacts compute economics.",
     "facebook_text": "GPU thermal throttling is a hidden cost in AI infrastructure. When GPUs get too hot, they automatically reduce performance by 15-30%. In a large cluster, this can waste millions in compute capacity annually. The solution is cooling infrastructure designed for per-GPU thermal management, not just rack-level averages. #GPU #AI #DataCenter #Cooling\n\nCurious how your facility compares? We offer free 30-minute cooling efficiency reviews. Learn more at https://thermashift.net/contact",
     "bluesky_text": "GPU thermal throttling: 20% throttle rate in a 1,000 GPU cluster = 200 GPUs of lost compute. $3.5M/year wasted at current pricing. Cooling directly determines AI compute ROI. #GPU #AI #DataCenter Free cooling review at thermashift.net/contact",
-    "usedBy": []
+    "usedBy": [
+      "bluesky"
+    ]
   },
   {
     "id": "lc-003",
@@ -503,6 +519,102 @@
     "reddit_body": "Google published well-known results about using DeepMind to optimize their data center cooling, claiming a 40 percent reduction in cooling energy. That is impressive but it is also Google, with massive proprietary datasets and engineering resources. I am interested in hearing from operators at more typical facilities. Has anyone deployed an AI or machine learning based thermal monitoring and optimization platform in a production environment? I have a few specific questions. How much historical data did you need before the models started producing useful recommendations? Did you let the system automate control actions or did you keep a human in the loop? What actual energy savings did you measure after six months or more? And critically, were there any instances where the AI recommendations would have caused problems if followed blindly? I am evaluating a few platforms and trying to separate genuine capability from vendor hype.",
     "facebook_text": "Most data centers still use fixed temperature thresholds to manage cooling. Set it at 25 degrees, forget it, and hope for the best. The problem is this approach wastes energy when conditions are favorable and misses developing thermal issues when they are not. AI-driven thermal monitoring can predict hotspots 15 to 30 minutes before they form, dynamically adjust cooling setpoints based on real workload and weather data, and flag equipment degradation before it causes downtime. Google reported a 40 percent reduction in cooling energy using this approach. Typical facilities see 10 to 25 percent savings within six months using platforms that work with standard BMS data. It is not science fiction. It is operational intelligence that pays for itself quickly. See what AI-driven thermal management could do for your facility. Book a free consultation at https://thermashift.net/contact",
     "bluesky_text": "Static thermal thresholds waste energy and miss developing issues. AI-driven cooling optimization delivers 10-25% energy savings by predicting conditions and adjusting dynamically. Works with standard BMS data. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-001",
+    "topic": "Section 179D Deadline — Direct Urgency",
+    "category": "tax_incentive",
+    "linkedin_text": "Section 179D federal tax deduction expires June 30, 2026.\n\nFor cooling efficiency improvements, that's $1.88 per square foot. After June 30, the deduction reverts to $0.50/sq ft for most properties — a 73% drop in tax value.\n\nFor a 50,000 sq ft facility: $94,000 in deduction at risk.\nFor a 200,000 sq ft facility: $376,000.\n\nMost data center CFOs I talk to don't realize how close the deadline is or how much value is on the table. The ones who do are pulling cooling efficiency projects forward into Q2 to capture the higher tier before it disappears.\n\nIf your facility has any cooling improvement, retrofit, or efficiency project that's been on the back burner — now is the time. Even projects placed in service after Dec 31, 2022 can qualify if filed before the deadline.\n\nWe do complimentary 30-minute cooling efficiency assessments that identify 179D-qualifying improvements with documented dollar value. No commitment.\n\n📅 Book yours: https://thermashift.net/contact\n\n#Section179D #DataCenter #TaxIncentive #EnergyEfficiency #ThermaShift",
+    "twitter_text": "Section 179D expires June 30. $1.88/sq ft for cooling efficiency upgrades. After that — drops to $0.50. A 50K sq ft facility = $94K of tax value disappearing in <60 days. Free assessment: thermashift.net/contact #179D #DataCenter",
+    "reddit_title": "Are you tracking the Section 179D deadline (June 30 2026)? Most facilities aren't.",
+    "reddit_body": "Quick PSA for facility managers and CFOs reading this sub. Section 179D federal tax deduction for energy-efficient building improvements drops from $1.88/sq ft to $0.50/sq ft for most properties after June 30, 2026. For data center cooling improvements (HVAC retrofit, efficiency upgrades, controls modernization), this is potentially massive. A 100,000 sq ft facility goes from $188K available deduction to $50K. The catch: improvements must be placed in service before the deadline AND properly documented. Most operators I've talked to either don't know about the deadline or assume it doesn't apply to them. Worth getting a tax professional to look at any cooling project that touched your books since Dec 2022.",
+    "facebook_text": "Heads up to anyone managing a data center or commercial facility: Section 179D federal tax deduction for cooling and energy efficiency improvements expires June 30, 2026. After that the deduction value drops by about 73% for most properties. For a 50,000 sq ft data center that's $94,000 of tax value at stake. We do free cooling efficiency assessments that identify 179D-qualifying improvements. Book yours at https://thermashift.net/contact #Section179D #DataCenter",
+    "bluesky_text": "Section 179D federal tax deduction expires June 30. $1.88/sq ft for cooling efficiency drops to $0.50. A 100K sq ft facility = $138K of tax value disappearing. Most CFOs don't know. We help identify qualifying improvements. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-002",
+    "topic": "Section 179D — CFO / Capital Efficiency Angle",
+    "category": "tax_incentive",
+    "linkedin_text": "If you're a CFO at a data center operator, here's a number worth knowing: $1.88 per square foot in federal tax deductions, expiring June 30.\n\nThat's Section 179D for cooling and energy efficiency improvements placed in service through that date. Most operators are sitting on cooling projects — economizer upgrades, CRAC retrofits, controls modernization, chilled water system improvements — that qualify but haven't been documented for the deduction.\n\nThe stacking opportunity is what makes this interesting:\n\n• Section 179D deduction: $1.88/sq ft\n• Duke Energy EnergyWise rebate (NC/SC): $50 per kW saved\n• Operating cost reduction: 15-30% on cooling energy\n• Carbon cost avoidance for ESG reporting\n\nA 100,000 sq ft facility doing a 200kW cooling efficiency project could realize $188K in tax deductions + $10K in utility rebates + $250K-500K annual energy savings. ROI in year one is typically 6-18 months.\n\nThe deadline window is closing fast. If your finance team hasn't reviewed open or recent cooling projects against 179D requirements, now is the time.\n\nWe help quantify the opportunity in 30 minutes — no commitment.\n\n📊 Schedule: https://thermashift.net/contact\n\n#CFO #Section179D #DataCenter #CapEx #TaxStrategy #ThermaShift",
+    "twitter_text": "CFOs: Section 179D expires June 30. $1.88/sq ft federal tax deduction for cooling efficiency improvements. Stack with Duke Energy rebates ($50/kW saved). Most ops haven't documented qualifying projects. Free 30-min assessment: thermashift.net/contact",
+    "reddit_title": "Section 179D + Duke Energy rebates + cooling efficiency = stacked savings most data center operators are missing",
+    "reddit_body": "There's a finance angle to data center cooling that I keep seeing operators miss. Section 179D federal tax deduction is $1.88 per square foot for energy efficiency improvements placed in service before June 30, 2026. After that it drops to $0.50/sq ft for most. Duke Energy's EnergyWise Business program pays $50 per kW saved on commercial efficiency improvements. These stack. So a 100,000 sq ft NC facility doing a 200kW cooling efficiency project gets $188K tax deduction + $10K utility rebate + ongoing energy savings. Most facility managers think 'we can do that next year.' Their CFOs disagree once they see the numbers. Worth running by your tax advisor before June 30 hits.",
+    "facebook_text": "For data center CFOs and finance teams: Section 179D expires June 30 2026. That's $1.88/sq ft in federal tax deduction for cooling efficiency improvements. After the deadline it drops by 73 percent for most properties. Combined with Duke Energy efficiency rebates and operational savings, a 100,000 sq ft facility with a cooling project can realize $188K in tax value + $10K in rebates + ongoing energy savings. The deadline window closes in less than 60 days. https://thermashift.net/contact",
+    "bluesky_text": "CFOs at data center ops: Section 179D ($1.88/sq ft) + Duke Energy EnergyWise ($50/kW saved) stack on cooling efficiency projects. Both before June 30 = real money. 100K sq ft facility with 200kW project = $200K+ in tax + rebate value. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-003",
+    "topic": "Section 179D — Real Numbers For Charlotte/NC Operators",
+    "category": "tax_incentive",
+    "linkedin_text": "For NC and Southeast data center operators reading this — here are the actual numbers on Section 179D before it changes June 30:\n\nFlexential's 229,000 sq ft Charlotte facility: $431K potential deduction.\nDataBank's regional footprint: $200K-500K depending on which sites qualify.\nH5 Data Centers' University Research Park (207K sq ft, Duke-powered): $389K.\nPowerHouse Data Centers' 2.5M sq ft University City buildout: $4.7M (project pending placed-in-service date).\n\nThese numbers assume cooling/HVAC improvements meeting the 25% energy reduction threshold — most modernization projects qualify. After June 30, those numbers drop by about 73% for most properties.\n\nThe stacking opportunity with Duke Energy's EnergyWise program ($50/kW saved) makes this even more compelling. NC operators are uniquely positioned to capture both incentives.\n\nTime is the constraint, not capital. Improvements must be placed in service before the deadline AND properly documented. The tax filing happens later, but the work has to be done.\n\nIf you're an NC operator and haven't reviewed your 179D position, you have under 60 days. We help quantify it.\n\n🏛️ Free 30-min assessment: https://thermashift.net/contact\n\n#NorthCarolina #DataCenter #Section179D #DukeEnergy #ThermaShift",
+    "twitter_text": "NC data center operators: Section 179D expires June 30. Flexential Charlotte = $431K, H5 = $389K, DataBank = $200-500K of tax deductions at stake. Stacks with Duke Energy rebates. We help quantify in 30 min. thermashift.net/contact",
+    "reddit_title": "NC data center operators — has your finance team modeled Section 179D before the June 30 deadline?",
+    "reddit_body": "Specifically calling out NC and Southeast facility owners. Section 179D federal tax deduction for cooling efficiency improvements is $1.88/sq ft, expires June 30, 2026, drops to $0.50 after for most properties. For NC operators specifically, this stacks with Duke Energy's EnergyWise Business rebate ($50 per kW saved on commercial efficiency improvements). Real example: a 200,000 sq ft Charlotte facility doing a 500kW cooling efficiency upgrade could realize $376K in 179D + $25K in Duke rebates + recurring energy savings. The constraint is time, not capital. Has anyone run these numbers internally? Curious whether finance teams are surfacing this to operations or vice versa.",
+    "facebook_text": "Charlotte and NC data center operators — Section 179D federal tax deduction expires June 30, 2026. For typical Charlotte-area facilities the numbers are significant: $400K-$500K in tax deductions for cooling efficiency improvements at large operators. After June 30 those numbers drop by about 73 percent. Stacks with Duke Energy efficiency rebates for additional savings. We help quantify the opportunity in 30 min. https://thermashift.net/contact",
+    "bluesky_text": "NC data center operators — Section 179D + Duke Energy stacking is real money before June 30. Flexential Charlotte = $431K. H5 = $389K. PowerHouse = $4.7M for the new build. Most haven't documented yet. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-004",
+    "topic": "What Qualifies for Section 179D — Cooling Specifics",
+    "category": "tax_incentive",
+    "linkedin_text": "Frequent question I'm getting from facility managers: 'What actually qualifies for Section 179D in a data center cooling context?'\n\nHere's the practical list of cooling improvements that typically qualify (assuming the 25% energy reduction threshold is met):\n\n✅ CRAC/CRAH unit replacements with higher-efficiency models\n✅ Variable-speed drives on cooling pumps and fans\n✅ Economizer (free cooling) implementations\n✅ Chilled water system optimization\n✅ Hot aisle / cold aisle containment\n✅ Direct liquid cooling retrofits\n✅ Rear-door heat exchanger installations\n✅ Building envelope improvements affecting cooling load\n✅ Smart controls and automation systems\n✅ Lighting modernization (often grouped in DC retrofits)\n\nWhat usually does NOT qualify:\n❌ Routine maintenance\n❌ Like-for-like equipment replacement without efficiency improvement\n❌ Sensors and monitoring alone (must be paired with control changes)\n\nThe deduction value is $1.88/sq ft full benefit before June 30, 2026. After that, $0.50/sq ft for most properties.\n\nThe filing requires energy modeling by a qualified third party — but the work itself often pays for itself, with 179D as the cherry on top.\n\nWe identify qualifying improvements during our free 30-min cooling assessment.\n\n📋 Book: https://thermashift.net/contact\n\n#Section179D #DataCenter #TaxStrategy #EnergyEfficiency #ThermaShift",
+    "twitter_text": "Section 179D qualifying cooling improvements: CRAC retrofits, VFDs, economizers, hot/cold aisle containment, liquid cooling, smart controls. Must hit 25% energy reduction. Deadline June 30. thermashift.net/contact #Section179D",
+    "reddit_title": "Practical guide: what cooling improvements qualify for Section 179D before the June 30 deadline?",
+    "reddit_body": "I keep getting this question from facilities folks who've heard about 179D but aren't sure what counts. Practical list of cooling improvements that typically qualify (assuming the 25 percent energy reduction threshold is met). CRAC or CRAH unit replacements with higher-efficiency models. Variable-speed drives on pumps and fans. Economizers and free cooling implementations. Chilled water system optimization. Hot aisle / cold aisle containment. Direct liquid cooling retrofits. Rear-door heat exchanger installations. Smart controls and automation. What does NOT qualify: routine maintenance, like-for-like replacements without efficiency gain, sensors alone without control changes. Filing requires energy modeling by a qualified third party but the deduction is real money. Anyone here actually filed 179D for a data center project? Curious about the documentation friction.",
+    "facebook_text": "What cooling improvements qualify for Section 179D before the June 30 deadline? Practically: CRAC unit replacements, VFDs on pumps and fans, economizers and free cooling, hot/cold aisle containment, liquid cooling retrofits, rear-door heat exchangers, smart controls. Must achieve 25 percent energy reduction. Routine maintenance and like-for-like replacements don't qualify. We identify what counts in 30 min. https://thermashift.net/contact",
+    "bluesky_text": "What cooling work qualifies for Section 179D? CRAC retrofits, VFD pumps, economizers, hot/cold aisle containment, liquid cooling, smart controls. Must hit 25% efficiency reduction. Deadline June 30. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-005",
+    "topic": "AI Workload Density + 179D Timing",
+    "category": "tax_incentive",
+    "linkedin_text": "There's a strategic timing convergence happening that most data center operators are missing.\n\nGPU and AI workload deployments are forcing cooling architecture changes anyway. Whether you're moving to liquid cooling, increasing CRAC capacity, or implementing rear-door heat exchangers — the work is happening because AI rack densities have made it physically necessary.\n\nDoing that same work before June 30, 2026 captures Section 179D's $1.88/sq ft deduction. Doing it after captures $0.50/sq ft. Same work, 73% less tax value.\n\nFor a 100,000 sq ft facility deploying GPU racks across 30% of the floor: that's $138K of tax deduction value that disappears based on whether placed-in-service is May vs July.\n\nThe rational play: pull AI cooling upgrades that were planned for late 2026 forward into Q2. The capital is committed regardless. The deduction is only there before the deadline.\n\nMost operators I've talked to haven't connected these dots. Their AI deployment timeline and their tax strategy are running in different lanes.\n\nWe help quantify what your specific facility could capture.\n\n📅 Free 30-min assessment: https://thermashift.net/contact\n\n#AIDataCenter #LiquidCooling #Section179D #GPUcooling #ThermaShift",
+    "twitter_text": "AI cooling upgrades planned for H2 2026? Pull them forward. Section 179D = $1.88/sq ft before June 30, $0.50 after. Same upgrade, 73% less tax value if you wait. Most ops haven't connected AI deployment with tax timing. thermashift.net/contact",
+    "reddit_title": "AI rack density forcing cooling upgrades anyway — pull them forward to capture Section 179D before June 30?",
+    "reddit_body": "Strategic question for facility folks deploying GPU/AI capacity in 2026. Cooling architecture changes are happening because AI density forces them — whether that's liquid cooling, additional CRAC capacity, RDHX, or hot aisle containment. If those projects are planned for H2 2026 (post June 30), Section 179D drops from $1.88/sq ft to $0.50/sq ft. For a 100,000 sq ft facility upgrading 30% of floor, that's $138K of tax value at stake based purely on placed-in-service date. The capital is committed either way. The deduction is only there before the deadline. Has anyone re-sequenced their 2026 cooling roadmap to capture this? Or is the constraint typically supply chain and lead times that make June 30 infeasible?",
+    "facebook_text": "If you're planning AI/GPU cooling upgrades for the second half of 2026, consider pulling them forward to capture Section 179D before it expires June 30. The deduction is $1.88/sq ft now, $0.50/sq ft after. For a typical facility doing AI density upgrades, that's $100K-$300K of tax value tied to timing. Same work, dramatically different tax outcome. https://thermashift.net/contact",
+    "bluesky_text": "AI rack density forcing cooling upgrades? Pull them forward. Section 179D = $1.88/sq ft before June 30, $0.50 after. 100K sq ft facility upgrading 30% of floor = $138K of tax value tied to timing. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-006",
+    "topic": "60-Day Countdown — Action Plan",
+    "category": "tax_incentive",
+    "linkedin_text": "Less than 60 days until Section 179D's $1.88/sq ft cooling deduction reverts to $0.50/sq ft.\n\nIf you operate a data center and haven't reviewed your position, here's a tactical 60-day plan:\n\n**Week 1:** Inventory cooling/HVAC improvements made or planned since Jan 1, 2023. Most operators have 3-7 qualifying touchpoints they've forgotten about (CRAC replacements, VFD installs, control upgrades, etc.).\n\n**Week 2:** Have an energy modeler run baseline vs. as-built numbers for the qualifying improvements. This is the documentation the IRS requires. Cost: $5K-$15K depending on facility size.\n\n**Weeks 3-6:** Execute any pending cooling efficiency work that can realistically be placed-in-service before June 30. The constraint is usually lead times on equipment and contractor availability, not capital.\n\n**Weeks 7-8:** Final documentation, energy modeling sign-off, prepare for tax filing.\n\nFor most facilities, the 179D capture more than pays for the consulting and acceleration costs. The math typically yields 5-15x return.\n\nThe operators who win this aren't the ones with the biggest budgets. They're the ones who started before June 1.\n\n⏰ Free 30-min cooling assessment: https://thermashift.net/contact\n\n#Section179D #DataCenter #TaxStrategy #ThermaShift",
+    "twitter_text": "60 days to Section 179D deadline. Tactical plan: Week 1 inventory cooling improvements since 2023. Week 2 get energy modeling done. Weeks 3-6 execute pending work for placed-in-service before June 30. Week 7-8 file. thermashift.net/contact",
+    "reddit_title": "60-day Section 179D action plan for data center operators",
+    "reddit_body": "For folks who suddenly realized June 30 is closer than they thought, here's a tactical 60-day plan. Week 1 inventory all cooling and HVAC improvements made or planned since Jan 1 2023 — most operators have 3 to 7 qualifying touchpoints they've forgotten about. Week 2 get an energy modeler to run baseline vs as-built numbers for qualifying improvements (cost $5-15K). Weeks 3-6 execute any pending cooling efficiency work that can realistically be placed-in-service before June 30. Weeks 7-8 final documentation and prepare tax filing. The 179D capture typically more than covers the consulting cost — 5-15x return. The constraint is usually equipment lead times and contractor availability, not capital. Has anyone here done the documentation work yourselves vs hiring it out?",
+    "facebook_text": "Less than 60 days until Section 179D drops from $1.88/sq ft to $0.50/sq ft. Tactical plan if you operate a data center: Week 1 inventory cooling improvements since 2023. Week 2 get energy modeling done. Weeks 3-6 execute pending work for placed-in-service before June 30. Week 7-8 file documentation. The capture typically returns 5-15x the consulting cost. https://thermashift.net/contact",
+    "bluesky_text": "60-day Section 179D plan: Week 1 inventory cooling work since 2023. Week 2 energy modeling. Weeks 3-6 execute pending work before June 30. Week 7-8 file. Typical return 5-15x consulting cost. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-007",
+    "topic": "After June 30 — What Changes",
+    "category": "tax_incentive",
+    "linkedin_text": "What actually changes on July 1, 2026?\n\nSection 179D deduction values for energy-efficient building improvements:\n\n**Before June 30:**\n• Maximum deduction: $1.88/sq ft\n• Achieved with 50% energy reduction\n• Sliding scale: $0.94/sq ft at 25% reduction\n\n**After June 30:**\n• Maximum deduction: $0.50/sq ft for most properties\n• 73% reduction in available tax value for typical projects\n• Some properties retain higher deduction tiers but qualification gets stricter\n\nFor a 100,000 sq ft data center achieving 30% cooling energy reduction:\n• Pre-June 30 placed-in-service: ~$120K deduction\n• Post-June 30 placed-in-service: ~$32K deduction\n• Difference: $88K based purely on timing\n\nThe IRS doesn't extend deadlines for forgotten paperwork. The work needs to be DONE before the deadline, even if the tax filing comes later.\n\nFor any data center operator with cooling efficiency improvements in flight or planned: the next 60 days is the highest-leverage time for capital deployment in your facility's history. Probably for the next 5-10 years.\n\nWe help quantify what's at stake for your specific facility.\n\n📊 Book: https://thermashift.net/contact\n\n#Section179D #TaxDeadline #DataCenter #ThermaShift",
+    "twitter_text": "What changes July 1: Section 179D max deduction drops from $1.88/sq ft to $0.50/sq ft for most properties. 100K sq ft facility with 30% cooling reduction goes from $120K to $32K deduction. Pure timing difference. thermashift.net/contact",
+    "reddit_title": "What actually changes for Section 179D on July 1, 2026?",
+    "reddit_body": "Section 179D for energy-efficient building improvements is changing significantly on July 1. Before June 30 maximum deduction is $1.88/sq ft achieved with 50% energy reduction (sliding scale to $0.94 at 25%). After June 30 maximum deduction is $0.50/sq ft for most properties — about 73% reduction in tax value. Some properties retain higher tiers but qualification gets stricter. For a 100,000 sq ft data center with 30% cooling energy reduction the math goes from ~$120K deduction (pre June 30) to ~$32K (post). The improvement work needs to be placed-in-service before the deadline even if tax filing happens later. Anyone here have insight on whether the deadline is likely to get extended via budget reconciliation or administrative action? My gut says no but curious about more informed views.",
+    "facebook_text": "What changes for Section 179D on July 1, 2026: maximum federal tax deduction for energy efficiency improvements drops from $1.88/sq ft to $0.50/sq ft for most properties. For a typical data center with cooling improvements, that's a 73% drop in available tax value. The work has to be placed-in-service before June 30 — even if your tax filing happens later in the year. Less than 60 days remaining. https://thermashift.net/contact",
+    "bluesky_text": "Section 179D after July 1: max deduction drops $1.88/sq ft → $0.50/sq ft. 100K sq ft facility with 30% cooling reduction = $120K deduction → $32K. Pure timing difference. thermashift.net/contact",
+    "usedBy": []
+  },
+  {
+    "id": "179d-008",
+    "topic": "Your Tax Advisor Doesn't Know This",
+    "category": "tax_incentive",
+    "linkedin_text": "Reality check from inside the data center industry:\n\nYour generalist tax advisor probably doesn't know about Section 179D's June 30 deadline.\n\nIt's not their fault. 179D is a niche provision. Most CPAs encounter it once or twice in a career, usually for green-building clients. Data center cooling falls outside the typical 179D conversation pattern, even though the deduction values are massive at our scale.\n\nWhat usually happens:\n• Facility manager makes cooling upgrades\n• Books them as cap-ex with normal depreciation\n• Tax advisor processes the return like any other commercial property\n• 179D opportunity is missed entirely\n• Tax value forgone: $50K-$500K depending on facility size\n\nThe fix is specific:\n1. Get a 179D-experienced energy modeler involved BEFORE the project closes out\n2. Have proper baseline-vs-as-built calculations done\n3. Coordinate between operations, finance, and tax in a way that most companies don't naturally do\n\nThe deadline closes June 30. After that, the deduction shrinks 73%.\n\nIf you're an operator and you're not 100% sure your tax team is positioned for 179D — ask. Worst case, you confirm everything's covered. Best case, you save six figures.\n\nWe help facility teams structure the conversation.\n\n💼 Free 30-min call: https://thermashift.net/contact\n\n#Section179D #DataCenter #TaxStrategy #CFO #ThermaShift",
+    "twitter_text": "Hot take: Your tax advisor probably doesn't know about Section 179D's June 30 deadline. It's a niche provision most CPAs encounter once or twice. Data center cooling falls outside the typical 179D pattern despite massive deduction values. Ask them. thermashift.net/contact",
+    "reddit_title": "PSA: Your generalist tax advisor probably isn't tracking Section 179D for your data center",
+    "reddit_body": "Honest observation from working with data center operators on cooling efficiency. Most generalist CPAs don't know much about Section 179D — it's a niche provision they encounter rarely (usually for green-building or LEED-cert clients). Data centers fall outside the typical 179D conversation pattern, even though the deduction values can be six figures at our scale. Common pattern: facility makes cooling upgrades, books cap-ex with normal depreciation, tax advisor processes return without ever surfacing 179D opportunity, $50K-$500K of tax value goes unclaimed. The fix requires getting a 179D-experienced energy modeler involved before project closes, plus coordination between ops, finance, and tax that most companies don't naturally do. With the June 30 deadline approaching, this is worth verifying with your tax team. Anyone here have war stories on 179D done right or done badly?",
+    "facebook_text": "Reality check: most generalist tax advisors don't know about Section 179D for data center cooling. It's a niche provision they encounter rarely, even though deduction values can be $50K-$500K at our facility scale. With the June 30 deadline approaching, it's worth asking your tax team if they're tracking 179D for any cooling efficiency work you've done since 2023. Most operators leave money on the table without realizing it. https://thermashift.net/contact",
+    "bluesky_text": "Most generalist CPAs don't know about Section 179D for data centers — it's niche. Operators routinely leave $50-500K on the table from cooling efficiency upgrades. Worth asking your tax team before June 30. thermashift.net/contact",
     "usedBy": []
   }
 ]

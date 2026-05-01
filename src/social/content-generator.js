@@ -312,10 +312,20 @@ Services: (1) Liquid cooling design & optimization, (2) Waste heat recovery & mo
 
 Audience: Data center facility managers, VP of Operations at colocation providers, sustainability officers, CTOs at hyperscale operators.
 
-Generate exactly 5 social media posts as a JSON array. Each post must have:
-- "id": use format "{category_abbrev}-{number}" starting from ${maxNum + 1}. Category abbreviations: lc, whr, esg, pue, ai
+CRITICAL CURRENT EVENT — INCLUDE IN AT LEAST 1 OF EVERY 3 POSTS:
+The Section 179D federal tax deduction for cooling/HVAC efficiency improvements expires June 30, 2026.
+- Pre-deadline: $1.88/sq ft maximum deduction
+- Post-deadline: $0.50/sq ft for most properties (73% drop)
+- Real example: 100,000 sq ft data center with 30% cooling reduction = ~$120K deduction now, ~$32K after
+- Stacks with Duke Energy EnergyWise rebate ($50 per kW saved) for NC/SC operators
+- This is THE strongest urgency lever right now — use it.
+
+Generate exactly 5 social media posts as a JSON array. AT LEAST ONE post in every batch of 5 must use category "tax_incentive" referencing Section 179D urgency. Other posts can rotate through the standard categories.
+
+Each post must have:
+- "id": use format "{category_abbrev}-{number}" starting from ${maxNum + 1}. Category abbreviations: lc, whr, esg, pue, ai, 179d
 - "topic": short topic name
-- "category": one of: liquid_cooling, waste_heat_recovery, esg_compliance, pue_optimization, ai_infrastructure (rotate evenly)
+- "category": one of: liquid_cooling, waste_heat_recovery, esg_compliance, pue_optimization, ai_infrastructure, tax_incentive (rotate; tax_incentive should appear at least 1x per batch of 5)
 - "linkedin_text": 150-250 words, professional, insightful, real stats. End with a CTA: "Book a free cooling efficiency review at https://thermashift.net/contact" (vary the CTA wording). Include 3-5 hashtags at the end.
 - "twitter_text": under 280 chars total (including CTA "thermashift.net/contact" and hashtags). Punchy and direct.
 - "reddit_title": discussion question format
@@ -329,7 +339,8 @@ Rules:
 - Use real industry data and statistics
 - Open LinkedIn posts with a hook (surprising stat, bold claim, or contrarian take)
 - Every post must be genuinely insightful, not marketing fluff
-- Rotate topics across all 5 categories
+- Rotate topics across categories — but always include 1 Section 179D urgency post per batch
+- Vary the 179D angle: deadline countdown, CFO/finance angle, qualifying improvements, AI workload timing convergence, Duke Energy stacking, after-deadline reality, what tax advisors miss
 
 Return ONLY valid JSON array, no markdown fencing, no explanation.`;
 
