@@ -393,12 +393,29 @@ function AdvisorPanel({ apiKey, context, incidentId, autoLoad = true, compact = 
     </div>
   );
 
-  if (error) return (
-    <div className="card" style={{ padding: 14, marginBottom: 20, border: '1px solid rgba(239,68,68,0.3)' }}>
-      <div style={{ color: '#ef4444', fontSize: '0.85rem' }}>Advisor error: {error}</div>
-      <button className="btn" onClick={generate} style={{ marginTop: 8, fontSize: '0.8rem' }}>Retry</button>
-    </div>
-  );
+  if (error) {
+    const friendly = /credit balance|insufficient|429|rate.?limit/i.test(error)
+      ? "AI Advisor is temporarily unavailable. The system administrator has been notified — service should resume shortly."
+      : "AI Advisor is temporarily unavailable. Please try again in a moment.";
+    return (
+      <div className="card" style={{
+        padding: 16, marginBottom: 20,
+        background: 'linear-gradient(135deg, rgba(134,59,255,0.06), rgba(0,163,224,0.04))',
+        border: '1px solid rgba(134,59,255,0.2)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+          <Sparkles size={16} style={{ color: '#863bff' }} />
+          <strong style={{ fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: 1, color: '#863bff' }}>
+            AI Cooling Advisor
+          </strong>
+        </div>
+        <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.5 }}>{friendly}</div>
+        <button className="btn" onClick={generate} style={{ marginTop: 10, fontSize: '0.78rem', padding: '4px 10px' }}>
+          <RefreshCw size={12} /> Try again
+        </button>
+      </div>
+    );
+  }
 
   const upsellLabels = {
     'LCaaS': { label: 'Liquid Cooling-as-a-Service', icon: '❄️', color: '#0ea5e9' },
