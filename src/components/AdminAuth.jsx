@@ -128,40 +128,66 @@ export function AdminLogin() {
   const [loading, setLoading] = useState(false);
 
   if (authed) {
+    const adminTileStyle = { padding: '12px 16px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none', display: 'block' };
     return (
-      <main style={{ paddingTop: '72px', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', maxWidth: '400px' }}>
-          <Lock size={48} style={{ color: 'var(--success)', marginBottom: '16px' }} />
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Admin Access Granted</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>
-            You have access to internal tools. Use the links below or navigate directly.
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-            <Link to="/dashboard" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
-              Sales Pipeline Dashboard
-            </Link>
-            <Link to="/tracker" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
-              CRM Tracker
-            </Link>
-            <Link to="/report" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
-              Report Generator
-            </Link>
-            <Link to="/proposal" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
-              Proposal & SOW Generator
-            </Link>
-            <Link to="/closer" style={{ padding: '12px 20px', background: 'linear-gradient(135deg, rgba(134,59,255,0.15), rgba(0,163,224,0.1))', borderRadius: '8px', border: '1px solid rgba(134,59,255,0.4)', color: '#863bff', fontWeight: 700, fontSize: '0.9rem', textDecoration: 'none' }}>
-              ✨ AI Sales Closer
-            </Link>
-            <Link to="/contracts" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
-              Contract Manager
-            </Link>
-            <Link to="/content" style={{ padding: '12px 20px', background: 'var(--surface)', borderRadius: '8px', border: '1px solid var(--border)', color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', textDecoration: 'none' }}>
-              LinkedIn Content Hub
-            </Link>
+      <main style={{ paddingTop: '72px', minHeight: '60vh' }}>
+        <div style={{ maxWidth: '720px', margin: '40px auto', padding: '0 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <Lock size={36} style={{ color: 'var(--success)', marginBottom: '10px' }} />
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '6px' }}>Admin Access Granted</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0 }}>
+              30-min idle timeout active. Sign out when done.
+            </p>
           </div>
-          <button onClick={logout} className="btn btn-outline" style={{ padding: '8px 20px', fontSize: '0.85rem' }}>
-            <LogOut size={16} /> Sign Out
-          </button>
+
+          {/* DEMO — shareable with prospects */}
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span style={{ padding: '2px 10px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}>SAFE TO SHARE</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Public demo URL — shows fake data, no real client info</span>
+            </div>
+            <a href="/saas?key=tsk_demo_9f42e3c62de1be877830fa37dab0f3f2" target="_blank" rel="noopener noreferrer"
+              style={{
+                display: 'block', padding: '18px 20px', textDecoration: 'none',
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.08))',
+                border: '2px solid rgba(16,185,129,0.4)', borderRadius: '10px',
+              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, marginBottom: '4px' }}>
+                    🌐 Demo Dashboard for Prospects
+                  </div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Open ThermaShift Demo Co dashboard →</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
+                    Live SaaS view: 2 sites, 12 sensors, AI Cooling Advisor, Pro auto-action features. Send this URL to any prospect.
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
+
+          {/* INTERNAL — your CRM data */}
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span style={{ padding: '2px 10px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)' }}>INTERNAL — DO NOT SHARE</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Your real CRM data — leads, audits, proposals</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '8px' }}>
+              <Link to="/dashboard" style={adminTileStyle}>📊 Sales Pipeline</Link>
+              <Link to="/closer" style={{ ...adminTileStyle, background: 'linear-gradient(135deg, rgba(134,59,255,0.15), rgba(0,163,224,0.1))', border: '1px solid rgba(134,59,255,0.4)', color: '#863bff', fontWeight: 700 }}>✨ AI Sales Closer</Link>
+              <Link to="/tracker" style={adminTileStyle}>👥 CRM Tracker</Link>
+              <Link to="/report" style={adminTileStyle}>📄 Report Generator</Link>
+              <Link to="/proposal" style={adminTileStyle}>📋 Proposal & SOW</Link>
+              <Link to="/contracts" style={adminTileStyle}>📑 Contract Manager</Link>
+              <Link to="/content" style={adminTileStyle}>📢 LinkedIn Content</Link>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center' }}>
+            <button onClick={logout} className="btn btn-outline" style={{ padding: '8px 20px', fontSize: '0.85rem' }}>
+              <LogOut size={16} /> Sign Out
+            </button>
+          </div>
         </div>
       </main>
     );
