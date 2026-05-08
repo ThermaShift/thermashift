@@ -715,14 +715,50 @@ app.post('/api/follow-ups/process', async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 
 // Admin auth middleware — checks password hash in x-admin-token header
-const ADMIN_HASH = '6a1cf8ff6fa4491a4b3d9e22d6ef2ea31f2873c631fce4401ee49d6be788762f';
+// Rotated 2026-05-08 due to autofill exposure risk; previous hash invalidated.
+const ADMIN_HASH = 'a7adb46eea195572e6d1f418a324673fc33ce5889869c39c67e88aa68eb6fe33';
+
+// Brute-force protection: track failed admin auth attempts per IP
+const adminAuthFailures = new Map(); // ip -> { count, firstAttempt, lockedUntil }
+const ADMIN_AUTH_MAX_ATTEMPTS = 10;
+const ADMIN_AUTH_WINDOW_MS = 15 * 60 * 1000;
+const ADMIN_AUTH_LOCKOUT_MS = 60 * 60 * 1000;
+
+function getClientIp(req) {
+  return (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || 'unknown';
+}
+
 async function adminAuth(req, res, next) {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const record = adminAuthFailures.get(ip);
+
+  if (record?.lockedUntil && record.lockedUntil > now) {
+    const minutes = Math.ceil((record.lockedUntil - now) / 60000);
+    return res.status(429).json({ error: `Too many failed attempts. Locked out for ${minutes} more minute(s).` });
+  }
+
   const token = req.headers['x-admin-token'];
   if (!token) return res.status(401).json({ error: 'Admin authentication required' });
+
   try {
     const crypto = await import('crypto');
     const hash = crypto.createHash('sha256').update(token).digest('hex');
-    if (hash !== ADMIN_HASH) return res.status(403).json({ error: 'Invalid admin credentials' });
+    if (hash !== ADMIN_HASH) {
+      // Track failed attempt
+      const r = record && (now - record.firstAttempt) < ADMIN_AUTH_WINDOW_MS
+        ? record
+        : { count: 0, firstAttempt: now, lockedUntil: 0 };
+      r.count += 1;
+      if (r.count >= ADMIN_AUTH_MAX_ATTEMPTS) {
+        r.lockedUntil = now + ADMIN_AUTH_LOCKOUT_MS;
+        console.warn(`[security] Admin auth lockout triggered for IP ${ip} (${r.count} failures)`);
+      }
+      adminAuthFailures.set(ip, r);
+      return res.status(403).json({ error: 'Invalid admin credentials' });
+    }
+    // Successful auth — reset the counter
+    if (record) adminAuthFailures.delete(ip);
     next();
   } catch {
     return res.status(500).json({ error: 'Auth check failed' });

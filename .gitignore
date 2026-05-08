@@ -48,3 +48,6 @@ screenshots/
 *.njsproj
 *.sln
 *.sw?
+
+# Admin password — local only, NEVER commit
+THERMASHIFT-ADMIN-PASSWORD.txt

@@ -1,9 +1,16 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { Lock, LogIn, LogOut } from 'lucide-react';
 
 const AuthContext = createContext(null);
-const HASH = '6a1cf8ff6fa4491a4b3d9e22d6ef2ea31f2873c631fce4401ee49d6be788762f';
+const HASH = 'a7adb46eea195572e6d1f418a324673fc33ce5889869c39c67e88aa68eb6fe33';
+
+// Idle timeout — auto-logout after 30 minutes of no activity
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+// Brute-force protection — N failed attempts in window blocks for cooldown
+const MAX_ATTEMPTS = 5;
+const ATTEMPT_WINDOW_MS = 15 * 60 * 1000;
+const COOLDOWN_MS = 30 * 60 * 1000;
 
 async function sha256(message) {
   const data = new TextEncoder().encode(message);
@@ -12,24 +19,89 @@ async function sha256(message) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function getAttempts() {
+  try { return JSON.parse(sessionStorage.getItem('ts_login_attempts') || '[]'); } catch { return []; }
+}
+function recordFailedAttempt() {
+  const now = Date.now();
+  const attempts = getAttempts().filter(t => now - t < ATTEMPT_WINDOW_MS);
+  attempts.push(now);
+  sessionStorage.setItem('ts_login_attempts', JSON.stringify(attempts));
+  return attempts.length;
+}
+function isLockedOut() {
+  const attempts = getAttempts();
+  if (attempts.length < MAX_ATTEMPTS) return false;
+  const lastAttempt = Math.max(...attempts);
+  return (Date.now() - lastAttempt) < COOLDOWN_MS;
+}
+function getCooldownSecondsRemaining() {
+  const attempts = getAttempts();
+  if (attempts.length < MAX_ATTEMPTS) return 0;
+  const lastAttempt = Math.max(...attempts);
+  return Math.max(0, Math.ceil((COOLDOWN_MS - (Date.now() - lastAttempt)) / 1000));
+}
+
 export function AuthProvider({ children }) {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem('ts_admin') === 'true');
+  const [authed, setAuthed] = useState(() => {
+    if (sessionStorage.getItem('ts_admin') !== 'true') return false;
+    // Check if session has timed out
+    const lastActivity = parseInt(sessionStorage.getItem('ts_last_activity') || '0', 10);
+    if (lastActivity && (Date.now() - lastActivity) > IDLE_TIMEOUT_MS) {
+      sessionStorage.removeItem('ts_admin');
+      sessionStorage.removeItem('ts_admin_pw');
+      sessionStorage.removeItem('ts_last_activity');
+      return false;
+    }
+    return true;
+  });
+  const idleTimerRef = useRef(null);
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem('ts_admin');
+    sessionStorage.removeItem('ts_admin_pw');
+    sessionStorage.removeItem('ts_last_activity');
+    setAuthed(false);
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+  }, []);
+
+  const resetIdleTimer = useCallback(() => {
+    if (!authed) return;
+    sessionStorage.setItem('ts_last_activity', String(Date.now()));
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      logout();
+      alert('Signed out due to 30 minutes of inactivity.');
+    }, IDLE_TIMEOUT_MS);
+  }, [authed, logout]);
+
+  // Track activity for idle timeout
+  useEffect(() => {
+    if (!authed) return;
+    resetIdleTimer();
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach(e => window.addEventListener(e, resetIdleTimer, { passive: true }));
+    return () => {
+      events.forEach(e => window.removeEventListener(e, resetIdleTimer));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [authed, resetIdleTimer]);
 
   const login = async (password) => {
+    if (isLockedOut()) {
+      return { ok: false, lockedOut: true, retryIn: getCooldownSecondsRemaining() };
+    }
     const hash = await sha256(password);
     if (hash === HASH) {
       sessionStorage.setItem('ts_admin', 'true');
       sessionStorage.setItem('ts_admin_pw', password);
+      sessionStorage.setItem('ts_last_activity', String(Date.now()));
+      sessionStorage.removeItem('ts_login_attempts');
       setAuthed(true);
-      return true;
+      return { ok: true };
     }
-    return false;
-  };
-
-  const logout = () => {
-    sessionStorage.removeItem('ts_admin');
-    sessionStorage.removeItem('ts_admin_pw');
-    setAuthed(false);
+    const attempts = recordFailedAttempt();
+    return { ok: false, attemptsRemaining: Math.max(0, MAX_ATTEMPTS - attempts) };
   };
 
   return (
@@ -98,10 +170,16 @@ export function AdminLogin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(false);
-    const success = await login(password);
-    if (!success) {
-      setError(true);
+    setError('');
+    const result = await login(password);
+    if (!result.ok) {
+      if (result.lockedOut) {
+        setError(`Too many failed attempts. Try again in ${Math.ceil(result.retryIn / 60)} minute(s).`);
+      } else if (result.attemptsRemaining === 0) {
+        setError('Too many failed attempts. Locked out for 30 minutes.');
+      } else {
+        setError(`Incorrect password. ${result.attemptsRemaining} attempt(s) remaining before lockout.`);
+      }
       setPassword('');
     }
     setLoading(false);
@@ -117,15 +195,24 @@ export function AdminLogin() {
             Enter your password to access internal tools.
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="card" style={{ padding: '28px' }}>
+        <form onSubmit={handleSubmit} className="card" style={{ padding: '28px' }} autoComplete="off">
+          {/* Hidden honeypot fields trick browsers' aggressive autofill into filling these instead of the real password field */}
+          <input type="text" name="username" autoComplete="username" style={{ display: 'none' }} aria-hidden="true" tabIndex="-1" />
+          <input type="password" name="fakepassword" autoComplete="current-password" style={{ display: 'none' }} aria-hidden="true" tabIndex="-1" />
+
           <div style={{ marginBottom: '16px' }}>
-            <label>Password</label>
+            <label htmlFor="ts-admin-pw">Password</label>
             <input
+              id="ts-admin-pw"
+              name="ts-admin-pw-no-autofill"
               type="password"
               value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(false); }}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
               placeholder="Enter admin password"
-              autoFocus
+              autoComplete="new-password"
+              data-lpignore="true"
+              data-form-type="other"
+              data-1p-ignore="true"
               required
             />
           </div>
@@ -135,7 +222,7 @@ export function AdminLogin() {
               background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
               color: 'var(--danger)', fontSize: '0.85rem', fontWeight: 600,
             }}>
-              Incorrect password. Try again.
+              {error}
             </div>
           )}
           <button type="submit" disabled={loading} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: loading ? 0.7 : 1 }}>
