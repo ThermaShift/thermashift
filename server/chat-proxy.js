@@ -23,6 +23,7 @@ import {
   listDashboards, getDefaultDashboard, getDashboard, createDashboard,
   updateDashboard, deleteDashboard, WIDGET_CATALOG,
 } from './dashboard-storage.js';
+import { SCENARIOS as DEMO_SCENARIOS } from './demo-scenarios.js';
 import { pollInbox } from './ai-closer-inbound.js';
 import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 
@@ -863,6 +864,21 @@ app.delete('/api/monitoring/client/rules/:id', clientAuth, async (req, res) => {
     await sb('monitoring_alert_rules', 'DELETE', null, `?id=eq.${req.params.id}`);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Public demo library endpoint — returns all available demo scenarios with their URLs.
+// No auth required; demo URLs are intended to be shareable. Used by the admin Demo Library page.
+app.get('/api/demos/library', (req, res) => {
+  res.json(DEMO_SCENARIOS.map(s => ({
+    id: s.id,
+    label: s.label,
+    icon: s.icon,
+    blurb: s.blurb,
+    bestFor: s.bestFor,
+    company: s.company,
+    apiKey: s.apiKey,
+    url: `/saas?key=${s.apiKey}`,
+  })));
 });
 
 // Resend webhooks — receives email lifecycle events (delivered/opened/clicked/bounced/complained)

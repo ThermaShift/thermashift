@@ -140,13 +140,13 @@ export function AdminLogin() {
             </p>
           </div>
 
-          {/* DEMO — shareable with prospects */}
+          {/* DEMO LIBRARY — pick by scenario, share with prospects */}
           <div style={{ marginBottom: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
               <span style={{ padding: '2px 10px', borderRadius: '100px', fontSize: '0.65rem', fontWeight: 700, background: 'rgba(16,185,129,0.15)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}>SAFE TO SHARE</span>
-              <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Public demo URL — shows fake data, no real client info</span>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Public demos — pick the scenario that fits your prospect</span>
             </div>
-            <a href="/saas?key=tsk_demo_9f42e3c62de1be877830fa37dab0f3f2" target="_blank" rel="noopener noreferrer"
+            <Link to="/admin/demos"
               style={{
                 display: 'block', padding: '18px 20px', textDecoration: 'none',
                 background: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(6,182,212,0.08))',
@@ -155,15 +155,15 @@ export function AdminLogin() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <div style={{ fontSize: '0.7rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 700, marginBottom: '4px' }}>
-                    🌐 Demo Dashboard for Prospects
+                    🎬 Demo Library — 7 Scenarios
                   </div>
-                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Open ThermaShift Demo Co dashboard →</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Pick a demo by prospect type →</div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Live SaaS view: 2 sites, 12 sensors, AI Cooling Advisor, Pro auto-action features. Send this URL to any prospect.
+                    GPU Hotspot · Hyperscale Waste Heat · Multi-site · PFAS Migration · Greenfield · 179D · Mission-Critical Edge
                   </div>
                 </div>
               </div>
-            </a>
+            </Link>
           </div>
 
           {/* INTERNAL — your CRM data */}
