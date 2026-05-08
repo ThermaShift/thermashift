@@ -86,6 +86,27 @@ export async function sendMessage(sb, clientId, chatId, userMessage) {
   const chat = await getChat(sb, clientId, chatId);
   if (!chat) throw new Error('chat_not_found');
 
+  // Demo mode: don't call Claude, return a polite canned redirect to a sales conversation
+  const clientRows = await sb('monitoring_clients', 'GET', null, `?id=eq.${clientId}&limit=1`);
+  const clientRow = clientRows?.[0];
+  if (clientRow?.is_demo) {
+    const cannedReply = clientRow.demo_chat_disabled_message
+      || `This is a public demo — interactive AI chat is reserved for paying Pro-tier clients. The conversation above shows what a real client interaction looks like.\n\nWant to see this on YOUR data center's data? Reply to this message in any sales conversation, or contact Steve at steve@thermashift.net for a 30-min consultation. We can have a real Pro-tier instance running for you within 24 hours.`;
+
+    const newHistory = [
+      ...(chat.messages || []),
+      { role: 'user', content: userMessage, ts: new Date().toISOString() },
+      { role: 'assistant', content: cannedReply, ts: new Date().toISOString() },
+    ];
+    await sb('advisor_chats', 'PATCH', {
+      messages: newHistory,
+      message_count: newHistory.length,
+      last_message_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, `?id=eq.${chatId}`);
+    return { reply: cannedReply, message_count: newHistory.length, demo_mode: true };
+  }
+
   // Pull fresh context if there's an incident
   let incident = null, recentReadings = [];
   if (chat.incident_id) {

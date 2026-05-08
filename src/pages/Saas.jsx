@@ -493,6 +493,35 @@ function AdvisorPanel({ apiKey, context, incidentId, autoLoad = true, compact = 
           </a>
         </div>
       )}
+
+      {/* Demo funnel — explicit pointers to other tabs */}
+      {advice.demo_funnel && (
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+            What to do next
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+            {advice.demo_funnel.explore && (
+              <div style={{ padding: 10, background: 'rgba(134,59,255,0.06)', border: '1px solid rgba(134,59,255,0.2)', borderRadius: 6 }}>
+                <div style={{ fontSize: '0.7rem', color: '#863bff', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, marginBottom: 4 }}>⚡ Take action</div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5 }}>{advice.demo_funnel.explore}</div>
+              </div>
+            )}
+            {advice.demo_funnel.ask_questions && (
+              <div style={{ padding: 10, background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.2)', borderRadius: 6 }}>
+                <div style={{ fontSize: '0.7rem', color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, marginBottom: 4 }}>💬 Dig deeper</div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5 }}>{advice.demo_funnel.ask_questions}</div>
+              </div>
+            )}
+            {advice.demo_funnel.get_quote && (
+              <div style={{ padding: 10, background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6 }}>
+                <div style={{ fontSize: '0.7rem', color: '#10b981', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, marginBottom: 4 }}>💵 Get a quote</div>
+                <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5 }}>{advice.demo_funnel.get_quote}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

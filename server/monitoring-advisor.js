@@ -156,6 +156,17 @@ export async function generateAdvice(sb, clientId, opts = {}) {
   const hit = cache.get(cacheKey);
   if (hit && hit.expiresAt > Date.now()) return { ...hit.data, cached: true };
 
+  // Demo mode: if the client is flagged is_demo, return the pre-baked response
+  // without calling Claude. Saves API spend on prospect demos and gives
+  // tightly-scripted control of the narrative for sales calls.
+  const clientRows = await sb('monitoring_clients', 'GET', null, `?id=eq.${clientId}&limit=1`);
+  const clientRow = clientRows?.[0];
+  if (clientRow?.is_demo && clientRow?.demo_advisor_response) {
+    const baked = clientRow.demo_advisor_response;
+    cache.set(cacheKey, { data: baked, expiresAt: Date.now() + CACHE_TTL_MS });
+    return { ...baked, cached: false, demo_mode: true };
+  }
+
   let prompt;
   if (context === 'incident' && incident_id) {
     const ctx = await buildIncidentContext(sb, clientId, incident_id);

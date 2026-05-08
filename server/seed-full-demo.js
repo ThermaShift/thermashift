@@ -31,21 +31,60 @@ async function sb(t, m, b, q = '') {
 async function main() {
   console.log('\n🎬 Seeding full Pro-tier demo for ThermaShift Demo Co...\n');
 
-  // 1. Find + upgrade demo client to Pro
+  // 1. Find + upgrade demo client to Pro + flag as demo + bake advisor response
   const clients = await sb('monitoring_clients', 'GET', null, '?company=eq.ThermaShift Demo Co&limit=1');
   const client = clients?.[0];
   if (!client) {
     console.log('❌ Demo client not found. Run server/seed-demo-monitoring.js first.');
     process.exit(1);
   }
+
+  // Hand-crafted advisor response — explicitly funnels prospects to other tabs.
+  // Saves Claude API cost on demos and gives total narrative control.
+  const demoAdvisorResponse = {
+    headline: 'Hot Aisle 3 Rack 18 is recurring critical (88°F now, 14× in 30 days) — your air cooling has aged out of this zone.',
+    analysis: 'Rack 18 has triggered 14 critical hot-aisle alerts in 30 days while neighboring Rack 12 (same row) runs steady at 78°F. The pattern points to localized power density (3 GPU servers on Rack 18 vs 1 on Rack 12), not facility-wide cooling capacity. CRAC 2 is operating normally with a healthy 16°F delta-T but cannot deliver enough airflow at this density. Without intervention you have ~60 minutes before GPU thermal throttling kicks in and ~$12,400/month of cumulative downtime risk if the pattern continues.',
+    recommendations: [
+      {
+        action: 'Increase CRAC 2 fan speed from 78% to 95% — buys you 4-6°F drop in 5 minutes. Open the Cooling AI tab and approve the proposed action (it\'s already drafted with full reasoning). Or set an auto-approval rule so AI handles this automatically next time.',
+        urgency: 'today',
+        expected_impact: 'Stops thermal throttling within 5 min · ~$18/day extra fan energy',
+      },
+      {
+        action: 'Inspect Rack 18 for blocked vents, failed perforated tile alignment, or improperly seated server bezels — physical airflow obstruction is responsible for ~40% of recurring hotspots in our experience.',
+        urgency: 'today',
+        expected_impact: 'If found: 5-8°F drop, no equipment cost',
+      },
+      {
+        action: 'Set up a permission rule for economizer mode — outside-air free cooling is currently auto-approved on this account and saved you $612 last month. Review under Cooling AI → Permission Rules to confirm.',
+        urgency: 'this week',
+        expected_impact: 'Confirms autonomous savings stay enabled',
+      },
+    ],
+    upsell: {
+      service: 'LCaaS',
+      why: 'Rack 18 has outgrown air cooling at 30kW+ density. A rear-door heat exchanger retrofit eliminates this hotspot permanently and reduces CRAC 2 load by ~15%. ROI 14-21 months on incident risk alone.',
+      estimated_value: '$40,000–$60,000',
+      cta: 'Schedule a free 30-min consultation',
+    },
+    demo_funnel: {
+      explore: 'Open the Cooling AI tab to see the AI proposed actions waiting for your approval — including the CRAC fan speed increase referenced above.',
+      ask_questions: 'Open Chat with AI to dig deeper into this incident — there\'s already a sample multi-turn conversation about Rack 18 you can read.',
+      get_quote: 'Open Recommendations to see two AI-generated upsell opportunities ($40K-$60K LCaaS + $200K-$500K Waste Heat Recovery) ready for one-click escalation to Steve.',
+    },
+  };
+
   await sb('monitoring_clients', 'PATCH', {
     tier: 'pro',
     actions_enabled: true,
     action_webhook_url: 'https://example.com/cooling-webhook',
     primary_contact_name: 'Demo Operator',
+    is_demo: true,
+    demo_advisor_response: demoAdvisorResponse,
+    demo_chat_disabled_message: 'This is a public demo — interactive AI chat is reserved for paying Pro-tier clients. The conversation above shows what a real client interaction looks like in production.\n\nWant to see this on YOUR data center\'s data? Email steve@thermashift.net for a 30-min consultation. A real Pro-tier instance can be running on your sensors within 24 hours.',
     updated_at: new Date().toISOString(),
   }, `?id=eq.${client.id}`);
-  console.log(`✓ Demo client (id=${client.id}) → tier=pro, actions_enabled=true`);
+  console.log(`✓ Demo client (id=${client.id}) → tier=pro, is_demo=true, advisor response baked, chat redirect armed`);
 
   // 2. Wipe + reseed cooling actions
   await sb('cooling_action_audit', 'DELETE', null, `?client_id=eq.${client.id}`);
