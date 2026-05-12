@@ -198,7 +198,7 @@ async function seedScenario(scenario) {
       reasoning: act.reasoning,
       status: 'proposed',
       requires_permission: true,
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
     });
     pendingActionIds.push(a.id);
   }

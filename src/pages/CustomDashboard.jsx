@@ -14,8 +14,7 @@ const COLS = 12;
 
 // ─── Widget renderers ──────────────────────────────────────
 
-function Widget({ widget, sensors, sites, openIncidents, fetchReadings, onSettings }) {
-  const props = widget.props || {};
+function Widget({ widget, apiKey, sensors, sites, openIncidents, fetchReadings, onSettings }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{
@@ -28,7 +27,7 @@ function Widget({ widget, sensors, sites, openIncidents, fetchReadings, onSettin
         {onSettings && <button onClick={(e) => { e.stopPropagation(); onSettings(widget); }} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 2 }}><Settings size={12} /></button>}
       </div>
       <div style={{ flex: 1, padding: 10, overflow: 'auto' }}>
-        {renderWidgetBody(widget, { sensors, sites, openIncidents, fetchReadings })}
+        {renderWidgetBody(widget, { apiKey, sensors, sites, openIncidents, fetchReadings })}
       </div>
     </div>
   );
@@ -36,14 +35,11 @@ function Widget({ widget, sensors, sites, openIncidents, fetchReadings, onSettin
 
 function renderWidgetBody(widget, ctx) {
   const { type, props = {} } = widget;
-  const { sensors = [], sites = [], openIncidents = [], fetchReadings } = ctx;
+  const { apiKey, sensors = [], sites = [], openIncidents = [], fetchReadings } = ctx;
 
   switch (type) {
     case 'ai_advisor':
-      return <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-        <Sparkles size={20} style={{ color: '#863bff', marginBottom: 8 }} />
-        <div>AI advisor analysis appears here. Configure refresh rate in widget settings.</div>
-      </div>;
+      return <AdvisorWidgetBody apiKey={apiKey} />;
 
     case 'incident_list': {
       const list = openIncidents.slice(0, 8);
@@ -69,6 +65,7 @@ function renderWidgetBody(widget, ctx) {
             </div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
               {sensors.filter(x => x.site_id === s.id).length} sensors
+              {s.city ? ` · ${s.city}${s.state ? ', ' + s.state : ''}` : ''}
             </div>
           </div>
         ))}
@@ -100,19 +97,199 @@ function renderWidgetBody(widget, ctx) {
     }
 
     case 'cooling_actions':
-      return <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-        <Sparkles size={14} style={{ verticalAlign: 'middle', color: '#863bff' }} /> Pending cooling actions appear here (Pro tier).
-      </div>;
+      return <CoolingActionsWidgetBody apiKey={apiKey} />;
 
     case 'rules_table':
-      return <div style={{ fontSize: '0.82rem' }}>Active alert rules — see Rules tab.</div>;
+      return <RulesWidgetBody apiKey={apiKey} sensors={sensors} sites={sites} />;
 
     case 'sales_escalations':
-      return <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>AI-suggested upsell opportunities (Pro tier).</div>;
+      return <EscalationsWidgetBody apiKey={apiKey} />;
 
     default:
       return <div style={{ color: 'var(--text-muted)' }}>Unknown widget: {type}</div>;
   }
+}
+
+// ─── Live data widget bodies ───────────────────────────────
+
+function AdvisorWidgetBody({ apiKey }) {
+  const [advice, setAdvice] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    let cancel = false;
+    fetch('/api/monitoring/client/advisor', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context: 'overview' }),
+    })
+      .then(r => r.json())
+      .then(d => { if (!cancel) (d.error ? setError(d.error) : setAdvice(d)); })
+      .catch(e => !cancel && setError(String(e)));
+    return () => { cancel = true; };
+  }, [apiKey]);
+
+  if (error) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+    <Sparkles size={14} style={{ verticalAlign: 'middle', color: '#863bff' }} /> AI Advisor temporarily unavailable.
+  </div>;
+  if (!advice) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+    <Sparkles size={14} style={{ verticalAlign: 'middle', color: '#863bff' }} /> Loading AI analysis…
+  </div>;
+
+  const recs = Array.isArray(advice.recommendations) ? advice.recommendations.slice(0, 3) : [];
+  return (
+    <div style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <Sparkles size={14} style={{ color: '#863bff' }} />
+        <strong style={{ fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: 0.5, color: '#863bff' }}>AI Cooling Advisor</strong>
+      </div>
+      {advice.headline && <div style={{ fontWeight: 700, marginBottom: 6 }}>{advice.headline}</div>}
+      {advice.analysis && <div style={{ color: 'var(--text-muted)', marginBottom: recs.length ? 8 : 0 }}>{advice.analysis}</div>}
+      {recs.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {recs.map((r, i) => (
+            <li key={i} style={{ marginBottom: 4 }}>
+              <strong>{r.action}</strong>
+              {r.expected_impact && <span style={{ color: 'var(--text-muted)' }}> — {r.expected_impact}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+      {advice.upsell?.service && (
+        <div style={{ marginTop: 8, padding: 8, borderRadius: 4, background: 'rgba(134,59,255,0.08)', border: '1px solid rgba(134,59,255,0.2)', fontSize: '0.78rem' }}>
+          <strong style={{ color: '#863bff' }}>{advice.upsell.service}</strong>
+          {advice.upsell.estimated_value && <span style={{ color: 'var(--text-muted)' }}> · {advice.upsell.estimated_value}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CoolingActionsWidgetBody({ apiKey }) {
+  const [actions, setActions] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    let cancel = false;
+    fetch('/api/monitoring/client/cooling-actions?status=proposed', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (!cancel) (d?.error ? setError(d.error) : setActions(Array.isArray(d) ? d : [])); })
+      .catch(e => !cancel && setError(String(e)));
+    return () => { cancel = true; };
+  }, [apiKey]);
+
+  if (error === 'tier_upgrade_required') return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+    <Sparkles size={14} style={{ verticalAlign: 'middle', color: '#863bff' }} /> Cooling actions require Pro tier.
+  </div>;
+  if (error) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Cooling actions unavailable.</div>;
+  if (!actions) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</div>;
+  if (!actions.length) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No pending cooling actions 🟢</div>;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {actions.slice(0, 5).map(a => (
+        <div key={a.id} style={{
+          padding: '6px 10px', borderRadius: 4,
+          background: 'rgba(134,59,255,0.06)', borderLeft: '2px solid #863bff',
+          fontSize: '0.82rem',
+        }}>
+          <div><strong>{a.action_type}</strong> → {a.target_label}</div>
+          {a.reasoning && <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 2 }}>{a.reasoning}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EscalationsWidgetBody({ apiKey }) {
+  const [list, setList] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    let cancel = false;
+    fetch('/api/monitoring/client/escalations', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (!cancel) (d?.error ? setError(d.error) : setList(Array.isArray(d) ? d : [])); })
+      .catch(e => !cancel && setError(String(e)));
+    return () => { cancel = true; };
+  }, [apiKey]);
+
+  if (error === 'tier_upgrade_required') return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Recommendations require Pro tier.</div>;
+  if (error) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Recommendations unavailable.</div>;
+  if (!list) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</div>;
+  if (!list.length) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No recommendations yet.</div>;
+
+  const fmtRange = (lo, hi) => {
+    const f = (n) => n >= 1_000_000 ? `$${(n/1_000_000).toFixed(1)}M` : `$${Math.round(n/1000)}K`;
+    if (lo && hi) return `${f(lo)}–${f(hi)}`;
+    return lo ? f(lo) : (hi ? f(hi) : '');
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {list.slice(0, 4).map(e => (
+        <div key={e.id} style={{
+          padding: '6px 10px', borderRadius: 4,
+          background: 'rgba(16,185,129,0.06)', borderLeft: '2px solid #10b981',
+          fontSize: '0.82rem',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6 }}>
+            <strong>{e.recommended_service}</strong>
+            <span style={{ color: '#10b981', fontWeight: 700 }}>{fmtRange(e.estimated_value_low, e.estimated_value_high)}</span>
+          </div>
+          {e.ai_pitch_summary && <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', marginTop: 2 }}>{e.ai_pitch_summary}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RulesWidgetBody({ apiKey, sensors, sites }) {
+  const [rules, setRules] = useState(null);
+
+  useEffect(() => {
+    if (!apiKey) return;
+    let cancel = false;
+    fetch('/api/monitoring/client/rules', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+      .then(r => r.json())
+      .then(d => { if (!cancel) setRules(Array.isArray(d) ? d : []); })
+      .catch(() => !cancel && setRules([]));
+    return () => { cancel = true; };
+  }, [apiKey]);
+
+  if (!rules) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Loading…</div>;
+  if (!rules.length) return <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>No alert rules configured.</div>;
+
+  const sensorById = Object.fromEntries(sensors.map(s => [s.id, s]));
+  const siteById = Object.fromEntries(sites.map(s => [s.id, s]));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      {rules.slice(0, 6).map(r => {
+        const sensor = sensorById[r.sensor_id];
+        const site = siteById[r.site_id];
+        const sevColor = r.severity === 'critical' ? '#ef4444' : (r.severity === 'warning' ? '#f59e0b' : '#94a3b8');
+        return (
+          <div key={r.id} style={{ padding: '4px 8px', fontSize: '0.82rem', borderLeft: `2px solid ${sevColor}`, background: 'rgba(255,255,255,0.02)' }}>
+            <strong>{r.name}</strong>
+            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>
+              {sensor?.name || `sensor ${r.sensor_id}`}{site ? ` · ${site.name}` : ''} · {r.rule_type} {r.threshold_value}
+              {r.active === false && <span style={{ color: '#94a3b8', marginLeft: 6 }}>(disabled)</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function SensorChartMini({ sensorId, hours, fetchReadings }) {
@@ -275,7 +452,7 @@ export default function CustomDashboard({ apiKey, sensors, sites, openIncidents,
                 <Trash2 size={12} />
               </button>
             )}
-            <Widget widget={w} sensors={sensors} sites={sites} openIncidents={openIncidents} fetchReadings={fetchReadings} />
+            <Widget widget={w} apiKey={apiKey} sensors={sensors} sites={sites} openIncidents={openIncidents} fetchReadings={fetchReadings} />
           </div>
         ))}
       </GridLayout>

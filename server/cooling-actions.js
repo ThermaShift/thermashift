@@ -303,7 +303,13 @@ export async function expireStaleActions(sb) {
   const stale = await sb('cooling_actions', 'GET', null,
     `?status=eq.proposed&expires_at=lt.${now}&limit=100`);
   if (!stale?.length) return { expired: 0 };
+  // Skip demo clients so prospect-facing demos stay visually fresh
+  const demoClients = await sb('monitoring_clients', 'GET', null,
+    `?is_demo=eq.true&select=id`);
+  const demoIds = new Set((demoClients || []).map(c => c.id));
+  let expired = 0;
   for (const a of stale) {
+    if (demoIds.has(a.client_id)) continue;
     await sb('cooling_actions', 'PATCH',
       { status: 'expired', updated_at: new Date().toISOString() }, `?id=eq.${a.id}`);
     await audit(sb, {
@@ -311,6 +317,7 @@ export async function expireStaleActions(sb) {
       event_type: 'expired', actor: 'system',
       details: { reason: 'no approval received before expiry' },
     });
+    expired++;
   }
-  return { expired: stale.length };
+  return { expired };
 }
