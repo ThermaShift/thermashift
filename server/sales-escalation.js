@@ -56,7 +56,11 @@ async function generatePitch(pattern, incidents) {
       messages: [{ role: 'user', content: summary }],
     }),
   });
-  if (!res.ok) throw new Error(`Anthropic: ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    (await import('./anthropic-alert.js')).notifyIfCreditError('sales_escalation', res.status, errText).catch(() => {});
+    throw new Error(`Anthropic: ${res.status} ${errText.slice(0, 200)}`);
+  }
   const data = await res.json();
   const text = data.content?.[0]?.text || '';
   const m = text.match(/\{[\s\S]*\}/);

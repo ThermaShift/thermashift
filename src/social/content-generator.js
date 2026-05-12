@@ -360,6 +360,10 @@ Return ONLY valid JSON array, no markdown fencing, no explanation.`;
 
   if (!res.ok) {
     const body = await res.text();
+    try {
+      const { notifyIfCreditError } = await import('../../server/anthropic-alert.js');
+      await notifyIfCreditError('social_content_generator', res.status, body);
+    } catch { /* helper missing in some run contexts; ignore */ }
     throw new Error(`Claude API error (${res.status}): ${body}`);
   }
 

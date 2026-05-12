@@ -76,7 +76,11 @@ async function callClaude(userPrompt) {
       messages: [{ role: 'user', content: userPrompt }],
     }),
   });
-  if (!res.ok) throw new Error(`Anthropic API: ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    (await import('./anthropic-alert.js')).notifyIfCreditError('monitoring_advisor', res.status, errText).catch(() => {});
+    throw new Error(`Anthropic API: ${res.status} ${errText}`);
+  }
   const data = await res.json();
   const text = data.content?.[0]?.text || '';
   // Extract JSON even if model adds stray text

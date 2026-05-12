@@ -153,7 +153,11 @@ export async function generateReply(prospect, thread) {
       messages: [{ role: 'user', content: userPrompt }],
     }),
   });
-  if (!res.ok) throw new Error(`Anthropic API: ${res.status} ${await res.text()}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    (await import('./anthropic-alert.js')).notifyIfCreditError('ai_closer', res.status, errText).catch(() => {});
+    throw new Error(`Anthropic API: ${res.status} ${errText}`);
+  }
   const data = await res.json();
 
   const tool_calls = [];

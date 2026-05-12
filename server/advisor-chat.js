@@ -138,7 +138,11 @@ export async function sendMessage(sb, clientId, chatId, userMessage) {
       messages,
     }),
   });
-  if (!res.ok) throw new Error(`Anthropic API: ${res.status} ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    (await import('./anthropic-alert.js')).notifyIfCreditError('advisor_chat', res.status, errText).catch(() => {});
+    throw new Error(`Anthropic API: ${res.status} ${errText.slice(0, 300)}`);
+  }
   const data = await res.json();
   const assistantText = data.content?.[0]?.text || '(empty response)';
 

@@ -71,6 +71,7 @@ export async function generateReview(audit) {
 
   if (!response.ok) {
     const err = await response.text();
+    (await import('./anthropic-alert.js')).notifyIfCreditError('review_generator', response.status, err).catch(() => {});
     throw new Error(`Claude API error: ${response.status} — ${err}`);
   }
 

@@ -26,6 +26,7 @@ import {
 import { SCENARIOS as DEMO_SCENARIOS } from './demo-scenarios.js';
 import { pollInbox } from './ai-closer-inbound.js';
 import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
+import { notifyIfCreditError } from './anthropic-alert.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -116,6 +117,7 @@ app.post('/api/chat', async (req, res) => {
 
     if (!anthropicRes.ok) {
       const errText = await anthropicRes.text();
+      notifyIfCreditError('alex_chat', anthropicRes.status, errText).catch(() => {});
       return res.status(anthropicRes.status).json({ error: errText });
     }
 
