@@ -36,6 +36,7 @@ export default function Footer() {
           <div>
             <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Contact</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <a href="tel:+17866056239" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>(786) 605-6239</a>
               <Link to="/contact" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Get a Free Audit</Link>
               <a href="https://linkedin.com/company/thermashift" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>LinkedIn</a>
             </div>

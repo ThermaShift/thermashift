@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm } from '@formspree/react';
-import { Send, CheckCircle, Mail, MapPin, Link as LinkedinIcon, AlertCircle } from 'lucide-react';
+import { Send, CheckCircle, Mail, MapPin, Phone, Link as LinkedinIcon, AlertCircle } from 'lucide-react';
 
 export default function Contact() {
   const [state, handleFormspree] = useForm('xqeglkdw');
@@ -48,6 +48,20 @@ export default function Contact() {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{
+                  width: '44px', height: '44px', borderRadius: '10px',
+                  background: 'var(--accent-glow)', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Phone size={20} style={{ color: 'var(--accent)' }} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Phone</div>
+                  <a href="tel:+17866056239" style={{ color: 'var(--text-muted)', fontSize: '0.9rem', textDecoration: 'none' }}>(786) 605-6239</a>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{
                   width: '44px', height: '44px', borderRadius: '10px',
