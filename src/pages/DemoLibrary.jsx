@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ExternalLink, Copy, Check, ArrowLeft } from 'lucide-react';
 
 export default function DemoLibrary() {
   const [demos, setDemos] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+  const location = useLocation();
+  const isAdminView = location.pathname.startsWith('/admin');
 
   useEffect(() => {
     fetch('/api/demos/library')
@@ -35,16 +37,22 @@ export default function DemoLibrary() {
   return (
     <main style={{ paddingTop: 72, minHeight: '100vh' }}>
       <div style={{ maxWidth: 1080, margin: '40px auto', padding: '0 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
-          <Link to="/admin" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', fontSize: '0.85rem' }}>
-            <ArrowLeft size={16} /> Back to admin
-          </Link>
-        </div>
+        {isAdminView && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+            <Link to="/admin" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', fontSize: '0.85rem' }}>
+              <ArrowLeft size={16} /> Back to admin
+            </Link>
+          </div>
+        )}
 
         <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: '1.6rem', margin: 0 }}>Demo Library</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: 6, fontSize: '0.9rem' }}>
-            Pick the scenario that matches the conversation you're having. Each demo has its own company name, sites, sensors, AI advisor analysis, and recommendations — every tab tells that scenario's story. URLs are public and safe to share with prospects.
+          <h1 style={{ fontSize: isAdminView ? '1.6rem' : '2rem', margin: 0 }}>
+            {isAdminView ? 'Demo Library' : 'See ThermaShift in Action — Live Demos'}
+          </h1>
+          <p style={{ color: 'var(--text-muted)', marginTop: 10, fontSize: '0.95rem', lineHeight: 1.6 }}>
+            {isAdminView
+              ? "Pick the scenario that matches the conversation you're having. Each demo has its own company name, sites, sensors, AI advisor analysis, and recommendations — every tab tells that scenario's story. URLs are public and safe to share with prospects."
+              : "Each demo below is a complete working dashboard built around a real data center scenario — a GPU hotspot, a hyperscale waste-heat opportunity, a PFAS/Novec migration, a Section 179D retrofit, and more. Click whichever matches your facility. Every tab — sites, sensors, AI advisor, cooling actions, recommendations — tells that scenario's full story. No signup required."}
           </p>
         </div>
 
@@ -114,9 +122,26 @@ export default function DemoLibrary() {
           </div>
         )}
 
-        <div style={{ marginTop: 32, padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 8, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-          <strong>How to use:</strong> Pick the demo matching your prospect's situation. Click "Open Demo" to preview, or "Copy URL" to paste into an email/LinkedIn DM. Each demo is independent — same prospect can compare scenarios, or you can A/B test which one resonates.
-        </div>
+        {isAdminView ? (
+          <div style={{ marginTop: 32, padding: 16, background: 'rgba(255,255,255,0.03)', borderRadius: 8, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <strong>How to use:</strong> Pick the demo matching your prospect's situation. Click "Open Demo" to preview, or "Copy URL" to paste into an email/LinkedIn DM. Each demo is independent — same prospect can compare scenarios, or you can A/B test which one resonates.
+          </div>
+        ) : (
+          <div style={{ marginTop: 36, padding: 24, background: 'linear-gradient(135deg, rgba(134,59,255,0.06), rgba(0,163,224,0.04))', border: '1px solid rgba(134,59,255,0.2)', borderRadius: 10, textAlign: 'center' }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>Ready to see your own facility this way?</h3>
+            <p style={{ color: 'var(--text-muted)', marginTop: 10, fontSize: '0.9rem', maxWidth: 640, marginLeft: 'auto', marginRight: 'auto' }}>
+              Our free cooling efficiency review delivers the same kind of insights for your actual data center — typically identifying $200K–$500K/year in savings, plus waste-heat revenue and Section 179D tax credit opportunities (deadline June 30).
+            </p>
+            <div style={{ marginTop: 16, display: 'inline-flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+              <Link to="/contact" className="btn btn-primary" style={{ padding: '10px 20px' }}>
+                Request a Free Review
+              </Link>
+              <a href="tel:+17866056239" className="btn" style={{ padding: '10px 20px' }}>
+                Call (786) 605-6239
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </main>
   );

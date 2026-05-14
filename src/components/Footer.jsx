@@ -30,7 +30,7 @@ export default function Footer() {
             <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Tools</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <Link to="/calculator" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>ROI Calculator</Link>
-              <Link to="/dashboard" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Dashboard Demo</Link>
+              <Link to="/demos" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Live Demos</Link>
             </div>
           </div>
           <div>

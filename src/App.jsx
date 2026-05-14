@@ -59,7 +59,9 @@ function AppLayout() {
         {/* AI Sales Closer — admin-protected */}
         <Route path="/closer" element={<ProtectedRoute><Closer /></ProtectedRoute>} />
 
-        {/* Demo Library — admin-protected, lists all public demo scenarios */}
+        {/* Demo Library — PUBLIC so prospects can browse all scenarios */}
+        <Route path="/demos" element={<DemoLibrary />} />
+        {/* Keep admin path working for existing internal links */}
         <Route path="/admin/demos" element={<ProtectedRoute><DemoLibrary /></ProtectedRoute>} />
 
         <Route path="*" element={<NotFound />} />

@@ -11,7 +11,7 @@ export default function Navbar() {
   const links = [
     { to: '/', label: 'Home' },
     { to: '/calculator', label: 'ROI Calculator' },
-    { to: '/dashboard', label: 'Dashboard Demo' },
+    { to: '/demos', label: 'Live Demos' },
   ];
 
   return (
