@@ -1,36 +1,38 @@
-name: Deploy to GitHub Pages
+name: Deploy to VPS
 
 on:
   push:
     branches: [main]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  workflow_dispatch:
 
 concurrency:
-  group: pages
-  cancel-in-progress: true
+  group: vps-deploy
+  cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  deploy:
+    name: Deploy to production
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: SSH deploy to VPS
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          node-version: 20
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: cp dist/index.html dist/404.html
-      - uses: actions/configure-pages@v4
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 15m
+          script_stop: true
+          script: |
+            set -e
+            cd /var/www/thermashift
+            echo "🔄 Pulling latest code..."
+            git fetch origin main
+            git reset --hard origin/main
+            echo "📦 Installing dependencies..."
+            npm install --no-audit --no-fund
+            echo "🛠 Building frontend..."
+            npm run build
+            echo "♻️  Restarting backend..."
+            pm2 restart chat-proxy --update-env || pm2 start server/chat-proxy.js --name chat-proxy --update-env
+            echo "✅ Deployed $(git rev-parse --short HEAD) at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
