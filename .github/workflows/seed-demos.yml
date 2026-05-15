@@ -1,0 +1,34 @@
+name: Re-seed Demo Library
+
+# Manual trigger only — re-runs server/seed-all-demos.js on the VPS to refresh
+# the 7 demo scenarios' DB content (chat transcripts, advisor responses,
+# cooling actions, escalations, etc.) after their wording/scenario code
+# changes in server/demo-scenarios.js. NEVER auto-runs on push.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: vps-deploy
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Re-seed all demo scenarios
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and run seeder
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script_stop: true
+          script: |
+            set -e
+            cd /var/www/thermashift
+            echo "🌱 Re-seeding demos from $(git rev-parse --short HEAD)..."
+            node server/seed-all-demos.js
+            echo "✅ Demos re-seeded at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
