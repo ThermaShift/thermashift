@@ -45,9 +45,9 @@ const PRICING = {
       { name: 'Revenue Share Model', price: 0, description: 'No upfront cost — ThermaShift takes 15% of ongoing heat revenue as management fee', isRevenueShare: true },
     ],
   },
-  // LCaaS Implementation
+  // Liquid Cooling Design & Install (one-time project, equipment 100% upfront + labor 30/40/30)
   lcaas: {
-    label: 'Liquid Cooling-as-a-Service',
+    label: 'Liquid Cooling Design & Install',
     unit: 'per project',
     options: [
       { name: 'RDHX Retrofit (per rack)', price: 8000, description: 'Rear-door heat exchanger installation per rack, includes equipment, labor, and commissioning' },

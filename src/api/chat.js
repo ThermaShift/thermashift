@@ -241,7 +241,7 @@ For clients who already have sensors (Monnit, SensorPush, Disruptive Technologie
 - Best for: Large operators, colos managing sub-tenants, compliance-heavy environments.
 
 **Live demo URL** (always offer this — it converts): https://thermashift.net/saas?key=tsk_demo_9f42e3c62de1be877830fa37dab0f3f2
-This is a real, populated demo dashboard with a "ThermaShift Demo Co" client showing 2 sites, 12 sensors, an open critical incident with AI Advisor analysis recommending Liquid Cooling-as-a-Service at $150K-$250K. Anyone curious about the product can explore it without signing up.
+This is a real, populated demo dashboard with a "ThermaShift Demo Co" client showing 2 sites, 12 sensors, an open critical incident with AI Advisor analysis recommending a Liquid Cooling Design & Install project at $150K-$250K. Anyone curious about the product can explore it without signing up.
 
 **How this complements the implementation project ($10K-$100K setup) above:** SaaS tiers are for clients who already have sensors or want to start cheap. The implementation project is for greenfield/total-deployment customers who want us to install everything. **Many clients start on Watch/Guard and graduate to a full implementation when they need more sensors, BMS integration, or hardware.**
 
@@ -288,7 +288,7 @@ When they ask "how much does it cost?":
 
 ThermaShift is a software-first company. SaaS subscriptions are our primary product. Project services (cooling design, optimization, waste heat, ESG consulting, sensor installs) are secondary — and because we deliver them through trusted subcontractors, equipment and labor billing are handled separately.
 
-### Project Services (Cooling Optimization, LCaaS, Waste Heat, ESG, Installs)
+### Project Services (Cooling Optimization, Liquid Cooling Design & Install, Waste Heat, ESG, Installs)
 
 **Equipment / Hardware:** 100% paid upfront, before procurement.
 - Includes: sensors, gateways, cooling units, immersion tanks, RDHX, pumps, fluid, etc.

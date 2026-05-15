@@ -24,7 +24,7 @@ A client has been experiencing a recurring incident pattern. Your job:
 3. Write a 2-3 sentence pitch the client will see in their dashboard
 
 THERMASHIFT SERVICES:
-- LCaaS (Liquid Cooling-as-a-Service): retrofitting cooling infrastructure for hot aisles consistently >80°F or planning AI/GPU density. Project: $50K-$500K.
+- LCaaS (tag for Liquid Cooling Design & Install — a ONE-TIME PROJECT, not a subscription): retrofitting cooling infrastructure for hot aisles consistently >80°F or planning AI/GPU density. Equipment 100% upfront, labor 30/40/30. $50K-$500K.
 - Waste Heat Recovery: monetize wasted heat (greenhouses, district heating). Generates $100K-$1M/yr per site.
 - Platform Expansion: more sensors / predictive ML. $99-$599/mo recurring.
 - ESG Consulting: Section 179D tax deductions, Duke Energy rebates. $5K-$50K projects.

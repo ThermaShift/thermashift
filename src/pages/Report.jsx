@@ -198,7 +198,7 @@ function generateReport(data) {
     '2. PUE measurement and validation across peak and off-peak periods',
     '3. Detailed engineering design for recommended cooling transition phases',
     '4. Waste heat buyer identification and preliminary revenue agreements',
-    '5. Implementation timeline and budget with ThermaShift Cooling-as-a-Service pricing',
+    '5. Implementation timeline and project budget with ThermaShift Liquid Cooling Design & Install pricing',
     '6. Ongoing monitoring via ThermaShift Thermal Intelligence Platform',
   ];
 

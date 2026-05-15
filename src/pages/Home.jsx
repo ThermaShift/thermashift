@@ -11,9 +11,9 @@ const stats = [
 const services = [
   {
     icon: Thermometer,
-    title: 'Liquid Cooling-as-a-Service',
-    desc: 'Subscription-based design, installation, and management of rear-door heat exchangers, direct-to-chip, and immersion cooling systems. No capital outlay for your facility.',
-    tag: 'LCaaS',
+    title: 'Liquid Cooling Design & Install',
+    desc: 'One-time project: thermal assessment, CFD modeling, and turnkey installation of rear-door heat exchangers, direct-to-chip, or immersion cooling. Equipment paid upfront and owned by you from day one. Ongoing monitoring optionally handled by our Thermal Intelligence SaaS.',
+    tag: 'Liquid Cooling',
   },
   {
     icon: Leaf,

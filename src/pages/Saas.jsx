@@ -418,7 +418,7 @@ function AdvisorPanel({ apiKey, context, incidentId, autoLoad = true, compact = 
   }
 
   const upsellLabels = {
-    'LCaaS': { label: 'Liquid Cooling-as-a-Service', icon: '❄️', color: '#0ea5e9' },
+    'LCaaS': { label: 'Liquid Cooling Design & Install', icon: '❄️', color: '#0ea5e9' },
     'Waste Heat Recovery': { label: 'Waste Heat Recovery', icon: '♨️', color: '#f97316' },
     'Platform Expansion': { label: 'Platform Expansion', icon: '📡', color: '#863bff' },
     'ESG Consulting': { label: 'ESG Consulting', icon: '🌱', color: '#10b981' },

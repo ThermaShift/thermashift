@@ -26,8 +26,8 @@ const SERVICE_TIERS = {
     ],
   },
   lcaas: {
-    name: 'Liquid Cooling-as-a-Service (Full Implementation)',
-    description: 'End-to-end cooling transition: engineering design, equipment procurement, installation, commissioning, and ongoing monitoring setup.',
+    name: 'Liquid Cooling Design & Install (Full Project)',
+    description: 'End-to-end one-time project: engineering design, equipment procurement, installation, commissioning, and handoff. Equipment paid 100% upfront and owned by you. Labor billed 30/40/30. Ongoing monitoring optional via our Thermal Intelligence SaaS.',
     basePrice: 200000,
     timeline: '12-20 weeks',
     milestones: [
@@ -352,7 +352,7 @@ export default function Proposal() {
                 <select value={form.serviceTier} onChange={(e) => set('serviceTier', e.target.value)}>
                   <option value="esg">ESG Consulting Report ($7,500)</option>
                   <option value="assessment">Cooling Assessment & Design ($25,000)</option>
-                  <option value="lcaas">Full LCaaS Implementation ($200,000)</option>
+                  <option value="lcaas">Liquid Cooling Design & Install — Full Project ($200,000)</option>
                 </select>
               </div>
 

@@ -13,7 +13,7 @@ export const SCENARIOS = [
     id: 'demo_gpu_hotspot',
     label: 'GPU / AI Hotspot',
     icon: '🔥',
-    blurb: 'Mid-market colo with localized hot-aisle hotspot from new GPU/AI workload. LCaaS upsell ($40-60K).',
+    blurb: 'Mid-market colo with localized hot-aisle hotspot from new GPU/AI workload. Liquid Cooling Design & Install upsell ($40-60K).',
     bestFor: 'Charlotte/regional colos, AI/GPU buyers, Flexential/DataBank-style prospects',
     apiKey: 'tsk_demo_9f42e3c62de1be877830fa37dab0f3f2',
 
@@ -85,7 +85,7 @@ export const SCENARIOS = [
       demo_funnel: {
         explore: 'Open the Cooling AI tab to see two AI-proposed actions waiting for your approval — including the CRAC fan speed increase referenced above.',
         ask_questions: 'Open Chat with AI to read a sample multi-turn conversation about this exact Rack 18 pattern.',
-        get_quote: 'Open Recommendations to see the LCaaS upsell ($40-60K) ready for one-click escalation to Steve.',
+        get_quote: 'Open Recommendations to see the Liquid Cooling Design & Install upsell ($40-60K one-time project) ready for one-click escalation to Steve.',
       },
     },
 
@@ -95,7 +95,7 @@ export const SCENARIOS = [
         { role: 'user', content: 'Why does Hot Aisle 3 Rack 18 keep spiking? It happens 2-3 times a week.' },
         { role: 'assistant', content: "Looking at 30 days of data on Rack 18, the pattern is clear: spikes correlate strongly with afternoon GPU workload bursts (2-5pm EST), and CRAC 2 fan speed lags behind by 8-12 minutes. Three things going on:\n\n1. **CRAC 2 control loop is too slow.** It only reacts when temps are already 84°F+. By the time it ramps, you're already at 87°F.\n\n2. **Hot aisle return path is partially blocked.** Comparing Rack 12 (77°F avg) vs Rack 18 (82°F avg) suggests airflow constraint, not cooling capacity.\n\n3. **Workload stacking.** Rack 18 has 3 GPU servers vs Rack 12's 1. This is a power density problem, not a cooling problem.\n\nRecommend: I can propose a fan speed pre-action when GPU utilization predicts a spike. Want me to set that up?" },
         { role: 'user', content: "Yes. Also — what's the long-term fix?" },
-        { role: 'assistant', content: "Setting up predictive fan ramp now. For long-term:\n\nThe physical fix is liquid cooling on Rack 18 specifically — it's a high-density GPU rack that's outgrown air cooling. ThermaShift's LCaaS would do a rear-door heat exchanger retrofit on that rack alone, $40-60K, eliminates the hotspot permanently and reduces CRAC 2 load by ~15%.\n\nROI: at $200/incident downtime risk × 14 incidents/30 days = $2,800/month exposure. Project pays back in 14-21 months even before energy savings.\n\nWant me to flag that as a Recommendation in your dashboard? Steve will reach out to scope it." },
+        { role: 'assistant', content: "Setting up predictive fan ramp now. For long-term:\n\nThe physical fix is liquid cooling on Rack 18 specifically — it's a high-density GPU rack that's outgrown air cooling. ThermaShift's Liquid Cooling Design & Install service does a rear-door heat exchanger retrofit on that rack alone — $40-60K one-time project, equipment owned by you from day one — eliminates the hotspot permanently and reduces CRAC 2 load by ~15%.\n\nROI: at $200/incident downtime risk × 14 incidents/30 days = $2,800/month exposure. Project pays back in 14-21 months even before energy savings.\n\nWant me to flag that as a Recommendation in your dashboard? Steve will reach out to scope it." },
         { role: 'user', content: 'Yes, flag it.' },
         { role: 'assistant', content: "Done. You'll see it under Recommendations. Steve gets a notification at admin@thermashift.net and will reach out within 24 hours to scope a quote." },
       ],
@@ -103,7 +103,7 @@ export const SCENARIOS = [
 
     escalations: [
       { service: 'LCaaS', value_low: 40000, value_high: 60000,
-        pitch: "Rack 18 has triggered 14 critical hot-aisle alerts in the last 30 days — recurring pattern suggests power density has outgrown air cooling. ThermaShift's Liquid Cooling-as-a-Service can deploy a rear-door heat exchanger ($40-60K project) that eliminates this hotspot permanently and reduces CRAC 2 load by ~15%. ROI: 14-21 months on incident risk alone.",
+        pitch: "Rack 18 has triggered 14 critical hot-aisle alerts in the last 30 days — recurring pattern suggests power density has outgrown air cooling. ThermaShift's Liquid Cooling Design & Install service deploys a rear-door heat exchanger ($40-60K one-time project, equipment owned by you) that eliminates this hotspot permanently and reduces CRAC 2 load by ~15%. ROI: 14-21 months on incident risk alone.",
         trigger_pattern: 'rule_1: 14 critical incidents in 30 days on Hot Aisle 3 Rack 18' },
       { service: 'Waste Heat Recovery', value_low: 200000, value_high: 500000,
         pitch: "Your Charlotte facility runs CRAC return temps at 78°F average — that's 3.4M BTU/hr of recoverable heat being vented. ThermaShift's Waste Heat Recovery service could capture this and route it to a district heating partner or commercial greenhouse, generating $200-500K/year in incremental revenue.",
@@ -360,7 +360,7 @@ export const SCENARIOS = [
     id: 'demo_greenfield_ai_campus',
     label: 'Greenfield AI Campus',
     icon: '🏗️',
-    blurb: 'New 100MW AI campus in pre-design. Full Thermal Intelligence + LCaaS opportunity ($500K-$2M).',
+    blurb: 'New 100MW AI campus in pre-design. Full Thermal Intelligence + Liquid Cooling Design & Install opportunity ($500K-$2M).',
     bestFor: 'Hyperscale builds, pre-design phase, sustainability-mandated greenfields',
     apiKey: 'tsk_demo_apex_7b2d8f5c1a9e4c6d0f3b8e',
 
@@ -395,14 +395,14 @@ export const SCENARIOS = [
       analysis: 'Phoenix climate (avg high 92°F, low humidity 28%) is paradoxically excellent for cooling efficiency IF designed for it from day one. Conventional N+1 chiller plant + air-cooled CRAH design will hit ~1.55 PUE. **Adaptive design using direct evaporative + adiabatic spray + selective liquid cooling on AI/GPU halls can hit 1.20 PUE** — that\'s 22% cooling energy reduction = ~$3.4M/year operating cost difference at your scale and Phoenix electricity rates. The decision window is now: post-design, retrofit costs are 3-5x. Three architectural choices have outsized impact: (1) cooling architecture mix, (2) free-cooling utilization design, (3) waste heat capture for adjacent commercial use (Phoenix has emerging algae bioreactor industry).',
       recommendations: [
         { action: 'Engage ThermaShift Cooling Optimization in pre-design phase — produces a thermal architecture spec your MEP firm uses as input.', urgency: 'this month', expected_impact: 'PUE 1.55 → 1.20 = ~$3.4M/yr opex savings' },
-        { action: 'Lock in Liquid Cooling-as-a-Service contract for AI/GPU halls before construction — $0 capex, monthly opex.', urgency: 'this quarter', expected_impact: 'Removes liquid cooling from capital budget · faster time to first MW' },
+        { action: 'Engage ThermaShift for the Liquid Cooling Design & Install scope on AI/GPU halls before construction — single integrated project for design + procurement + commissioning.', urgency: 'this quarter', expected_impact: 'Locked-in cooling spec from pre-design · faster time to first MW' },
         { action: 'Document Section 179D eligibility before placed-in-service date — at 480K sq ft, this is potentially $900K of federal tax deduction.', urgency: 'this quarter', expected_impact: '$900K tax deduction at $1.88/sq ft' },
       ],
-      upsell: { service: 'LCaaS', why: 'Greenfield is where ThermaShift adds the most leverage. Pre-design involvement on a 100MW AI campus locks in 22% lifetime energy savings, removes $50-100M of cooling capex, and accelerates time-to-first-MW by 6-9 months.', estimated_value: '$500,000–$2,000,000 (project services)', cta: 'Schedule a 90-min pre-design workshop' },
+      upsell: { service: 'LCaaS', why: 'Greenfield is where ThermaShift adds the most leverage. Pre-design involvement on a 100MW AI campus locks in 22% lifetime energy savings and accelerates time-to-first-MW by 6-9 months. Equipment paid upfront and owned by you, labor 30/40/30.', estimated_value: '$500,000–$2,000,000 (one-time project)', cta: 'Schedule a 90-min pre-design workshop' },
       demo_funnel: {
         explore: 'Open Cooling AI tab — pre-design facility has minimal sensor history (test hall only), but the action engine framework is ready.',
         ask_questions: 'Open Chat with AI for sample conversation about Phoenix climate adaptive cooling architecture.',
-        get_quote: 'Open Recommendations for the LCaaS pre-design engagement ($500K-$2M).',
+        get_quote: 'Open Recommendations for the Liquid Cooling Design & Install pre-design engagement ($500K-$2M).',
       },
     },
 
@@ -410,17 +410,17 @@ export const SCENARIOS = [
       title: 'Phoenix climate adaptive cooling architecture',
       messages: [
         { role: 'user', content: 'How aggressive can we get with adiabatic + evaporative cooling in Phoenix? Our MEP firm is conservative.' },
-        { role: 'assistant', content: "Aggressively. Phoenix's climate makes it one of the best cities in North America for evaporative-dominant cooling — and yet most MEP firms default to chiller-plant-heavy designs because that's what they know. Three points to push your MEP on:\n\n**1. Wet-bulb temperature is your real metric** — Phoenix avg wet-bulb is 65°F, peak summer 78°F. **You can deliver 75-80°F supply air via direct evaporative cooling 88% of the year** with zero mechanical chiller use. The 12% remainder is your peak-load mechanical backup.\n\n**2. Indirect evaporative + adiabatic spray gets you to ~92% free-cooling** — adds adiabatic mist on the dry-side coil to hit higher operating ranges. Used by Microsoft Quincy WA, Google Mayes OK, Yotta India. Proven at hyperscale.\n\n**3. Water cost is the only real argument against** — Phoenix water is constrained. But your evaporative consumption (~5 gal/MWh) is 1/30th of mechanical-only PUE 1.55 design's water embedded in upstream electricity. **You actually save water by going evaporative.**\n\nYour MEP is being conservative because adiabatic systems require more controls sophistication and they don't want commissioning risk. ThermaShift can specify the controls layer + first-year operations support — that's literally what our LCaaS contract covers. Want a Phoenix climate-specific PUE projection?" },
+        { role: 'assistant', content: "Aggressively. Phoenix's climate makes it one of the best cities in North America for evaporative-dominant cooling — and yet most MEP firms default to chiller-plant-heavy designs because that's what they know. Three points to push your MEP on:\n\n**1. Wet-bulb temperature is your real metric** — Phoenix avg wet-bulb is 65°F, peak summer 78°F. **You can deliver 75-80°F supply air via direct evaporative cooling 88% of the year** with zero mechanical chiller use. The 12% remainder is your peak-load mechanical backup.\n\n**2. Indirect evaporative + adiabatic spray gets you to ~92% free-cooling** — adds adiabatic mist on the dry-side coil to hit higher operating ranges. Used by Microsoft Quincy WA, Google Mayes OK, Yotta India. Proven at hyperscale.\n\n**3. Water cost is the only real argument against** — Phoenix water is constrained. But your evaporative consumption (~5 gal/MWh) is 1/30th of mechanical-only PUE 1.55 design's water embedded in upstream electricity. **You actually save water by going evaporative.**\n\nYour MEP is being conservative because adiabatic systems require more controls sophistication and they don't want commissioning risk. ThermaShift can specify the controls layer + commissioning — that's exactly what our Liquid Cooling Design & Install project covers (one-time project, equipment owned by you). Want a Phoenix climate-specific PUE projection?" },
         { role: 'user', content: 'Yes. And what about the heat capture angle?' },
-        { role: 'assistant', content: "Phoenix is unusual for heat capture but the opportunity is real:\n\n**Algae bioreactor partnerships** — Arizona has emerging algae-for-biofuels and algae-for-feedstock industry (Heliae, ATP3). They need 80-95°F process water continuously. Your reject heat at exactly that temperature, $0.005/kWh equivalent value to them, $30-50K/year per acre of algae production they can support.\n\n**Greenhouse partnership** — Maricopa County has the largest commercial greenhouse cluster in the Southwest (Eurofresh, NatureSweet). They use natural gas heating fall-spring. Reject heat displaces 100% of that load. $200-400K/year revenue potential at your scale.\n\n**Aquaculture (saltwater shrimp)** — Arizona has 6 commercial saltwater shrimp farms (NaturalShrimp, SD Shrimp). They need 80-85°F brood tanks year-round. Tight match.\n\nPick one of these as a pre-design partner and you have a co-located customer who pays for the heat infrastructure. **At $500K/year revenue, the heat capture facility pays for itself in <3 years.** Want me to flag both LCaaS and Waste Heat Recovery for Steve?" },
+        { role: 'assistant', content: "Phoenix is unusual for heat capture but the opportunity is real:\n\n**Algae bioreactor partnerships** — Arizona has emerging algae-for-biofuels and algae-for-feedstock industry (Heliae, ATP3). They need 80-95°F process water continuously. Your reject heat at exactly that temperature, $0.005/kWh equivalent value to them, $30-50K/year per acre of algae production they can support.\n\n**Greenhouse partnership** — Maricopa County has the largest commercial greenhouse cluster in the Southwest (Eurofresh, NatureSweet). They use natural gas heating fall-spring. Reject heat displaces 100% of that load. $200-400K/year revenue potential at your scale.\n\n**Aquaculture (saltwater shrimp)** — Arizona has 6 commercial saltwater shrimp farms (NaturalShrimp, SD Shrimp). They need 80-85°F brood tanks year-round. Tight match.\n\nPick one of these as a pre-design partner and you have a co-located customer who pays for the heat infrastructure. **At $500K/year revenue, the heat capture facility pays for itself in <3 years.** Want me to flag both the Liquid Cooling Design & Install project and Waste Heat Recovery for Steve?" },
         { role: 'user', content: 'Yes flag both.' },
-        { role: 'assistant', content: "Done. Steve will scope a combined LCaaS + Waste Heat Recovery engagement. Total project value: $500K-$2M (LCaaS) + $50-300K (waste heat feasibility + design). Combined operating contract makes it a flagship engagement for your campus and a reference for ThermaShift's hyperscale practice. Expect contact within 24 hours." },
+        { role: 'assistant', content: "Done. Steve will scope a combined Liquid Cooling Design & Install + Waste Heat Recovery engagement. Total project value: $500K-$2M (cooling design + install) + $50-300K (waste heat feasibility + design). Both are one-time project engagements — equipment 100% upfront, labor 30/40/30. Makes it a flagship engagement for your campus and a reference for ThermaShift's hyperscale practice. Expect contact within 24 hours." },
       ],
     },
 
     escalations: [
       { service: 'LCaaS', value_low: 500000, value_high: 2000000,
-        pitch: "Apex Phoenix is in pre-design — single highest-leverage moment in any data center's life. ThermaShift Cooling Optimization + LCaaS engagement at this stage delivers PUE 1.20 vs conventional 1.55 = $3.4M/yr opex savings, removes $50-100M of cooling capex, and accelerates time-to-first-MW by 6-9 months. Project services scope: $500K-$2M. Pays back in <12 months of operation.",
+        pitch: "Apex Phoenix is in pre-design — single highest-leverage moment in any data center's life. ThermaShift Cooling Optimization + Liquid Cooling Design & Install engagement at this stage delivers PUE 1.20 vs conventional 1.55 = $3.4M/yr opex savings, accelerates time-to-first-MW by 6-9 months, and gives you owned cooling infrastructure (equipment paid upfront, labor 30/40/30). Project services scope: $500K-$2M. Pays back in <12 months of operation.",
         trigger_pattern: 'Greenfield 100MW+ AI campus, pre-design phase' },
       { service: 'Waste Heat Recovery', value_low: 200000, value_high: 600000,
         pitch: "Phoenix has emerging algae bioreactor + greenhouse + aquaculture industries that consume 80-95°F process heat continuously. Co-located heat capture partnership generates $200-600K/year recurring revenue and supports ESG reporting narrative. Pre-design engagement allows physical heat distribution to be designed in, not retrofitted.",
