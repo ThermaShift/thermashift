@@ -220,7 +220,7 @@ For clients who already have sensors (Monnit, SensorPush, Disruptive Technologie
 
 **Guard — $299/month**
 - Everything in Watch +
-- Multi-channel alerts: SMS (Twilio) + voice calls (Vapi calls the prospect when critical) + custom webhooks (Slack, Teams, PagerDuty)
+- Webhook alerts to your existing tools (Slack, Teams, PagerDuty) — your team gets paged where they already work
 - **AI Cooling Advisor** — Claude-powered analysis on every incident with tactical recommendations and quantified dollar impact
 - 10 sites, 1-year data history
 - Custom alert rules (above/below/delta/missing thresholds with debounce)

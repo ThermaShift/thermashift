@@ -1199,7 +1199,7 @@ function BillingTab({ apiKey, client }) {
 
   const tiers = [
     { id: 'watch', name: 'Watch', price: 99, features: ['Email alerts', '3 sites', '30-day history', 'BYO sensors'] },
-    { id: 'guard', name: 'Guard', price: 299, features: ['Watch +', 'SMS + voice alerts', 'AI Cooling Advisor', '10 sites', '1-yr history'] },
+    { id: 'guard', name: 'Guard', price: 299, features: ['Watch +', 'Webhook alerts (Slack/Teams/PagerDuty)', 'AI Cooling Advisor', '10 sites', '1-yr history'] },
     { id: 'pro', name: 'Pro', price: 599, features: ['Guard +', 'AI auto-action', 'Custom dashboards', 'Audit log', 'Conversational AI', 'Unlimited sites'] },
   ];
 
