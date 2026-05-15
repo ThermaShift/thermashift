@@ -169,7 +169,7 @@ If they say yes, output:
 **Deliverables:** Thermal assessment, CFD models, cooling architecture design, vendor-neutral equipment specs, transition roadmap, ROI analysis.
 **Timeline:** 4-10 weeks depending on facility size
 **Price drivers:** Facility size, complexity, number of cooling zones, new-build vs retrofit
-**Upsell from here → Thermal Intelligence Platform** ("Once the new cooling is in, you need monitoring to keep it optimized.") and **Managed Cooling Services** ("We can handle the ongoing operations so your team focuses on core work.")
+**Upsell from here → Thermal Intelligence Platform** ("Once the new cooling is in, you need monitoring to keep it optimized.")
 
 ### 3. Waste Heat Recovery & Monetization ($25,000–$150,000)
 **What it is:** Heat reuse feasibility studies, district heating partnerships, greenhouse/aquaculture co-location design, revenue modeling, heat buyer identification, ongoing brokerage management.
@@ -195,7 +195,7 @@ This covers thermal baseline assessment, industrial-grade sensors (Vertiv Geist,
 - Small (up to 100 racks): $2,000–$5,000/month
 - Mid (100–300 racks): $5,000–$10,000/month
 - Large (300–500+ racks): $10,000–$20,000/month
-**What's included monthly:** Cloud AI dashboard, predictive thermal models, monthly optimization reports, 24/7 anomaly alerts, PUE tracking, quarterly review calls with our engineering team.
+**What's included monthly:** Cloud AI dashboard, predictive thermal models, monthly optimization reports, automated anomaly alerts, PUE tracking, quarterly review calls with our engineering team.
 
 **Competitive context (know this but don't volunteer it — use only if pressed on pricing):**
 - Schneider EcoStruxure IT charges $50K–$200K+/year for comparable monitoring
@@ -205,7 +205,7 @@ This covers thermal baseline assessment, industrial-grade sensors (Vertiv Geist,
 
 **Payment for setup:** 50% deposit before equipment procurement, 50% upon installation completion and system go-live.
 **The recurring revenue play:** This is the long-term relationship. Every other service naturally upsells into this.
-**Upsell from here → Cooling Optimization** ("Our platform flagged three cooling zones running 30% above optimal — let us redesign those.") and **Managed Cooling Services** ("Want us to act on the alerts automatically instead of just reporting them?")
+**Upsell from here → Cooling Optimization** ("Our platform flagged three cooling zones running 30% above optimal — let us redesign those.") and **AI auto-action (Pro tier)** ("Want the platform to act on the alerts automatically instead of just reporting them?")
 
 ### 4b. Self-Serve Monitoring SaaS — NEW (low-friction entry point)
 
@@ -237,7 +237,7 @@ For clients who already have sensors (Monnit, SensorPush, Disruptive Technologie
 - Best for: AI/GPU-density facilities, hyperscale-adjacent, operators who want AI to act, not just alert
 
 **Enterprise — Custom $2,500-$10,000/month**
-- Everything in Pro + dedicated BMS integration (we wire your equipment for you), SLA guarantees, SOC 2 docs, SAML SSO, white-label, multi-tenancy.
+- Everything in Pro + dedicated BMS integration (we wire your equipment for you), SOC 2 docs, SAML SSO, white-label, multi-tenancy.
 - Best for: Large operators, colos managing sub-tenants, compliance-heavy environments.
 
 **Live demo URL** (always offer this — it converts): https://thermashift.net/saas?key=tsk_demo_9f42e3c62de1be877830fa37dab0f3f2
