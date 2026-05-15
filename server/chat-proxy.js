@@ -27,6 +27,8 @@ import { SCENARIOS as DEMO_SCENARIOS } from './demo-scenarios.js';
 import { pollInbox } from './ai-closer-inbound.js';
 import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 import { notifyIfCreditError } from './anthropic-alert.js';
+import { runIntentScrape } from './intent-scraper.js';
+import { buildCSV, brandjetHealth } from './brandjet.js';
 
 try {
   const require = createRequire(import.meta.url);
@@ -1412,6 +1414,103 @@ app.post('/api/outreach/process', adminAuth, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Failed to process outreach' });
   }
+});
+
+// ═══════════════════════════════════════════════════════════
+// INTENT SCORING (Adzuna + NewsAPI) → BrandJet handoff
+// ═══════════════════════════════════════════════════════════
+
+// Trigger a fresh intent scrape. Long-running (~30-90s).
+// Returns stats + top scored companies.
+app.post('/api/admin/intent/scrape', adminAuth, async (req, res) => {
+  try {
+    const dryRun = req.body?.dryRun === true;
+    const result = await runIntentScrape({ dryRun });
+    res.json({
+      ok: true,
+      stats: result.stats,
+      top10: result.scored.slice(0, 10).map(c => ({
+        company: c.company, country: c.country, score: c.score,
+        bucket: c.bucket, signal: c.signal_summary,
+      })),
+    });
+  } catch (e) {
+    console.error('intent scrape error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// List scored companies with optional filtering
+app.get('/api/admin/intent/companies', adminAuth, async (req, res) => {
+  try {
+    const bucket = req.query.bucket;
+    const status = req.query.status;
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    let q = `?order=score.desc,last_scored_at.desc&limit=${limit}`;
+    if (bucket) q += `&bucket=eq.${bucket}`;
+    if (status) q += `&status=eq.${status}`;
+    const rows = await sb('intent_companies', 'GET', null, q);
+    res.json(rows || []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Bucket summary for dashboard widget
+app.get('/api/admin/intent/summary', adminAuth, async (req, res) => {
+  try {
+    const rows = await sb('intent_companies', 'GET', null, '?select=bucket,status,score,country,last_scored_at&limit=2000');
+    const summary = { HOT: 0, WARM: 0, COLD: 0, SKIP: 0, total: 0, new: 0, exported: 0, replied: 0 };
+    let latest = null;
+    for (const r of rows) {
+      summary[r.bucket] = (summary[r.bucket] || 0) + 1;
+      summary.total++;
+      if (r.status === 'new') summary.new++;
+      else if (r.status === 'exported') summary.exported++;
+      else if (r.status === 'replied') summary.replied++;
+      if (!latest || r.last_scored_at > latest) latest = r.last_scored_at;
+    }
+    summary.last_scored_at = latest;
+    res.json(summary);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Download CSV of HOT+WARM leads for BrandJet bulk import
+app.get('/api/admin/intent/csv', adminAuth, async (req, res) => {
+  try {
+    const buckets = (req.query.buckets || 'HOT,WARM').split(',');
+    const status = req.query.status; // optional
+    const filter = buckets.map(b => `bucket.eq.${b}`).join(',');
+    let q = `?or=(${filter})&order=score.desc&limit=500`;
+    if (status) q += `&status=eq.${status}`;
+    const rows = await sb('intent_companies', 'GET', null, q);
+    const csv = buildCSV(rows || []);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="thermashift-leads-${new Date().toISOString().slice(0,10)}.csv"`);
+    res.send(csv);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Update a single intent company row (status changes, manual notes, etc.)
+app.patch('/api/admin/intent/companies/:id', adminAuth, async (req, res) => {
+  try {
+    const result = await sb('intent_companies', 'PATCH',
+      { ...req.body, updated_at: new Date().toISOString() },
+      `?id=eq.${req.params.id}`);
+    res.json(result?.[0] || { ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// BrandJet connectivity check — useful for debugging from dashboard
+app.get('/api/admin/intent/brandjet-health', adminAuth, async (req, res) => {
+  const reachable = await brandjetHealth();
+  res.json({ brandjet_reachable: reachable, base: process.env.BRANDJET_API_BASE });
 });
 
 // ═══════════════════════════════════════════════════════════
