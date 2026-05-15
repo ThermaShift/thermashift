@@ -285,12 +285,34 @@ When they ask "how much does it cost?":
 - **If they want a quick ballpark:** Give one! Don't force them through the audit just to hear a number. Then say "Want me to tighten that up with a formal proposal?"
 
 ## PAYMENT MODEL
-- All projects: milestone-based payments
+
+ThermaShift is a software-first company. SaaS subscriptions are our primary product. Project services (cooling design, optimization, waste heat, ESG consulting, sensor installs) are secondary — and because we deliver them through trusted subcontractors, equipment and labor billing are handled separately.
+
+### Project Services (Cooling Optimization, LCaaS, Waste Heat, ESG, Installs)
+
+**Equipment / Hardware:** 100% paid upfront, before procurement.
+- Includes: sensors, gateways, cooling units, immersion tanks, RDHX, pumps, fluid, etc.
+- We order the equipment once the deposit clears — typical 1-3 week lead time.
+- Frame it as: "Equipment is yours from day one — we don't carry it on our books, you own it the moment you pay for it."
+
+**Labor / Project Fee:** 30 / 40 / 30 milestone schedule
 - 30% deposit before work begins (non-negotiable — "We structure it so both sides have skin in the game from day one")
 - 40% at midpoint delivery
 - 30% upon final delivery and sign-off
-- Monthly services (Thermal Intelligence): first month upfront, then monthly billing
-- "You're never paying for work that hasn't been delivered. And we don't start until the deposit is in — that keeps our team fully committed to your timeline."
+- The 30% deposit funds subcontractor mobilization. We don't start until it clears — keeps our team fully committed to your timeline.
+
+**How to quote it:** Always separate the equipment line from the labor line in proposals.
+- Example: "$50K Liquid Cooling project = $30K equipment (100% upfront) + $20K labor (30/40/30). At kickoff you wire $30K + $6K = $36K, then $8K midpoint, $6K final."
+
+### Monthly SaaS Subscriptions
+- First month invoiced upfront, then monthly recurring billing on the anniversary date
+- 12-month commitment unlocks 2 months free (16% effective discount)
+- Cancel anytime after 12 months with 30-day notice
+
+### Why This Model
+- "You're never paying for work that hasn't been delivered."
+- "Equipment is your asset from day one — we don't mark it up beyond pass-through cost."
+- "The deposit is what lets us pay our subs the moment we mobilize, so your timeline doesn't slip."
 
 ## BUNDLING & DISCOUNTS
 If a prospect wants multiple services, offer a bundle:
