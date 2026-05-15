@@ -16,6 +16,11 @@ jobs:
     steps:
       - name: SSH deploy to VPS
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          BRANDJET_API_KEY: ${{ secrets.BRANDJET_API_KEY }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -23,16 +28,48 @@ jobs:
           port: 22
           command_timeout: 15m
           script_stop: true
+          envs: BRANDJET_API_KEY,ADZUNA_APP_ID,ADZUNA_APP_KEY,NEWSAPI_KEY
           script: |
             set -e
             cd /var/www/thermashift
+
+            echo "🔐 Syncing env secrets to .env (upsert)..."
+            ENV_FILE="/var/www/thermashift/.env"
+            touch "$ENV_FILE"
+            upsert_env() {
+              local key="$1"
+              local value="$2"
+              if [ -z "$value" ]; then
+                echo "  ⊘ $key — empty in secrets, skipping"
+                return
+              fi
+              if grep -q "^${key}=" "$ENV_FILE"; then
+                # Use a delimiter unlikely to appear in keys/values
+                sed -i "s|^${key}=.*|${key}=${value}|" "$ENV_FILE"
+                echo "  ↻ $key updated"
+              else
+                echo "${key}=${value}" >> "$ENV_FILE"
+                echo "  + $key added"
+              fi
+            }
+            upsert_env "BRANDJET_API_KEY" "$BRANDJET_API_KEY"
+            upsert_env "BRANDJET_API_BASE" "https://api.brandjet.ai"
+            upsert_env "ADZUNA_APP_ID" "$ADZUNA_APP_ID"
+            upsert_env "ADZUNA_APP_KEY" "$ADZUNA_APP_KEY"
+            upsert_env "NEWSAPI_KEY" "$NEWSAPI_KEY"
+            chmod 600 "$ENV_FILE"
+
             echo "🔄 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
+
             echo "📦 Installing dependencies..."
             npm install --no-audit --no-fund
+
             echo "🛠 Building frontend..."
             npm run build
+
             echo "♻️  Restarting backend..."
             pm2 restart chat-proxy --update-env || pm2 start server/chat-proxy.js --name chat-proxy --update-env
+
             echo "✅ Deployed $(git rev-parse --short HEAD) at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
