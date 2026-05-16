@@ -83,9 +83,56 @@ const ALLOWED_CANDIDATE_COUNTRIES = new Set([
   'united arab emirates', 'uae', 'dubai',
 ]);
 
-function allowedCandidateCountry(country) {
-  if (!country) return true; // Some BJ records have null country — don't reject blindly
-  return ALLOWED_CANDIDATE_COUNTRIES.has(String(country).toLowerCase().trim());
+// 2-letter country-code TLDs that map to our allowed countries — used as a
+// fallback signal when the `country` field is missing. Any other ccTLD is
+// treated as a foreign-country signal and rejected.
+const ALLOWED_COUNTRY_TLDS = new Set([
+  'us',         // United States
+  'uk', 'gb',   // United Kingdom
+  'ie',         // Ireland
+  'ca',         // Canada
+  'au',         // Australia
+  'nz',         // New Zealand
+  'ae',         // United Arab Emirates
+]);
+
+// Generic / commercial TLDs that don't signal geography. Used to distinguish
+// "this is a global .com" (allow) from "this is a .de German company" (reject)
+// when the country field on the BrandJet record is empty.
+const GENERIC_TLDS = new Set([
+  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int',
+  'biz', 'info', 'name', 'pro', 'mobi',
+  'io', 'co', 'ai', 'app', 'dev', 'tech', 'cloud', 'inc', 'ltd',
+  'xyz', 'online', 'site', 'store', 'global',
+]);
+
+function extractTLD(domain) {
+  if (!domain) return null;
+  const clean = String(domain).toLowerCase().trim()
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/.*$/, '')
+    .replace(/:\d+$/, '');
+  const parts = clean.split('.').filter(Boolean);
+  if (parts.length < 2) return null;
+  return parts[parts.length - 1];
+}
+
+function allowedCandidateCountry(country, domain) {
+  // Primary signal: explicit country field
+  if (country) {
+    return ALLOWED_CANDIDATE_COUNTRIES.has(String(country).toLowerCase().trim());
+  }
+  // Fallback when country is null/empty: infer from email/company domain TLD.
+  // - 2-letter ccTLD (e.g. .de, .fi, .ee, .sa) must be in our allow list
+  // - Generic TLDs (.com, .org, .io, ...) are ambiguous → allow
+  // - No domain at all → allow (rare, can't infer)
+  const tld = extractTLD(domain);
+  if (!tld) return true;
+  if (GENERIC_TLDS.has(tld)) return true;
+  if (tld.length === 2) return ALLOWED_COUNTRY_TLDS.has(tld);
+  // Unknown long TLD → conservative allow (assume new gTLD)
+  return true;
 }
 
 // Job-level enum BrandJet uses; we accept VP and above
@@ -398,8 +445,10 @@ export async function discoverByTitleSearch(opts = {}) {
         for (const p of people) {
           const companyMatch = p.company && intentByName.get(p.company.toLowerCase().trim());
 
-          // 0. HARD REJECT: candidate's country not in English-primary list + UAE exception
-          if (!allowedCandidateCountry(p.country)) continue;
+          // 0. HARD REJECT: candidate's country not in English-primary list + UAE exception.
+          //    Falls back to domain TLD when country field is empty (was the leak
+          //    that let through .sa / .ee / .de / .fi contacts on prior runs).
+          if (!allowedCandidateCountry(p.country, p.companyDomain || p.domain)) continue;
 
           // 1. HARD REJECT: negative company keywords (games, media, hotels, recruiters)
           if (negativeCompanyMatch(p.company)) continue;
@@ -483,8 +532,17 @@ export async function revealTopEmails({ maxCredits = 100, minScore = 60 } = {}) 
   const candidates = await _sb('discovered_contacts', 'GET', null,
     `?email_status=eq.available_unrevealed&email=is.null&score=gte.${minScore}&order=score.desc&limit=${targetCount}`);
 
-  let revealed = 0, failed = 0;
+  let revealed = 0, failed = 0, skipped_country = 0;
   for (const c of (candidates || [])) {
+    // Backstop: re-check country gate before spending 2 credits. Catches
+    // records that pre-date the TLD-fallback fix or any other edge case.
+    if (!allowedCandidateCountry(c.country, c.company_domain)) {
+      await _sb('discovered_contacts', 'PATCH',
+        { email_status: 'rejected_country', updated_at: new Date().toISOString() },
+        `?id=eq.${c.id}`);
+      skipped_country++;
+      continue;
+    }
     try {
       const r = await bj.revealEmail(c.source_external_id);
       const email = r?.email || r?.emailAddress || r?.contactInfo?.email;
@@ -513,7 +571,7 @@ export async function revealTopEmails({ maxCredits = 100, minScore = 60 } = {}) 
   }
 
   const newBalance = await bj.getEnrichmentBalance();
-  return { revealed, failed, balance_after: newBalance?.balance };
+  return { revealed, failed, skipped_country, balance_after: newBalance?.balance };
 }
 
 /**
