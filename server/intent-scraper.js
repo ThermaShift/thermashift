@@ -108,7 +108,9 @@ async function searchAdzuna(country, query) {
   return d.results || [];
 }
 
-async function searchNewsAPI(query, daysBack = 60) {
+async function searchNewsAPI(query, daysBack = 25) {
+  // NewsAPI free tier limits historical articles to ~30 days. Stay at 25
+  // to leave buffer for clock skew + rounding.
   const key = process.env.NEWSAPI_KEY;
   if (!key) throw new Error('NEWSAPI_KEY not set');
   const from = new Date(Date.now() - daysBack * 86400000).toISOString().slice(0, 10);
@@ -264,7 +266,7 @@ export async function runIntentScrape(opts = {}) {
         // Quoted company name + any category keyword
         const kwOr = cat.keywords.slice(0, 6).map(k => `"${k}"`).join(' OR ');
         const query = `"${c.company}" AND (${kwOr})`;
-        const articles = await searchNewsAPI(query, 60);
+        const articles = await searchNewsAPI(query, 25);
         stats.newsapi_calls++;
         for (const a of articles.slice(0, 3)) {
           c.news_signals.push({
