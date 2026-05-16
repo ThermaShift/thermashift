@@ -1,0 +1,71 @@
+name: Run BrandJet Discovery Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_companies:
+        description: 'Max intent companies to search contacts for'
+        required: false
+        default: '20'
+      reveal_credits_cap:
+        description: 'Max credits to spend on email reveals'
+        required: false
+        default: '100'
+      push_min_score:
+        description: 'Min contact score to push to BrandJet list'
+        required: false
+        default: '60'
+      push_list_name:
+        description: 'BrandJet lead list name (timestamp auto-appended)'
+        required: false
+        default: 'ThermaShift Enriched'
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            cd /var/www/thermashift
+            export MAX_COMPANIES='${{ inputs.max_companies }}'
+            export REVEAL_CAP='${{ inputs.reveal_credits_cap }}'
+            export PUSH_MIN='${{ inputs.push_min_score }}'
+            export PUSH_LIST='${{ inputs.push_list_name }}'
+            node -e "
+              const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r=await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const mcp = await import('./server/brandjet-mcp.js');
+                const disc = await import('./server/brandjet-discovery.js');
+                mcp.configureMcp(sb);
+                disc.configureDiscovery(sb);
+
+                console.log('=== BEFORE: enrichment credit balance ===');
+                console.log(JSON.stringify(await mcp.getEnrichmentBalance(), null, 2));
+
+                const result = await disc.runFullDiscovery({
+                  maxCompanies: parseInt(process.env.MAX_COMPANIES) || 20,
+                  revealCreditsCap: parseInt(process.env.REVEAL_CAP) || 100,
+                  pushMinScore: parseInt(process.env.PUSH_MIN) || 60,
+                  pushListName: process.env.PUSH_LIST,
+                });
+
+                console.log();
+                console.log('=== FULL RESULT ===');
+                console.log(JSON.stringify(result, null, 2));
+
+                console.log();
+                console.log('=== AFTER: enrichment credit balance ===');
+                console.log(JSON.stringify(await mcp.getEnrichmentBalance(), null, 2));
+              })().catch(e => { console.error('FATAL:', e.message); console.error(e.stack); process.exit(1); });
+            "

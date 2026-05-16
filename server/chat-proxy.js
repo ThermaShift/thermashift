@@ -30,6 +30,7 @@ import { notifyIfCreditError } from './anthropic-alert.js';
 import { runIntentScrape } from './intent-scraper.js';
 import { buildCSV, brandjetHealth } from './brandjet.js';
 import * as bjMcp from './brandjet-mcp.js';
+import * as bjDiscovery from './brandjet-discovery.js';
 import crypto from 'node:crypto';
 
 try {
@@ -89,6 +90,7 @@ async function sb(table, method, body, query = '') {
 
 // Hand the sb helper to the BrandJet MCP module so it can persist OAuth state
 bjMcp.configureMcp(sb);
+bjDiscovery.configureDiscovery(sb);
 
 // ─── Invoice number generator ───────────────────────────────
 function generateInvoiceNumber() {
@@ -1587,6 +1589,63 @@ app.get('/api/admin/brandjet/status', adminAuth, async (req, res) => {
   try {
     const connected = await bjMcp.isConnected();
     res.json({ connected });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Enrichment credit balance check
+app.get('/api/admin/brandjet/credits', adminAuth, async (req, res) => {
+  try {
+    res.json(await bjMcp.getEnrichmentBalance());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Run full discovery pipeline: search → reveal emails → push to BJ list
+app.post('/api/admin/discovery/run', adminAuth, async (req, res) => {
+  try {
+    const result = await bjDiscovery.runFullDiscovery(req.body || {});
+    res.json(result);
+  } catch (e) {
+    console.error('discovery run error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Discovery — list contacts with optional filters
+app.get('/api/admin/discovery/contacts', adminAuth, async (req, res) => {
+  try {
+    const bucket = req.query.bucket;
+    const status = req.query.status;
+    const limit = Math.min(parseInt(req.query.limit) || 100, 500);
+    let q = `?order=score.desc&limit=${limit}`;
+    if (bucket) q += `&bucket=eq.${bucket}`;
+    if (status) q += `&status=eq.${status}`;
+    res.json((await sb('discovered_contacts', 'GET', null, q)) || []);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Discovery summary for dashboard
+app.get('/api/admin/discovery/summary', adminAuth, async (req, res) => {
+  try {
+    const rows = await sb('discovered_contacts', 'GET', null,
+      '?select=bucket,status,email,score&limit=2000');
+    const summary = {
+      total: 0, with_email: 0, ready_to_push: 0, pushed: 0,
+      by_bucket: { HOT: 0, WARM: 0, COLD: 0, SKIP: 0 },
+    };
+    for (const r of rows || []) {
+      summary.total++;
+      summary.by_bucket[r.bucket] = (summary.by_bucket[r.bucket] || 0) + 1;
+      if (r.email) summary.with_email++;
+      if (r.status === 'new' && r.email) summary.ready_to_push++;
+      if (r.status === 'pushed_to_brandjet') summary.pushed++;
+    }
+    res.json(summary);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

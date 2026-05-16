@@ -444,3 +444,83 @@ export async function addLead({ leadListId, name, email, phoneNumber, linkedinPr
 export async function listTools() {
   return mcpCall('tools/list', {});
 }
+
+/**
+ * Helper: BrandJet wraps tool results in `{content: [{type:'text', text:'<json>'}]}`.
+ * Unwrap and parse the inner JSON, with graceful fallback.
+ */
+export function unwrap(result) {
+  try {
+    const text = result?.content?.[0]?.text;
+    if (!text) return result;
+    return JSON.parse(text);
+  } catch {
+    return result;
+  }
+}
+
+// ─── Lead-database discovery (BrandJet's native 700M-contact DB) ────
+
+/**
+ * Get enrichment credit balance. Returns the parsed payload, e.g.
+ * { action: 'balance', balance: 1100, lastUpdatedAt: null }
+ */
+export async function getEnrichmentBalance() {
+  await ensureBrandSelected();
+  const r = await callTool('brandjet_get_enrichment_credits', { action: 'balance' });
+  return unwrap(r);
+}
+
+/**
+ * Search BrandJet's lead database. Free for `searchType` of 'people' /
+ * 'companies' / 'employees'. The 'lead_finder' option is free for first
+ * 3 pages then costs credits.
+ *
+ * Filter keys (per BrandJet docs — confirmed via brandjet_get_search_filters):
+ *   - jobTitle: string OR array
+ *   - firstName / lastName
+ *   - countryName (e.g. "United States" — NOT iso code)
+ *   - companyName
+ *   - companyDomain
+ *   - industry
+ *   - employeeCountMin / employeeCountMax
+ *   - jobLevel: 'VP' | 'Director' | 'Manager' | 'C-Level' | 'Owner' ...
+ *   - jobFunction
+ *   - skills (array)
+ *   - More via brandjet_get_search_filters
+ *
+ * `searchType` defaults to 'people'. Returns the parsed result with a
+ * `results` array of person objects.
+ */
+export async function searchLeads(filters, opts = {}) {
+  await ensureBrandSelected();
+  const args = {
+    searchType: opts.searchType || 'people',
+    ...filters,
+  };
+  if (opts.page) args.page = opts.page;
+  const r = await callTool('brandjet_search_lead_database', args);
+  return unwrap(r);
+}
+
+/**
+ * Reveal a single email from search results (costs 2 credits).
+ * `leadId` is BrandJet's id from searchLeads results (mvj_*).
+ */
+export async function revealEmail(leadId) {
+  await ensureBrandSelected();
+  const r = await callTool('brandjet_find_contact_info', {
+    action: 'reveal_search_email',
+    leadId,
+  });
+  return unwrap(r);
+}
+
+/** List the actual filter catalog so we know what's queryable. */
+export async function listSearchFilters(groupId) {
+  await ensureBrandSelected();
+  const args = {};
+  if (groupId) args.groupId = groupId;
+  const r = await callTool('brandjet_get_search_filters', args);
+  return unwrap(r);
+}
