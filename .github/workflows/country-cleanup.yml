@@ -9,9 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       list_id:
-        description: 'BrandJet lead list ID to scope deletions (optional — speeds up matching)'
+        description: 'BrandJet lead list ID to scope deletions. Leave blank to search across all lists.'
         required: false
-        default: '3a17fd27-6710-441f-a0e0-bb0e5d3e5aee'
+        default: ''
+      scan_statuses:
+        description: 'Comma-separated Supabase statuses to scan. Defaults catch both unpushed and pushed leaks.'
+        required: false
+        default: 'new,pushed_to_brandjet'
       dry_run:
         description: 'Print what would be deleted without actually deleting'
         required: false
@@ -31,6 +35,7 @@ jobs:
           script: |
             cd /var/www/thermashift
             export LIST_ID='${{ inputs.list_id }}'
+            export SCAN_STATUSES='${{ inputs.scan_statuses }}'
             export DRY_RUN='${{ inputs.dry_run }}'
             node -e "
               const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
@@ -43,10 +48,11 @@ jobs:
                 const bj = await import('./server/brandjet-mcp.js');
                 bj.configureMcp(sb);
 
-                const listId = process.env.LIST_ID || null;
+                const listId = (process.env.LIST_ID || '').trim() || null;
+                const statuses = (process.env.SCAN_STATUSES || 'new,pushed_to_brandjet').split(',').map(s => s.trim()).filter(Boolean);
                 const dryRun = process.env.DRY_RUN === 'true';
                 console.log('=== cleanup country-leak records ===');
-                console.log('list_id:', listId, 'dry_run:', dryRun);
+                console.log('list_id:', listId || '(any)', 'scan_statuses:', statuses.join(','), 'dry_run:', dryRun);
                 console.log();
 
                 // Mirror the post-fix country gate logic (intentionally inline
@@ -85,10 +91,13 @@ jobs:
                   return null;
                 }
 
-                // 1. Pull pushed-to-brandjet records from Supabase
+                // 1. Pull records in the requested statuses from Supabase
+                const statusFilter = statuses.length === 1
+                  ? 'status=eq.' + encodeURIComponent(statuses[0])
+                  : 'status=in.(' + statuses.map(encodeURIComponent).join(',') + ')';
                 const pushed = await sb('discovered_contacts', 'GET', null,
-                  '?status=eq.pushed_to_brandjet&select=id,full_name,email,country,company_domain&limit=1000');
-                console.log('Pushed records scanned:', pushed?.length || 0);
+                  '?' + statusFilter + '&select=id,full_name,email,country,company_domain,status&limit=2000');
+                console.log('Records scanned:', pushed?.length || 0);
 
                 const leaked = [];
                 for (const c of (pushed || [])) {
@@ -96,7 +105,7 @@ jobs:
                   if (reason) leaked.push({ ...c, reason });
                 }
                 console.log('Leaked records found:', leaked.length);
-                leaked.forEach(l => console.log('  -', l.full_name, '<' + l.email + '> reason=' + l.reason));
+                leaked.forEach(l => console.log('  -', l.full_name, '<' + l.email + '> status=' + l.status + ' reason=' + l.reason));
 
                 if (leaked.length === 0) {
                   console.log();
