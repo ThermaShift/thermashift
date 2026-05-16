@@ -139,90 +139,142 @@ async function upsertContact(payload) {
 
 // ─── Main flows ─────────────────────────────────────────────────────
 
+// Industries that map to ThermaShift-relevant buyers. Match against the
+// person's `industry` field (case-insensitive substring match).
+const RELEVANT_INDUSTRY_KEYWORDS = [
+  'data center', 'colocation', 'colo',
+  'cloud', 'hosting',
+  'telecom', 'telecommunications',
+  'information technology', 'it services',
+  'internet', 'software',
+  'real estate investment trust', // many DC operators (Digital Realty, Equinix) are REITs
+];
+
+// Companies to skip (hyperscalers/recruiters/vendors that aren't our buyers)
+const COMPANY_BLOCKLIST = new Set([
+  'google','oracle','amazon','amazon web services','aws','microsoft','azure',
+  'apple','meta','facebook','ibm','dell','hp','hpe','cisco',
+  'vertiv','vertiv group','schneider electric','schneider','johnson controls',
+  'trane','trane technologies','carrier','delta electronics',
+  'insight global','liberty personnel services','liberty personnel','breagh recruitment','eligo recruitment','reed talent solutions','hireiq solutions',
+  'cbre','jacobs','jll',
+]);
+
+function relevantIndustry(industry) {
+  if (!industry) return false;
+  const lower = industry.toLowerCase();
+  return RELEVANT_INDUSTRY_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+function blockedCompany(company) {
+  if (!company) return true;
+  const lower = company.toLowerCase().trim();
+  for (const blocked of COMPANY_BLOCKLIST) {
+    if (lower === blocked || lower.startsWith(blocked + ' ') || lower.startsWith(blocked + ',')) return true;
+  }
+  return false;
+}
+
 /**
- * Cross-reference flow: for each company we already identified via Adzuna
- * intent, find decision-makers there. Returns stats.
+ * Find decision-makers via title-based search of BrandJet's 700M-contact DB.
+ *
+ * We iterate target titles one-at-a-time (basic 'people' search only accepts
+ * single-string jobTitle), accumulate raw candidates, post-filter for
+ * DC-relevant industries + non-blocked companies, then store top scorers.
+ *
+ * Cross-reference with intent_companies (Adzuna-sourced hiring intent) adds
+ * a +20 score bonus when a candidate's company also shows up in our intent
+ * pipeline — that's the gold signal.
  */
-export async function discoverContactsForIntentCompanies(opts = {}) {
+export async function discoverByTitleSearch(opts = {}) {
   const {
-    minScore = 50,            // intent_companies score threshold
-    perCompanyLimit = 5,      // contacts to consider per company
-    maxCompanies = 20,        // company budget per run
+    titles = TARGET_TITLES,
+    countries = ['United States'],
+    minScore = 50,
   } = opts;
   if (!_sb) throw new Error('Discovery not configured — call configureDiscovery(sb)');
 
   const stats = {
     started_at: new Date().toISOString(),
-    companies_searched: 0,
-    candidates_found: 0,
+    searches_run: 0,
+    raw_candidates: 0,
+    industry_passed: 0,
+    company_passed: 0,
     contacts_stored: 0,
     errors: [],
   };
 
-  // Pull intent companies we haven't already discovered contacts for
-  const companies = await _sb('intent_companies', 'GET', null,
-    `?score=gte.${minScore}&order=score.desc&limit=${maxCompanies}`);
-  if (!companies || !companies.length) {
-    console.log('[discovery] no intent companies above threshold');
-    return stats;
-  }
+  // Pre-load intent_companies for cross-reference scoring
+  const intentRows = await _sb('intent_companies', 'GET', null, '?select=id,company&limit=2000');
+  const intentByName = new Map(
+    (intentRows || []).map(r => [r.company.toLowerCase().trim(), r.id])
+  );
 
-  for (const co of companies) {
-    try {
-      console.log(`[discovery] searching contacts at "${co.company}"`);
-      const result = await bj.searchLeads({
-        companyName: co.company,
-        jobTitle: TARGET_TITLES.slice(0, 5),       // BrandJet accepts arrays
-        countryName: TARGET_COUNTRIES[0],          // US first; iterate other geos in v2
-      }, { searchType: 'people' });
-      stats.companies_searched++;
+  for (const country of countries) {
+    for (const title of titles) {
+      try {
+        const result = await bj.searchLeads({ jobTitle: title, countryName: country });
+        stats.searches_run++;
+        const people = result?.results || [];
+        stats.raw_candidates += people.length;
 
-      const people = result?.results || [];
-      const ranked = people
-        .map(p => ({ p, scored: scoreCandidate(p, { intentCompanyMatch: true }) }))
-        .filter(x => x.scored.score >= 40)
-        .sort((a, b) => b.scored.score - a.scored.score)
-        .slice(0, perCompanyLimit);
+        for (const p of people) {
+          const companyMatch = p.company && intentByName.get(p.company.toLowerCase().trim());
 
-      stats.candidates_found += ranked.length;
+          // Industry filter (or pass if cross-referenced to a known intent company)
+          if (!companyMatch && !relevantIndustry(p.industry)) continue;
+          stats.industry_passed++;
 
-      for (const { p, scored } of ranked) {
-        await upsertContact({
-          source: 'brandjet',
-          source_external_id: p.id,
-          full_name: p.fullName,
-          first_name: p.firstName,
-          last_name: p.lastName,
-          job_title: p.jobTitle,
-          job_level: p.jobLevel,
-          job_function: p.jobFunction,
-          linkedin_url: p.linkedinUrl,
-          profile_picture_url: p.profilePicture,
-          headline: (p.headline || '').slice(0, 500),
-          company: p.company,
-          company_domain: p.companyDomain || p.domain,
-          company_size: p.companySize,
-          industry: p.industry,
-          country: p.country || 'United States',
-          email: p.email || null,
-          email_status: p.emailAvailable ? 'available_unrevealed' : 'unknown',
-          intent_company_id: co.id,
-          score: scored.score,
-          bucket: scored.bucket,
-          score_breakdown: scored.breakdown,
-          status: 'new',
-        });
-        stats.contacts_stored++;
+          // Company blocklist
+          if (blockedCompany(p.company)) continue;
+          stats.company_passed++;
+
+          const scored = scoreCandidate(p, { intentCompanyMatch: !!companyMatch });
+          if (scored.score < minScore) continue;
+
+          await upsertContact({
+            source: 'brandjet',
+            source_external_id: p.id,
+            full_name: p.fullName,
+            first_name: p.firstName,
+            last_name: p.lastName,
+            job_title: p.jobTitle,
+            job_level: p.jobLevel,
+            job_function: p.jobFunction,
+            linkedin_url: p.linkedinUrl,
+            profile_picture_url: p.profilePicture,
+            headline: (p.headline || '').slice(0, 500),
+            company: p.company,
+            company_domain: p.companyDomain || p.domain,
+            company_size: p.companySize,
+            industry: p.industry,
+            country: p.country || country,
+            email: p.email || null,
+            email_status: p.emailAvailable ? 'available_unrevealed' : 'unknown',
+            intent_company_id: companyMatch || null,
+            score: scored.score,
+            bucket: scored.bucket,
+            score_breakdown: scored.breakdown,
+            status: 'new',
+          });
+          stats.contacts_stored++;
+        }
+      } catch (e) {
+        console.warn(`[discovery] error searching "${title}" in ${country}: ${e.message}`);
+        stats.errors.push({ title, country, msg: e.message });
       }
-    } catch (e) {
-      console.warn(`[discovery] error searching ${co.company}: ${e.message}`);
-      stats.errors.push({ company: co.company, msg: e.message });
     }
   }
 
   stats.finished_at = new Date().toISOString();
-  console.log(`[discovery] DONE: ${stats.companies_searched} searched, ${stats.contacts_stored} contacts stored, ${stats.errors.length} errors`);
+  console.log(`[discovery] DONE: ${stats.searches_run} searches, ${stats.raw_candidates} raw, ${stats.contacts_stored} stored (≥${minScore}), ${stats.errors.length} errors`);
   return stats;
+}
+
+// Keep the cross-reference function exported for advanced use cases, but the
+// default pipeline now uses discoverByTitleSearch (richer + actually works).
+export async function discoverContactsForIntentCompanies(opts = {}) {
+  return discoverByTitleSearch(opts);
 }
 
 /**
@@ -337,18 +389,20 @@ export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore
  */
 export async function runFullDiscovery(opts = {}) {
   const {
-    minIntentScore = 50,
-    perCompanyLimit = 5,
-    maxCompanies = 20,
+    titles,
+    countries = ['United States'],
+    discoverMinScore = 50,
     revealCreditsCap = 100,
     revealMinScore = 60,
     pushMinScore = 60,
     pushListName,
   } = opts;
 
-  console.log('[discovery] step 1: search BrandJet for contacts at intent companies');
-  const search = await discoverContactsForIntentCompanies({
-    minScore: minIntentScore, perCompanyLimit, maxCompanies,
+  console.log('[discovery] step 1: title-based search of BrandJet contact DB');
+  const search = await discoverByTitleSearch({
+    titles: titles || TARGET_TITLES,
+    countries,
+    minScore: discoverMinScore,
   });
 
   console.log('[discovery] step 2: reveal emails for top contacts');
