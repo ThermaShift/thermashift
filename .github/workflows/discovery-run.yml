@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       countries:
-        description: 'Comma-separated countries (BrandJet names: "United States,United Kingdom,Canada,Ireland,Australia")'
+        description: 'Comma-separated countries. Default covers Tier A + Tier B English-speaking DC markets.'
         required: false
-        default: 'United States,United Kingdom,Canada,Ireland'
+        default: 'United States,United Kingdom,Ireland,Canada,Australia,United Arab Emirates,Singapore,India'
       reveal_credits_cap:
         description: 'Max credits to spend on email reveals'
         required: false

@@ -50,8 +50,26 @@ const TARGET_INDUSTRIES = [
   'Information Technology',
 ];
 
-// Geographic priority — English-speaking, biased to US East Coast
-const TARGET_COUNTRIES = ['United States', 'United Kingdom', 'Ireland', 'Canada', 'Australia'];
+// Geographic priority — English-speaking business markets with active DC
+// industry. Order matters only for default-loop tie-breaking; actual selection
+// is set per-run via the workflow's `countries` input.
+//
+// Tier A — primary buyers, full English, regulation-driven (179D, EU EED):
+//   United States, United Kingdom, Ireland, Canada, Australia
+// Tier B — English business standard + significant DC investment:
+//   United Arab Emirates (Dubai — desert climate = cooling critical),
+//   Singapore (premium DC hub, mature operators),
+//   India (fast-growing market, English-speaking IT)
+// Tier C — opportunistic (smaller market or limited DC growth):
+//   Israel, Hong Kong, Philippines, South Africa, New Zealand, Malaysia
+const TARGET_COUNTRIES = [
+  // Tier A
+  'United States', 'United Kingdom', 'Ireland', 'Canada', 'Australia',
+  // Tier B
+  'United Arab Emirates', 'Singapore', 'India',
+  // Tier C
+  'Israel', 'Hong Kong', 'Philippines', 'South Africa', 'New Zealand', 'Malaysia',
+];
 
 // Job-level enum BrandJet uses; we accept VP and above
 const ACCEPTABLE_LEVELS = new Set(['VP', 'Director', 'C-Level', 'Owner', 'Partner']);
