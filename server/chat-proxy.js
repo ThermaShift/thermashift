@@ -748,8 +748,28 @@ async function adminAuth(req, res, next) {
     return res.status(429).json({ error: `Too many failed attempts. Locked out for ${minutes} more minute(s).` });
   }
 
-  const token = req.headers['x-admin-token'];
-  if (!token) return res.status(401).json({ error: 'Admin authentication required' });
+  // Support three auth methods:
+  //   1. x-admin-token header (used by React admin UI via fetch)
+  //   2. Authorization: Basic — browsers prompt natively for username/password
+  //      (any username works; the password is what we hash). Used for browser-
+  //      initiated flows like /api/admin/brandjet/connect.
+  //   3. ?admin_token=... query param — fallback for redirect chains
+  let token = req.headers['x-admin-token'];
+  if (!token) {
+    const authz = req.headers['authorization'] || '';
+    if (authz.startsWith('Basic ')) {
+      try {
+        const decoded = Buffer.from(authz.slice(6), 'base64').toString('utf8');
+        token = decoded.split(':').slice(1).join(':');
+      } catch { /* fall through */ }
+    }
+  }
+  if (!token) token = req.query.admin_token;
+  if (!token) {
+    // Hint browsers to show their native password dialog
+    res.set('WWW-Authenticate', 'Basic realm="ThermaShift Admin"');
+    return res.status(401).json({ error: 'Admin authentication required' });
+  }
 
   try {
     const crypto = await import('crypto');
