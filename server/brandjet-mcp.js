@@ -1,0 +1,321 @@
+/**
+ * BrandJet MCP integration via OAuth 2.1 + PKCE.
+ *
+ * BrandJet's REST API auth scheme isn't documented yet, but their MCP server
+ * is fully spec-compliant and available at https://mcp.brandjet.ai/mcp.
+ * This module:
+ *   1. Discovers OAuth metadata from .well-known endpoints
+ *   2. Registers a dynamic client (DCR per RFC 7591) — done once, cached
+ *   3. Starts a browser auth flow with PKCE
+ *   4. Exchanges code for tokens, stores in oauth_tokens table
+ *   5. Refreshes tokens automatically
+ *   6. Calls MCP tools via JSON-RPC 2.0 over HTTP (Streamable HTTP transport)
+ *
+ * Public helpers (after connect):
+ *   - pushLead({company, contact_email, ...})  — creates a lead in BrandJet
+ *   - listCampaigns()                           — lists user's campaigns
+ *   - addLeadToCampaign(campaignId, leadId)     — enrolls lead in campaign
+ *   - isConnected()                             — boolean
+ *
+ * Setup flow (one-time):
+ *   1. Steve hits GET /api/admin/brandjet/connect
+ *   2. Server registers client (cached after first call) + generates PKCE
+ *   3. Server redirects Steve's browser to BrandJet auth page
+ *   4. Steve clicks Allow
+ *   5. BrandJet redirects to /api/admin/brandjet/oauth-callback with code
+ *   6. Server exchanges code for tokens, stores in oauth_tokens
+ *   7. Done forever (refresh tokens are handled automatically)
+ */
+
+import crypto from 'node:crypto';
+
+const MCP_SERVER = 'https://mcp.brandjet.ai/mcp';
+const ISSUER = 'https://mcp.brandjet.ai';
+const REDIRECT_URI = 'https://thermashift.net/api/admin/brandjet/oauth-callback';
+
+// Scopes we need for our use case (push leads + manage campaigns + read replies)
+const REQUESTED_SCOPES = [
+  'leads:read',
+  'leads:write',
+  'campaigns:read',
+  'campaigns:write',
+  'unibox:read',
+  'brands:read',
+  'email_accounts:read',
+].join(' ');
+
+// ─── Supabase token storage ──────────────────────────────────────────
+
+// Inject the sb() helper at module init time
+let _sb;
+export function configureMcp(sbHelper) { _sb = sbHelper; }
+
+async function storeTokens({ access_token, refresh_token, expires_in, scope, authorized_by }) {
+  if (!_sb) throw new Error('MCP module not configured — call configureMcp(sb) first');
+  const expires_at = expires_in
+    ? new Date(Date.now() + (expires_in - 60) * 1000).toISOString()
+    : null;
+  const existing = await _sb('oauth_tokens', 'GET', null, "?service=eq.brandjet&limit=1");
+  const row = {
+    service: 'brandjet',
+    access_token, refresh_token,
+    token_type: 'Bearer',
+    expires_at, scopes: scope || REQUESTED_SCOPES,
+    authorized_by, authorized_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    code_verifier: null, state: null,
+  };
+  if (existing && existing.length) {
+    await _sb('oauth_tokens', 'PATCH', row, `?id=eq.${existing[0].id}`);
+  } else {
+    await _sb('oauth_tokens', 'POST', { ...row, created_at: new Date().toISOString() });
+  }
+}
+
+async function getStoredTokens() {
+  if (!_sb) return null;
+  const rows = await _sb('oauth_tokens', 'GET', null, "?service=eq.brandjet&limit=1");
+  return rows?.[0] || null;
+}
+
+// Stash in-flight PKCE state (code_verifier + state) between /connect and /callback.
+// Re-uses the same row that will eventually hold the tokens.
+async function storePkceState({ code_verifier, state, client_id, client_secret }) {
+  if (!_sb) throw new Error('MCP module not configured');
+  const existing = await _sb('oauth_tokens', 'GET', null, "?service=eq.brandjet&limit=1");
+  const row = {
+    service: 'brandjet',
+    code_verifier, state, redirect_uri: REDIRECT_URI,
+    notes: JSON.stringify({ client_id, client_secret }),
+    updated_at: new Date().toISOString(),
+  };
+  if (existing && existing.length) {
+    await _sb('oauth_tokens', 'PATCH', row, `?id=eq.${existing[0].id}`);
+  } else {
+    await _sb('oauth_tokens', 'POST', { ...row, access_token: 'pending', created_at: new Date().toISOString() });
+  }
+}
+
+async function getPkceState() {
+  const row = await getStoredTokens();
+  if (!row) return null;
+  let extra = {};
+  try { extra = row.notes ? JSON.parse(row.notes) : {}; } catch { /* ignore */ }
+  return {
+    code_verifier: row.code_verifier,
+    state: row.state,
+    client_id: extra.client_id,
+    client_secret: extra.client_secret,
+  };
+}
+
+// ─── OAuth flow primitives ───────────────────────────────────────────
+
+function generatePkce() {
+  const verifier = crypto.randomBytes(48).toString('base64url');
+  const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+  return { verifier, challenge };
+}
+
+async function registerClient() {
+  const r = await fetch(ISSUER + '/oauth/register', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      client_name: 'ThermaShift Backend',
+      redirect_uris: [REDIRECT_URI],
+      grant_types: ['authorization_code', 'refresh_token'],
+      response_types: ['code'],
+      token_endpoint_auth_method: 'client_secret_post',
+      scope: REQUESTED_SCOPES,
+    }),
+  });
+  if (!r.ok) throw new Error(`DCR failed: ${r.status} ${await r.text()}`);
+  return r.json();
+}
+
+/**
+ * Start the OAuth flow. Returns the URL to redirect Steve's browser to.
+ * Caller (the /connect endpoint) should res.redirect(url).
+ */
+export async function startAuthFlow(authorizedBy) {
+  // Cached client? Re-use; otherwise DCR.
+  const existing = await getPkceState();
+  let client_id = existing?.client_id;
+  let client_secret = existing?.client_secret;
+  if (!client_id) {
+    const reg = await registerClient();
+    client_id = reg.client_id;
+    client_secret = reg.client_secret;
+  }
+
+  const { verifier, challenge } = generatePkce();
+  const state = crypto.randomBytes(24).toString('base64url');
+
+  await storePkceState({ code_verifier: verifier, state, client_id, client_secret });
+
+  const url = new URL(ISSUER + '/oauth/authorize');
+  url.searchParams.set('response_type', 'code');
+  url.searchParams.set('client_id', client_id);
+  url.searchParams.set('redirect_uri', REDIRECT_URI);
+  url.searchParams.set('scope', REQUESTED_SCOPES);
+  url.searchParams.set('state', state);
+  url.searchParams.set('code_challenge', challenge);
+  url.searchParams.set('code_challenge_method', 'S256');
+  return { url: url.toString(), authorizedBy };
+}
+
+/**
+ * Handle the OAuth callback. Exchanges code for tokens, stores them.
+ */
+export async function handleCallback({ code, state }) {
+  const stored = await getPkceState();
+  if (!stored) throw new Error('No PKCE state — auth flow not started or expired');
+  if (stored.state !== state) throw new Error('State mismatch — possible CSRF');
+
+  const body = new URLSearchParams({
+    grant_type: 'authorization_code',
+    code,
+    redirect_uri: REDIRECT_URI,
+    client_id: stored.client_id,
+    code_verifier: stored.code_verifier,
+  });
+  if (stored.client_secret) body.set('client_secret', stored.client_secret);
+
+  const r = await fetch(ISSUER + '/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  if (!r.ok) throw new Error(`Token exchange failed: ${r.status} ${await r.text()}`);
+  const tokens = await r.json();
+
+  await storeTokens({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    expires_in: tokens.expires_in,
+    scope: tokens.scope,
+    authorized_by: 'admin',
+  });
+  return { connected: true, scopes: tokens.scope };
+}
+
+async function refreshAccessToken() {
+  const row = await getStoredTokens();
+  if (!row?.refresh_token) throw new Error('No refresh token — re-authorization required');
+  let creds = {};
+  try { creds = row.notes ? JSON.parse(row.notes) : {}; } catch { /* */ }
+
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: row.refresh_token,
+    client_id: creds.client_id,
+  });
+  if (creds.client_secret) body.set('client_secret', creds.client_secret);
+
+  const r = await fetch(ISSUER + '/oauth/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  });
+  if (!r.ok) throw new Error(`Refresh failed: ${r.status} ${await r.text()}`);
+  const tokens = await r.json();
+  await storeTokens({
+    access_token: tokens.access_token,
+    refresh_token: tokens.refresh_token || row.refresh_token, // some servers don't rotate
+    expires_in: tokens.expires_in,
+    scope: tokens.scope || row.scopes,
+    authorized_by: row.authorized_by,
+  });
+  return tokens.access_token;
+}
+
+async function getAccessToken() {
+  const row = await getStoredTokens();
+  if (!row || row.access_token === 'pending') return null;
+  if (row.expires_at && new Date(row.expires_at) < new Date()) {
+    return await refreshAccessToken();
+  }
+  return row.access_token;
+}
+
+export async function isConnected() {
+  const t = await getAccessToken().catch(() => null);
+  return !!t;
+}
+
+// ─── MCP JSON-RPC client ─────────────────────────────────────────────
+
+let _rpcId = 1;
+
+async function mcpCall(method, params, opts = { retried: false }) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('not_connected');
+
+  const r = await fetch(MCP_SERVER, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json, text/event-stream',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ jsonrpc: '2.0', id: _rpcId++, method, params }),
+  });
+
+  // 401 → refresh + retry once
+  if (r.status === 401 && !opts.retried) {
+    await refreshAccessToken();
+    return mcpCall(method, params, { retried: true });
+  }
+
+  const text = await r.text();
+  if (!r.ok) throw new Error(`MCP call ${method}: ${r.status} ${text.slice(0, 300)}`);
+
+  // Streamable HTTP may return text/event-stream; extract JSON-RPC envelope.
+  let envelope;
+  try { envelope = JSON.parse(text); }
+  catch {
+    // Parse SSE format: look for "data: " lines and stitch JSON
+    const dataLines = text.split('\n').filter(l => l.startsWith('data: '));
+    const joined = dataLines.map(l => l.slice(6)).join('');
+    envelope = JSON.parse(joined);
+  }
+
+  if (envelope.error) throw new Error(`MCP error ${envelope.error.code}: ${envelope.error.message}`);
+  return envelope.result;
+}
+
+async function callTool(name, args = {}) {
+  return mcpCall('tools/call', { name, arguments: args });
+}
+
+// ─── High-level helpers ──────────────────────────────────────────────
+
+export async function listCampaigns() {
+  return callTool('campaigns.list', {});
+}
+
+export async function listLeads(limit = 50) {
+  return callTool('leads.list', { limit });
+}
+
+/**
+ * Push a lead into BrandJet.
+ * `data` shape (best-effort — actual MCP schema may differ slightly):
+ *   { company, first_name?, last_name?, email?, title?, country?, linkedin_url?, custom? }
+ */
+export async function pushLead(data) {
+  return callTool('leads.create', data);
+}
+
+export async function addLeadToCampaign(campaignId, leadId) {
+  return callTool('campaigns.add_lead', { campaign_id: campaignId, lead_id: leadId });
+}
+
+/**
+ * Convenience — list available tool names from BrandJet's MCP server.
+ * Useful for confirming what's actually exposed.
+ */
+export async function listTools() {
+  return mcpCall('tools/list', {});
+}

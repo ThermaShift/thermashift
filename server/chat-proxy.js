@@ -29,6 +29,7 @@ import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 import { notifyIfCreditError } from './anthropic-alert.js';
 import { runIntentScrape } from './intent-scraper.js';
 import { buildCSV, brandjetHealth } from './brandjet.js';
+import * as bjMcp from './brandjet-mcp.js';
 import crypto from 'node:crypto';
 
 try {
@@ -85,6 +86,9 @@ async function sb(table, method, body, query = '') {
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }
+
+// Hand the sb helper to the BrandJet MCP module so it can persist OAuth state
+bjMcp.configureMcp(sb);
 
 // ─── Invoice number generator ───────────────────────────────
 function generateInvoiceNumber() {
@@ -1511,7 +1515,77 @@ app.patch('/api/admin/intent/companies/:id', adminAuth, async (req, res) => {
 // BrandJet connectivity check — useful for debugging from dashboard
 app.get('/api/admin/intent/brandjet-health', adminAuth, async (req, res) => {
   const reachable = await brandjetHealth();
-  res.json({ brandjet_reachable: reachable, base: process.env.BRANDJET_API_BASE });
+  const mcpConnected = await bjMcp.isConnected().catch(() => false);
+  res.json({
+    brandjet_reachable: reachable,
+    base: process.env.BRANDJET_API_BASE,
+    mcp_connected: mcpConnected,
+  });
+});
+
+// ─── BrandJet MCP OAuth flow ────────────────────────────────────────
+// One-time setup: admin hits /connect → browser redirect → /oauth-callback
+// → tokens stored → fully connected. Tokens auto-refresh thereafter.
+
+app.get('/api/admin/brandjet/connect', adminAuth, async (req, res) => {
+  try {
+    const { url } = await bjMcp.startAuthFlow('admin');
+    // Send the user's browser to BrandJet's auth page
+    res.redirect(url);
+  } catch (e) {
+    console.error('BrandJet connect error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// OAuth callback — no adminAuth because BrandJet's browser-driven redirect
+// won't carry our session cookie. State parameter protects against CSRF.
+app.get('/api/admin/brandjet/oauth-callback', async (req, res) => {
+  try {
+    const { code, state, error, error_description } = req.query;
+    if (error) {
+      return res.status(400).send(`<h1>BrandJet authorization failed</h1><p>${error}: ${error_description || ''}</p>`);
+    }
+    if (!code || !state) {
+      return res.status(400).send('<h1>Missing code or state</h1>');
+    }
+    const result = await bjMcp.handleCallback({ code, state });
+    res.send(`<!doctype html><html><body style="font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px;">
+      <h1>✅ BrandJet connected</h1>
+      <p>Scopes granted: <code>${(result.scopes || '').split(' ').join(', ')}</code></p>
+      <p>The intent scraper can now push HOT leads directly into BrandJet. You can close this tab.</p>
+      <p><a href="/tracker">← Back to admin</a></p>
+    </body></html>`);
+  } catch (e) {
+    console.error('BrandJet OAuth callback error:', e);
+    res.status(500).send(`<h1>OAuth error</h1><pre>${e.message}</pre>`);
+  }
+});
+
+// Connection status + sanity check
+app.get('/api/admin/brandjet/status', adminAuth, async (req, res) => {
+  try {
+    const connected = await bjMcp.isConnected();
+    res.json({ connected });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Smoke test — list available tools and a few campaigns
+app.get('/api/admin/brandjet/smoke-test', adminAuth, async (req, res) => {
+  try {
+    const [tools, campaigns] = await Promise.allSettled([
+      bjMcp.listTools(),
+      bjMcp.listCampaigns(),
+    ]);
+    res.json({
+      tools: tools.status === 'fulfilled' ? tools.value : { error: tools.reason?.message },
+      campaigns: campaigns.status === 'fulfilled' ? campaigns.value : { error: campaigns.reason?.message },
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── BrandJet inbound webhook receiver ──────────────────────────────
