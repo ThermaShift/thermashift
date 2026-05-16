@@ -29,6 +29,7 @@ import { sendDraft, rejectDraft, placeDueCalls } from './ai-closer-actions.js';
 import { notifyIfCreditError } from './anthropic-alert.js';
 import { runIntentScrape } from './intent-scraper.js';
 import { buildCSV, brandjetHealth } from './brandjet.js';
+import crypto from 'node:crypto';
 
 try {
   const require = createRequire(import.meta.url);
@@ -1512,6 +1513,83 @@ app.get('/api/admin/intent/brandjet-health', adminAuth, async (req, res) => {
   const reachable = await brandjetHealth();
   res.json({ brandjet_reachable: reachable, base: process.env.BRANDJET_API_BASE });
 });
+
+// ─── BrandJet inbound webhook receiver ──────────────────────────────
+//
+// Public endpoint — BrandJet POSTs here with events: lead.created,
+// reply.received, campaign.completed, etc. We verify the HMAC signature
+// (if BRANDJET_WEBHOOK_SECRET is set), log every event, and route known
+// events to handlers (AI Closer for replies, etc.).
+//
+// URL to configure in BrandJet → Settings → Webhooks:
+//   https://thermashift.net/api/brandjet/webhook
+//
+app.post('/api/brandjet/webhook',
+  express.json({ verify: (req, _res, buf) => { req.rawBody = buf; }, limit: '1mb' }),
+  async (req, res) => {
+    const secret = process.env.BRANDJET_WEBHOOK_SECRET;
+    // Optional signature check — supports the most common header names BrandJet might use
+    if (secret) {
+      const sigHeader = req.get('x-brandjet-signature') ||
+                        req.get('x-signature') ||
+                        req.get('signature') ||
+                        req.get('x-hub-signature-256');
+      if (!sigHeader) {
+        console.warn('[brandjet-webhook] no signature header, rejecting');
+        return res.status(401).json({ error: 'missing_signature' });
+      }
+      const expected = crypto.createHmac('sha256', secret).update(req.rawBody).digest('hex');
+      // Accept both raw hex and `sha256=` prefixed forms
+      const provided = sigHeader.replace(/^sha256=/, '');
+      const okBytes = Buffer.from(provided, 'hex');
+      const expBytes = Buffer.from(expected, 'hex');
+      const sigOk = okBytes.length === expBytes.length && crypto.timingSafeEqual(okBytes, expBytes);
+      if (!sigOk) {
+        console.warn('[brandjet-webhook] signature mismatch, rejecting');
+        return res.status(401).json({ error: 'invalid_signature' });
+      }
+    } else {
+      console.warn('[brandjet-webhook] BRANDJET_WEBHOOK_SECRET not set — accepting without verification');
+    }
+
+    const event = req.body || {};
+    const eventType = event.type || event.event || event.event_type || 'unknown';
+    console.log(`[brandjet-webhook] received: ${eventType}`, JSON.stringify(event).slice(0, 500));
+
+    // Route known event types. For now, log everything and ack 200 — actual
+    // routing (e.g., AI Closer integration) gets added per event as we
+    // observe what BrandJet actually sends.
+    try {
+      switch (eventType) {
+        case 'reply.received':
+        case 'unibox.reply':
+        case 'lead.replied':
+          // TODO: when BrandJet's payload shape is known, route to AI Closer
+          // For now: log + ack
+          console.log(`[brandjet-webhook] reply event — payload preview:`, JSON.stringify(event).slice(0, 1500));
+          break;
+
+        case 'lead.created':
+        case 'lead.added':
+          console.log(`[brandjet-webhook] lead created/added`);
+          break;
+
+        case 'campaign.completed':
+        case 'campaign.finished':
+          console.log(`[brandjet-webhook] campaign finished`);
+          break;
+
+        default:
+          console.log(`[brandjet-webhook] unhandled event type: ${eventType}`);
+      }
+    } catch (e) {
+      console.error('[brandjet-webhook] handler error:', e.message);
+      // Don't return an error to BrandJet — they'll retry. Just log.
+    }
+
+    res.json({ ok: true, received: eventType });
+  }
+);
 
 // ═══════════════════════════════════════════════════════════
 // MONITORING SAAS — sensor ingestion + alert engine (Phase 2)

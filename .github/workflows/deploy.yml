@@ -18,6 +18,7 @@ jobs:
         uses: appleboy/ssh-action@v1.2.0
         env:
           BRANDJET_API_KEY: ${{ secrets.BRANDJET_API_KEY }}
+          BRANDJET_WEBHOOK_SECRET: ${{ secrets.BRANDJET_WEBHOOK_SECRET }}
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
           NEWSAPI_KEY: ${{ secrets.NEWSAPI_KEY }}
@@ -28,15 +29,16 @@ jobs:
           port: 22
           command_timeout: 15m
           script_stop: true
-          envs: BRANDJET_API_KEY,ADZUNA_APP_ID,ADZUNA_APP_KEY,NEWSAPI_KEY
+          envs: BRANDJET_API_KEY,BRANDJET_WEBHOOK_SECRET,ADZUNA_APP_ID,ADZUNA_APP_KEY,NEWSAPI_KEY
           script: |
             cd /var/www/thermashift || exit 1
             ENV_FILE=/var/www/thermashift/.env
             [ -f "$ENV_FILE" ] || touch "$ENV_FILE"
             echo "🔐 Syncing env secrets to .env (upsert)..."
-            sed -i '/^BRANDJET_API_KEY=/d;/^BRANDJET_API_BASE=/d;/^ADZUNA_APP_ID=/d;/^ADZUNA_APP_KEY=/d;/^NEWSAPI_KEY=/d' "$ENV_FILE"
+            sed -i '/^BRANDJET_API_KEY=/d;/^BRANDJET_API_BASE=/d;/^BRANDJET_WEBHOOK_SECRET=/d;/^ADZUNA_APP_ID=/d;/^ADZUNA_APP_KEY=/d;/^NEWSAPI_KEY=/d' "$ENV_FILE"
             [ -n "$BRANDJET_API_KEY" ] && echo "BRANDJET_API_KEY=$BRANDJET_API_KEY" >> "$ENV_FILE" && echo "  + BRANDJET_API_KEY"
             echo "BRANDJET_API_BASE=https://api.brandjet.ai" >> "$ENV_FILE" && echo "  + BRANDJET_API_BASE"
+            [ -n "$BRANDJET_WEBHOOK_SECRET" ] && echo "BRANDJET_WEBHOOK_SECRET=$BRANDJET_WEBHOOK_SECRET" >> "$ENV_FILE" && echo "  + BRANDJET_WEBHOOK_SECRET"
             [ -n "$ADZUNA_APP_ID" ] && echo "ADZUNA_APP_ID=$ADZUNA_APP_ID" >> "$ENV_FILE" && echo "  + ADZUNA_APP_ID"
             [ -n "$ADZUNA_APP_KEY" ] && echo "ADZUNA_APP_KEY=$ADZUNA_APP_KEY" >> "$ENV_FILE" && echo "  + ADZUNA_APP_KEY"
             [ -n "$NEWSAPI_KEY" ] && echo "NEWSAPI_KEY=$NEWSAPI_KEY" >> "$ENV_FILE" && echo "  + NEWSAPI_KEY"
