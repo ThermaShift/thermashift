@@ -1,0 +1,58 @@
+name: Test BrandJet MCP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: SSH and exercise MCP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run MCP smoke test on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            cd /var/www/thermashift
+            node -e "
+              process.env.SUPABASE_ANON_KEY=process.env.SUPABASE_ANON_KEY || require('fs').readFileSync('.env','utf8').match(/SUPABASE_ANON_KEY=(.+)/)?.[1] || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              const sbUrl = 'https://auqklthrpvsqyelfjood.supabase.co';
+              async function sb(table, method, body, query='') {
+                const r = await fetch(sbUrl+'/rest/v1/'+table+query, {
+                  method, headers: {
+                    'apikey': process.env.SUPABASE_ANON_KEY,
+                    'Authorization': 'Bearer '+process.env.SUPABASE_ANON_KEY,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation',
+                  },
+                  body: body ? JSON.stringify(body) : undefined
+                });
+                if (!r.ok) throw new Error(table+': '+r.status+' '+await r.text());
+                const t = await r.text();
+                return t ? JSON.parse(t) : null;
+              }
+              (async () => {
+                const mod = await import('./server/brandjet-mcp.js');
+                mod.configureMcp(sb);
+                console.log('=== isConnected? ===');
+                console.log(await mod.isConnected());
+                console.log();
+                console.log('=== Tools available ===');
+                try {
+                  const tools = await mod.listTools();
+                  const list = (tools.tools || tools).slice ? (tools.tools || tools) : [];
+                  console.log('Total tools:', list.length);
+                  list.slice(0, 20).forEach(t => console.log('  •', t.name, '—', (t.description||'').slice(0,70)));
+                } catch (e) { console.log('listTools error:', e.message); }
+                console.log();
+                console.log('=== Campaigns ===');
+                try {
+                  const c = await mod.listCampaigns();
+                  console.log(JSON.stringify(c, null, 2).slice(0, 1500));
+                } catch (e) { console.log('listCampaigns error:', e.message); }
+              })().catch(e => { console.error('FATAL:', e.message); process.exit(1); });
+            "
