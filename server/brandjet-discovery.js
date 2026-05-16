@@ -93,34 +93,117 @@ const ACCEPTABLE_LEVELS = new Set(['VP', 'Director', 'C-Level', 'Owner', 'Partne
 
 // ─── Scoring ────────────────────────────────────────────────────────
 
+// Headline / job-title keywords that signal ACTIVE investment focus areas.
+// These boost the score because they tell us this person is currently
+// working on something relevant to ThermaShift's services.
+const HEADLINE_BOOST_KEYWORDS = [
+  // Jackpot — Section 179D / PFAS migration are direct service-line matches
+  { kw: 'section 179d', points: 8 },
+  { kw: '179d', points: 8 },
+  { kw: 'pfas', points: 8 },
+  { kw: 'novec', points: 6 },
+  { kw: 'fluorinert', points: 6 },
+  // Strong — active AI/GPU buildout
+  { kw: 'ai infrastructure', points: 5 },
+  { kw: 'gpu', points: 4 },
+  { kw: 'liquid cooling', points: 5 },
+  { kw: 'direct-to-chip', points: 5 },
+  { kw: 'immersion cooling', points: 5 },
+  // Solid — active growth / capex signal
+  { kw: 'expansion', points: 3 },
+  { kw: 'scaling', points: 3 },
+  { kw: 'new build', points: 3 },
+  { kw: 'pre-construction', points: 3 },
+  // Sustainability — ESG-driven buyers
+  { kw: 'sustainability', points: 3 },
+  { kw: 'carbon neutral', points: 4 },
+  { kw: 'net zero', points: 4 },
+  { kw: 'esg', points: 3 },
+  { kw: 'pue', points: 3 },
+  { kw: 'wue', points: 3 },
+];
+const HEADLINE_BOOST_CAP = 12;
+
+function parseCompanySize(sizeStr) {
+  // BrandJet `companySize` can be a number string ("9", "379") or a range string ("11-50")
+  if (!sizeStr) return null;
+  const s = String(sizeStr).trim();
+  if (/^\d+$/.test(s)) return parseInt(s);
+  const m = s.match(/^(\d+)\s*[-–]\s*(\d+)/);
+  if (m) return Math.round((parseInt(m[1]) + parseInt(m[2])) / 2);
+  // "501-1000" or "1000+" patterns
+  const m2 = s.match(/^(\d+)\+/);
+  if (m2) return parseInt(m2[1]) * 2;
+  return null;
+}
+
+function scoreCompanySize(sizeStr) {
+  const size = parseCompanySize(sizeStr);
+  if (size === null) return { points: 0, label: 'unknown' };
+
+  // Mid-market sweet spot: 50-2000 employees → +10
+  if (size >= 50 && size <= 2000) return { points: 10, label: `mid-market (${size})` };
+  // Large but still addressable: 2000-10000 → +5
+  if (size > 2000 && size <= 10000) return { points: 5, label: `large (${size})` };
+  // Enterprise: 10001-100000 → 0
+  if (size > 10000 && size <= 100000) return { points: 0, label: `enterprise (${size})` };
+  // Hyperscaler / mega-corp penalty: >100000
+  if (size > 100000) return { points: -15, label: `hyperscaler (${size})` };
+  // Too small to have meaningful infrastructure budget: <50
+  return { points: -5, label: `too-small (${size})` };
+}
+
+function scoreHeadlineKeywords(candidate) {
+  const text = [
+    candidate.headline || '',
+    candidate.jobTitle || '',
+    candidate.company || '',
+  ].join(' ').toLowerCase();
+  let total = 0;
+  const matches = [];
+  for (const { kw, points } of HEADLINE_BOOST_KEYWORDS) {
+    if (text.includes(kw)) {
+      total += points;
+      matches.push(kw);
+    }
+  }
+  return { points: Math.min(HEADLINE_BOOST_CAP, total), matches };
+}
+
+function scoreTitleAndLevel(candidate) {
+  const title = (candidate.jobTitle || '').toLowerCase();
+  const level = candidate.jobLevel || '';
+  // Refined spread — was flat 10/20/25/30; now 8/22/28/35 to better
+  // differentiate C-suite from rank-and-file directors.
+  if (level === 'C-Level' || /chief/.test(title)) return { points: 35, label: 'c-level' };
+  if (level === 'VP' || /\bvp\b|vice president/.test(title)) return { points: 28, label: 'vp' };
+  if (level === 'Owner' || level === 'Partner') return { points: 26, label: 'owner-partner' };
+  if (/senior director|sr\. director|sr director/.test(title)) return { points: 24, label: 'sr-director' };
+  if (level === 'Director' || /director/.test(title)) return { points: 22, label: 'director' };
+  if (/head of/.test(title)) return { points: 18, label: 'head-of' };
+  if (level === 'Manager' || /manager/.test(title)) return { points: 8, label: 'manager' };
+  return { points: 0, label: 'individual-contributor' };
+}
+
 function scoreCandidate(candidate, { intentCompanyMatch = false, hardSignal = false } = {}) {
   let score = 0;
   const breakdown = {};
 
-  // Title match (0-30)
-  const title = (candidate.jobTitle || '').toLowerCase();
-  const level = candidate.jobLevel || '';
-  if (level === 'C-Level' || /chief/.test(title)) {
-    score += 30; breakdown.title = 30;
-  } else if (level === 'VP' || /\bvp\b|vice president/.test(title)) {
-    score += 25; breakdown.title = 25;
-  } else if (level === 'Director' || /director/.test(title)) {
-    score += 20; breakdown.title = 20;
-  } else if (level === 'Owner' || level === 'Partner') {
-    score += 22; breakdown.title = 22;
-  } else if (level === 'Manager' || /manager|head/.test(title)) {
-    score += 10; breakdown.title = 10;
-  }
+  // Title / seniority (0-35)
+  const titleScore = scoreTitleAndLevel(candidate);
+  score += titleScore.points;
+  breakdown.title = { points: titleScore.points, label: titleScore.label };
 
   // Function relevance (0-15)
   const fn = (candidate.jobFunction || '').toLowerCase();
+  const title = (candidate.jobTitle || '').toLowerCase();
   const headline = ((candidate.headline || '') + ' ' + title).toLowerCase();
   if (/data center|colocation|colo|mission critical/.test(headline)) {
     score += 15; breakdown.function = 15;
-  } else if (/facilities|operations|infrastructure|engineering/.test(fn + ' ' + headline)) {
-    score += 10; breakdown.function = 10;
   } else if (/sustainability|esg|carbon|energy/.test(headline)) {
     score += 12; breakdown.function = 12;
+  } else if (/facilities|operations|infrastructure|engineering/.test(fn + ' ' + headline)) {
+    score += 10; breakdown.function = 10;
   }
 
   // Industry match (0-15)
@@ -131,23 +214,36 @@ function scoreCandidate(candidate, { intentCompanyMatch = false, hardSignal = fa
     score += 8; breakdown.industry = 8;
   }
 
-  // Email available (0-10) — without this, the lead is useless for outreach
-  if (candidate.emailAvailable) { score += 10; breakdown.email_available = 10; }
+  // Email available — outreach gate (0-5, was 10)
+  if (candidate.emailAvailable) { score += 5; breakdown.email_available = 5; }
 
-  // Cross-reference with intent_companies bonus (0-20) — the gold signal
-  if (intentCompanyMatch) { score += 20; breakdown.intent_cross_reference = 20; }
+  // Cross-reference with intent_companies (0-15, was 20)
+  if (intentCompanyMatch) { score += 15; breakdown.intent_cross_reference = 15; }
 
-  // Hard-signal keyword bonus (0-15) — company/headline mentions DC/cooling
-  if (hardSignal) { score += 15; breakdown.hard_signal = 15; }
+  // Hard-signal keyword in company/headline/title (0-10, was 15)
+  if (hardSignal) { score += 10; breakdown.hard_signal = 10; }
 
-  // Geo bonus (0-10) — already filtered by country, small boost
+  // Company size — mid-market sweet spot bonus, hyperscaler penalty
+  const sizeScore = scoreCompanySize(candidate.companySize);
+  score += sizeScore.points;
+  breakdown.company_size = { points: sizeScore.points, label: sizeScore.label };
+
+  // Headline-keyword active-investment boost (0-12)
+  const headlineScore = scoreHeadlineKeywords(candidate);
+  if (headlineScore.points > 0) {
+    score += headlineScore.points;
+    breakdown.headline_keywords = { points: headlineScore.points, matches: headlineScore.matches };
+  }
+
+  // Geo bonus (0-5) — already filtered by country
   if (candidate.country === 'United States') { score += 5; breakdown.geo = 5; }
   else if (candidate.country) { score += 3; breakdown.geo = 3; }
 
+  // Bucketing — thresholds match the wider possible range (max ~115)
   let bucket;
-  if (score >= 80) bucket = 'HOT';
-  else if (score >= 60) bucket = 'WARM';
-  else if (score >= 40) bucket = 'COLD';
+  if (score >= 85) bucket = 'HOT';
+  else if (score >= 65) bucket = 'WARM';
+  else if (score >= 45) bucket = 'COLD';
   else bucket = 'SKIP';
 
   return { score, bucket, breakdown };
@@ -424,16 +520,35 @@ export async function revealTopEmails({ maxCredits = 100, minScore = 60 } = {}) 
  * Push enriched contacts (with revealed emails) into a fresh BrandJet
  * lead list. Returns the BJ lead list id + push stats.
  */
-export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore = 60 } = {}) {
+export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore = 60, topNPerCompany = 1 } = {}) {
   if (!_sb) throw new Error('Discovery not configured');
 
   const ts = new Date().toISOString().slice(0, 10);
   const finalListName = listName || `ThermaShift Enriched ${ts}`;
 
-  const contacts = await _sb('discovered_contacts', 'GET', null,
-    `?email=not.is.null&status=eq.new&score=gte.${minScore}&order=score.desc&limit=${maxLeads}`);
-  if (!contacts || !contacts.length) {
+  // Pull a broader pool, then dedup per company in code so we pick the
+  // best contact per account rather than emailing 3 directors at the
+  // same firm (looks robotic to recipients).
+  const allCandidates = await _sb('discovered_contacts', 'GET', null,
+    `?email=not.is.null&status=eq.new&score=gte.${minScore}&order=score.desc&limit=${maxLeads * 4}`);
+  if (!allCandidates || !allCandidates.length) {
     return { listId: null, pushed: 0, message: 'No enriched contacts ready to push' };
+  }
+
+  // Per-company dedup: keep top N (by score) per normalized company name
+  const perCompanyCount = new Map();
+  const contacts = [];
+  for (const c of allCandidates) {
+    const key = (c.company || '').toLowerCase().trim();
+    const seen = perCompanyCount.get(key) || 0;
+    if (seen >= topNPerCompany) continue;
+    perCompanyCount.set(key, seen + 1);
+    contacts.push(c);
+    if (contacts.length >= maxLeads) break;
+  }
+
+  if (!contacts.length) {
+    return { listId: null, pushed: 0, message: 'No contacts left after per-company dedup' };
   }
 
   console.log(`[push] creating list "${finalListName}" with ${contacts.length} enriched contacts`);
@@ -488,6 +603,7 @@ export async function runFullDiscovery(opts = {}) {
     revealMinScore = 60,
     pushMinScore = 60,
     pushListName,
+    topNPerCompany = 1,
   } = opts;
 
   console.log('[discovery] step 1: title-based search of BrandJet contact DB');
@@ -502,9 +618,9 @@ export async function runFullDiscovery(opts = {}) {
     maxCredits: revealCreditsCap, minScore: revealMinScore,
   });
 
-  console.log('[discovery] step 3: push enriched contacts to BrandJet lead list');
+  console.log(`[discovery] step 3: push enriched contacts (top ${topNPerCompany}/company)`);
   const push = await pushEnrichedToBrandJet({
-    listName: pushListName, minScore: pushMinScore,
+    listName: pushListName, minScore: pushMinScore, topNPerCompany,
   });
 
   return { search, reveal, push };

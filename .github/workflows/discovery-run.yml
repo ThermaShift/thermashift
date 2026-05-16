@@ -23,6 +23,10 @@ on:
         description: 'BrandJet lead list base name (date auto-appended)'
         required: false
         default: 'ThermaShift Enriched'
+      top_n_per_company:
+        description: 'Max contacts per company in pushed list (1=most senior only)'
+        required: false
+        default: '1'
 
 jobs:
   discover:
@@ -42,6 +46,7 @@ jobs:
             export DISCOVER_MIN='${{ inputs.discover_min_score }}'
             export PUSH_MIN='${{ inputs.push_min_score }}'
             export PUSH_LIST='${{ inputs.push_list_name }}'
+            export TOP_N_PER_COMPANY='${{ inputs.top_n_per_company }}'
             node -e "
               const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
               async function sb(t,m,b,q='') {
@@ -65,6 +70,7 @@ jobs:
                   revealCreditsCap: parseInt(process.env.REVEAL_CAP) || 120,
                   pushMinScore: parseInt(process.env.PUSH_MIN) || 70,
                   pushListName: process.env.PUSH_LIST,
+                  topNPerCompany: parseInt(process.env.TOP_N_PER_COMPANY) || 1,
                 });
 
                 console.log();
