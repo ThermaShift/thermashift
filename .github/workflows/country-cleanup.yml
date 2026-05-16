@@ -1,0 +1,161 @@
+name: Cleanup Country-Leak Records
+
+# One-off / repeatable cleanup. Scans Supabase for discovered_contacts that
+# were pushed_to_brandjet but now fail the post-fix country gate (checks
+# both country field AND email/domain TLD). For each leaked record, deletes
+# the matching lead from BrandJet and marks the Supabase row 'rejected_country'.
+
+on:
+  workflow_dispatch:
+    inputs:
+      list_id:
+        description: 'BrandJet lead list ID to scope deletions (optional — speeds up matching)'
+        required: false
+        default: '3a17fd27-6710-441f-a0e0-bb0e5d3e5aee'
+      dry_run:
+        description: 'Print what would be deleted without actually deleting'
+        required: false
+        default: 'false'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            cd /var/www/thermashift
+            export LIST_ID='${{ inputs.list_id }}'
+            export DRY_RUN='${{ inputs.dry_run }}'
+            node -e "
+              const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r=await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const bj = await import('./server/brandjet-mcp.js');
+                bj.configureMcp(sb);
+
+                const listId = process.env.LIST_ID || null;
+                const dryRun = process.env.DRY_RUN === 'true';
+                console.log('=== cleanup country-leak records ===');
+                console.log('list_id:', listId, 'dry_run:', dryRun);
+                console.log();
+
+                // Mirror the post-fix country gate logic (intentionally inline
+                // so this script is self-contained and doesn't depend on
+                // brandjet-discovery internals).
+                const ALLOWED_C = new Set(['united states','usa','us','united kingdom','uk','great britain','england','scotland','wales','northern ireland','ireland','canada','australia','new zealand','united arab emirates','uae','dubai']);
+                const ALLOWED_TLDS = new Set(['us','uk','gb','ie','ca','au','nz','ae']);
+                const GENERIC_TLDS = new Set(['com','org','net','edu','gov','mil','int','biz','info','name','pro','mobi','io','co','ai','app','dev','tech','cloud','inc','ltd','xyz','online','site','store','global']);
+                function extractTLD(domain) {
+                  if (!domain) return null;
+                  const clean = String(domain).toLowerCase().trim().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*\$/,'').replace(/:\d+\$/,'');
+                  const parts = clean.split('.').filter(Boolean);
+                  if (parts.length < 2) return null;
+                  return parts[parts.length-1];
+                }
+                function tldAllowed(tld) {
+                  if (!tld) return true;
+                  if (GENERIC_TLDS.has(tld)) return true;
+                  if (tld.length === 2) return ALLOWED_TLDS.has(tld);
+                  return true;
+                }
+                function fails(country, companyDomain, email) {
+                  // Country field check
+                  if (country && !ALLOWED_C.has(String(country).toLowerCase().trim())) return 'country_explicit';
+                  // Email TLD (strongest signal post-reveal)
+                  if (email) {
+                    const at = email.indexOf('@');
+                    if (at > 0) {
+                      const t = extractTLD(email.slice(at+1));
+                      if (t && !tldAllowed(t)) return 'email_tld_' + t;
+                    }
+                  }
+                  // Company domain TLD (fallback)
+                  const t = extractTLD(companyDomain);
+                  if (t && !tldAllowed(t)) return 'domain_tld_' + t;
+                  return null;
+                }
+
+                // 1. Pull pushed-to-brandjet records from Supabase
+                const pushed = await sb('discovered_contacts', 'GET', null,
+                  '?status=eq.pushed_to_brandjet&select=id,full_name,email,country,company_domain&limit=1000');
+                console.log('Pushed records scanned:', pushed?.length || 0);
+
+                const leaked = [];
+                for (const c of (pushed || [])) {
+                  const reason = fails(c.country, c.company_domain, c.email);
+                  if (reason) leaked.push({ ...c, reason });
+                }
+                console.log('Leaked records found:', leaked.length);
+                leaked.forEach(l => console.log('  -', l.full_name, '<' + l.email + '> reason=' + l.reason));
+
+                if (leaked.length === 0) {
+                  console.log();
+                  console.log('Nothing to clean up. Done.');
+                  return;
+                }
+
+                // 2. For each leaked record: find in BrandJet, delete, patch Supabase
+                console.log();
+                console.log('=== executing cleanup ===');
+                let bjDeleted = 0, bjNotFound = 0, bjFailed = 0, sbPatched = 0;
+
+                for (const leak of leaked) {
+                  console.log('processing:', leak.email);
+                  let bjId = null;
+                  try {
+                    const found = await bj.findLeadByEmail(leak.email, { leadListId: listId });
+                    bjId = found?.id || found?.leadId || found?._id;
+                  } catch (e) {
+                    console.warn('  ! findLeadByEmail error:', e.message);
+                  }
+
+                  if (bjId) {
+                    if (dryRun) {
+                      console.log('  [dry] would delete BJ lead', bjId);
+                      bjDeleted++;
+                    } else {
+                      try {
+                        await bj.deleteLead(bjId);
+                        console.log('  ✓ deleted BJ lead', bjId);
+                        bjDeleted++;
+                      } catch (e) {
+                        console.warn('  ✗ delete failed:', e.message);
+                        bjFailed++;
+                      }
+                    }
+                  } else {
+                    console.warn('  ! no BJ lead match for', leak.email, '(may already be deleted)');
+                    bjNotFound++;
+                  }
+
+                  if (!dryRun) {
+                    await sb('discovered_contacts', 'PATCH',
+                      { status: 'rejected_country', updated_at: new Date().toISOString() },
+                      '?id=eq.' + leak.id);
+                    sbPatched++;
+                  }
+                }
+
+                console.log();
+                console.log('=== cleanup result ===');
+                console.log(JSON.stringify({
+                  scanned: pushed?.length || 0,
+                  leaked_found: leaked.length,
+                  brandjet_deleted: bjDeleted,
+                  brandjet_not_found: bjNotFound,
+                  brandjet_failed: bjFailed,
+                  supabase_patched: sbPatched,
+                  dry_run: dryRun,
+                }, null, 2));
+              })().catch(e => { console.error('FATAL:', e.message); console.error(e.stack); process.exit(1); });
+            "

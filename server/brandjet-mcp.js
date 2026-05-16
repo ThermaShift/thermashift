@@ -446,6 +446,34 @@ export async function listTools() {
 }
 
 /**
+ * Delete a lead from BrandJet by lead ID. Wraps brandjet_update_lead with
+ * action='delete' (per tool docs: "Update a single lead: ... or delete the lead").
+ */
+export async function deleteLead(leadId) {
+  await ensureBrandSelected();
+  if (!leadId) throw new Error('leadId is required');
+  return callTool('brandjet_update_lead', { action: 'delete', leadId });
+}
+
+/**
+ * Find a lead in BrandJet by email address. Optionally scoped to a single
+ * lead list. Returns the matched lead object or null. Pulls up to `limit`
+ * leads then filters client-side — BrandJet's get_leads doesn't expose an
+ * email filter directly.
+ */
+export async function findLeadByEmail(email, { leadListId, limit = 500 } = {}) {
+  if (!email) return null;
+  await ensureBrandSelected();
+  const args = { limit };
+  if (leadListId) args.leadListId = leadListId;
+  const raw = await callTool('brandjet_get_leads', args);
+  const parsed = unwrap(raw);
+  const leads = parsed?.leads || parsed?.results || parsed?.data || [];
+  const needle = email.toLowerCase().trim();
+  return leads.find(l => (l.email || '').toLowerCase().trim() === needle) || null;
+}
+
+/**
  * Helper: BrandJet wraps tool results in `{content: [{type:'text', text:'<json>'}]}`.
  * Unwrap and parse the inner JSON, with graceful fallback.
  */
