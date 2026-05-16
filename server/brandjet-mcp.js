@@ -342,32 +342,77 @@ async function callTool(name, args = {}) {
 }
 
 // ─── High-level helpers ──────────────────────────────────────────────
+//
+// Tool names confirmed against BrandJet's live MCP server (2026-05-15 smoke
+// test returned 75 tools). All BrandJet tools are prefixed brandjet_*.
+// Campaign ops require the brand to be "switched" first (per-session state),
+// which is handled lazily in ensureBrandSelected().
 
+let _currentBrandId = null;
+
+async function ensureBrandSelected() {
+  if (_currentBrandId) return _currentBrandId;
+  // Pick the only brand (Tier 1 = 1 brand) on first need
+  const result = await callTool('brandjet_list_brands', {});
+  // MCP tools return content as an array of items; BrandJet wraps payload in result.content[0].text (JSON)
+  const brand = extractFirstBrand(result);
+  if (!brand?.id) throw new Error('No BrandJet brand found on this account');
+  await callTool('brandjet_switch_brand', { brandId: brand.id });
+  _currentBrandId = brand.id;
+  return _currentBrandId;
+}
+
+function extractFirstBrand(toolResult) {
+  // BrandJet's MCP wraps payloads in {content: [{type: 'text', text: '<json>'}]}.
+  // We try to parse the inner JSON. If the shape differs, return null.
+  try {
+    const content = toolResult?.content || [];
+    const text = content[0]?.text;
+    if (!text) return null;
+    const parsed = JSON.parse(text);
+    return parsed.brands?.[0] || parsed.data?.[0] || parsed[0] || parsed;
+  } catch {
+    return null;
+  }
+}
+
+/** List all brands accessible to the user. */
+export async function listBrands() {
+  return callTool('brandjet_list_brands', {});
+}
+
+/** List campaigns for the active brand. */
 export async function listCampaigns() {
-  return callTool('campaigns.list', {});
+  await ensureBrandSelected();
+  return callTool('brandjet_get_campaigns', {});
 }
 
+/** Get leads already in lead lists. */
 export async function listLeads(limit = 50) {
-  return callTool('leads.list', { limit });
+  await ensureBrandSelected();
+  return callTool('brandjet_get_leads', { limit });
+}
+
+/** List all lead lists (collections of leads grouped for campaign assignment). */
+export async function listLeadLists() {
+  await ensureBrandSelected();
+  return callTool('brandjet_get_lead_lists', {});
 }
 
 /**
- * Push a lead into BrandJet.
- * `data` shape (best-effort — actual MCP schema may differ slightly):
- *   { company, first_name?, last_name?, email?, title?, country?, linkedin_url?, custom? }
+ * Create a new lead OR add to an existing lead list.
+ * action = 'create_list' to make a new list, 'add_to_list' to add to existing.
+ * `lead` is the contact/company data.
  */
-export async function pushLead(data) {
-  return callTool('leads.create', data);
+export async function pushLead({ action = 'add_to_list', leadListId, listName, lead }) {
+  await ensureBrandSelected();
+  const args = { action, lead };
+  if (leadListId) args.leadListId = leadListId;
+  if (listName) args.listName = listName;
+  return callTool('brandjet_create_lead', args);
 }
 
-export async function addLeadToCampaign(campaignId, leadId) {
-  return callTool('campaigns.add_lead', { campaign_id: campaignId, lead_id: leadId });
-}
-
-/**
- * Convenience — list available tool names from BrandJet's MCP server.
- * Useful for confirming what's actually exposed.
- */
+/** List available MCP tools. Returns the raw tools/list result. */
 export async function listTools() {
   return mcpCall('tools/list', {});
 }
