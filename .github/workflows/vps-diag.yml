@@ -1,0 +1,41 @@
+name: VPS Diagnostics
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    name: SSH and dump VPS state
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run diagnostics
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            cd /var/www/thermashift
+            echo "=== git HEAD ==="
+            git log --oneline -1
+            echo
+            echo "=== chat-proxy.js MD5 (lines around new endpoints) ==="
+            grep -n "brandjet/webhook" server/chat-proxy.js | head -5
+            echo
+            echo "=== PM2 status ==="
+            pm2 status
+            echo
+            echo "=== PM2 logs (last 30 lines) ==="
+            pm2 logs chat-proxy --lines 30 --nostream
+            echo
+            echo "=== Local endpoint test (bypasses Nginx) ==="
+            PORT=$(grep -E "^PORT=" .env | cut -d= -f2)
+            PORT=${PORT:-3001}
+            echo "Trying http://localhost:$PORT/api/brandjet/webhook"
+            curl -s -X POST http://localhost:$PORT/api/brandjet/webhook -H 'Content-Type: application/json' -d '{"type":"diag.test"}' | head -c 500
+            echo
+            echo
+            echo "=== Nginx config check for /api routing ==="
+            grep -A 2 "location.*/api" /etc/nginx/sites-enabled/* 2>/dev/null | head -20
