@@ -247,42 +247,94 @@ export async function isConnected() {
 // ─── MCP JSON-RPC client ─────────────────────────────────────────────
 
 let _rpcId = 1;
+// MCP session state — initialize handshake gives us a session id we have to
+// echo on every subsequent request (Streamable HTTP transport).
+let _session = { id: null, initialized: false };
 
-async function mcpCall(method, params, opts = { retried: false }) {
+function parseEnvelope(text) {
+  try { return JSON.parse(text); }
+  catch {
+    // SSE-style: stitch all `data: ...` lines into a single JSON blob
+    const dataLines = text.split('\n').filter(l => l.startsWith('data: '));
+    const joined = dataLines.map(l => l.slice(6)).join('');
+    return JSON.parse(joined);
+  }
+}
+
+async function rawRequest(method, params, { isNotification = false } = {}) {
   const token = await getAccessToken();
   if (!token) throw new Error('not_connected');
 
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/event-stream',
+    'Authorization': `Bearer ${token}`,
+  };
+  if (_session.id) headers['Mcp-Session-Id'] = _session.id;
+
+  const body = isNotification
+    ? { jsonrpc: '2.0', method, params }
+    : { jsonrpc: '2.0', id: _rpcId++, method, params };
+
   const r = await fetch(MCP_SERVER, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/event-stream',
-      'Authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify({ jsonrpc: '2.0', id: _rpcId++, method, params }),
+    headers,
+    body: JSON.stringify(body),
   });
 
-  // 401 → refresh + retry once
-  if (r.status === 401 && !opts.retried) {
-    await refreshAccessToken();
-    return mcpCall(method, params, { retried: true });
-  }
+  // Capture session id assigned during initialize
+  const newSessionId = r.headers.get('mcp-session-id');
+  if (newSessionId && !_session.id) _session.id = newSessionId;
+
+  if (isNotification) return null; // notifications return 202 with empty body
+
+  if (r.status === 401) throw new Error('mcp_unauthorized');
 
   const text = await r.text();
-  if (!r.ok) throw new Error(`MCP call ${method}: ${r.status} ${text.slice(0, 300)}`);
-
-  // Streamable HTTP may return text/event-stream; extract JSON-RPC envelope.
-  let envelope;
-  try { envelope = JSON.parse(text); }
-  catch {
-    // Parse SSE format: look for "data: " lines and stitch JSON
-    const dataLines = text.split('\n').filter(l => l.startsWith('data: '));
-    const joined = dataLines.map(l => l.slice(6)).join('');
-    envelope = JSON.parse(joined);
-  }
-
+  if (!r.ok) throw new Error(`MCP ${method}: ${r.status} ${text.slice(0, 300)}`);
+  const envelope = parseEnvelope(text);
   if (envelope.error) throw new Error(`MCP error ${envelope.error.code}: ${envelope.error.message}`);
   return envelope.result;
+}
+
+async function ensureInitialized() {
+  if (_session.initialized) return;
+
+  // Reset session so initialize gets a fresh one
+  _session = { id: null, initialized: false };
+
+  const initResult = await rawRequest('initialize', {
+    protocolVersion: '2025-06-18',
+    capabilities: { tools: {} },
+    clientInfo: { name: 'ThermaShift Backend', version: '1.0.0' },
+  });
+  if (!_session.id) {
+    // Some servers omit the session-id header for stateless mode; tolerate.
+    console.warn('[brandjet-mcp] no Mcp-Session-Id returned; proceeding stateless');
+  }
+  // Send the `initialized` notification (no response expected)
+  await rawRequest('notifications/initialized', {}, { isNotification: true }).catch(() => {});
+  _session.initialized = true;
+  return initResult;
+}
+
+async function mcpCall(method, params, opts = { retried: false, initRetried: false }) {
+  try {
+    await ensureInitialized();
+    return await rawRequest(method, params);
+  } catch (e) {
+    if (e.message === 'mcp_unauthorized' && !opts.retried) {
+      await refreshAccessToken();
+      _session = { id: null, initialized: false }; // re-handshake on new token
+      return mcpCall(method, params, { ...opts, retried: true });
+    }
+    // "Server not initialized" — reset session and try once more
+    if (/not initialized/i.test(e.message) && !opts.initRetried) {
+      _session = { id: null, initialized: false };
+      return mcpCall(method, params, { ...opts, initRetried: true });
+    }
+    throw e;
+  }
 }
 
 async function callTool(name, args = {}) {
