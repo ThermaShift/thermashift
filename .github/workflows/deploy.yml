@@ -50,11 +50,21 @@ jobs:
             npm install --no-audit --no-fund || exit 1
             echo "🛠 Building frontend..."
             npm run build || exit 1
-            echo "♻️  Restarting backend (clean reload)..."
-            pm2 delete chat-proxy 2>/dev/null || true
+            echo "♻️  Restarting backend (clean reload — kills both legacy 'thermashift' and 'chat-proxy' names)..."
+            pm2 delete chat-proxy thermashift 2>/dev/null || true
             pm2 start server/chat-proxy.js --name chat-proxy --update-env
             pm2 save 2>/dev/null || true
-            sleep 2
+            sleep 3
             echo "🔎 Verifying backend is up..."
             pm2 status chat-proxy
+            PORT=$(grep -E "^PORT=" .env | cut -d= -f2)
+            PORT=${PORT:-3001}
+            echo "🩺 Health check on http://localhost:$PORT/api/brandjet/webhook"
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:$PORT/api/brandjet/webhook -H 'Content-Type: application/json' -d '{"type":"deploy.healthcheck"}')
+            echo "  → HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" != "200" ]; then
+              echo "❌ Deploy verification failed — endpoint returned $HTTP_CODE"
+              pm2 logs chat-proxy --lines 20 --nostream
+              exit 1
+            fi
             echo "✅ Deployed $(git rev-parse --short HEAD) at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
