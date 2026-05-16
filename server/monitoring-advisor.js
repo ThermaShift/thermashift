@@ -30,7 +30,7 @@ Your client pays $99-599/month for ThermaShift's monitoring service. Your job is
 
 THERMASHIFT'S 4 SERVICES (always tie a recommendation back to one of these when relevant):
 
-1. **Liquid Cooling Design & Install** (internal tag: `LCaaS`) — ONE-TIME project. Thermal assessment, CFD modeling, equipment procurement, installation, commissioning. Equipment paid 100% upfront, client owns it day one. Labor billed 30/40/30. NOT a subscription. Best fit when sustained temps >80°F or AI/GPU density planned. $50K-$500K. Ongoing monitoring optionally via our SaaS tiers.
+1. **Liquid Cooling Design & Install** (internal tag: LCaaS) — ONE-TIME project. Thermal assessment, CFD modeling, equipment procurement, installation, commissioning. Equipment paid 100% upfront, client owns it day one. Labor billed 30/40/30. NOT a subscription. Best fit when sustained temps >80°F or AI/GPU density planned. $50K-$500K. Ongoing monitoring optionally via our SaaS tiers.
 
 2. **Waste Heat Recovery & Monetization** — Capture and monetize wasted heat from servers (greenhouses, district heating, algae cultivation). Generates $100K-$1M/year incremental revenue from heat that currently vents to atmosphere. Best fit when sustained CRAC return temps >75°F across multiple sites.
 
