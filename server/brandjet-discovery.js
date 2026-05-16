@@ -50,26 +50,43 @@ const TARGET_INDUSTRIES = [
   'Information Technology',
 ];
 
-// Geographic priority — English-speaking business markets with active DC
-// industry. Order matters only for default-loop tie-breaking; actual selection
-// is set per-run via the workflow's `countries` input.
+// Geographic priority — countries where ENGLISH is the primary national
+// language, plus UAE (Dubai) as an explicit exception per Steve: desert
+// climate makes cooling critical and English is the de-facto business
+// language despite Arabic being the official one.
 //
-// Tier A — primary buyers, full English, regulation-driven (179D, EU EED):
-//   United States, United Kingdom, Ireland, Canada, Australia
-// Tier B — English business standard + significant DC investment:
-//   United Arab Emirates (Dubai — desert climate = cooling critical),
-//   Singapore (premium DC hub, mature operators),
-//   India (fast-growing market, English-speaking IT)
-// Tier C — opportunistic (smaller market or limited DC growth):
-//   Israel, Hong Kong, Philippines, South Africa, New Zealand, Malaysia
+// Strict English-primary:
+//   United States, United Kingdom, Ireland, Canada, Australia, New Zealand
+// Steve-approved exception:
+//   United Arab Emirates (Dubai's DC industry)
 const TARGET_COUNTRIES = [
-  // Tier A
-  'United States', 'United Kingdom', 'Ireland', 'Canada', 'Australia',
-  // Tier B
-  'United Arab Emirates', 'Singapore', 'India',
-  // Tier C
-  'Israel', 'Hong Kong', 'Philippines', 'South Africa', 'New Zealand', 'Malaysia',
+  'United States',
+  'United Kingdom',
+  'Ireland',
+  'Canada',
+  'Australia',
+  'New Zealand',
+  'United Arab Emirates',
 ];
+
+// Post-filter: BrandJet's countryName search filter has some leakage —
+// occasionally returns people whose listed country is outside the search
+// region (often because they work for a multinational based elsewhere).
+// We apply this set to the candidate's `country` field as a hard gate.
+const ALLOWED_CANDIDATE_COUNTRIES = new Set([
+  'united states', 'usa', 'us',
+  'united kingdom', 'uk', 'great britain', 'england', 'scotland', 'wales', 'northern ireland',
+  'ireland',
+  'canada',
+  'australia',
+  'new zealand',
+  'united arab emirates', 'uae', 'dubai',
+]);
+
+function allowedCandidateCountry(country) {
+  if (!country) return true; // Some BJ records have null country — don't reject blindly
+  return ALLOWED_CANDIDATE_COUNTRIES.has(String(country).toLowerCase().trim());
+}
 
 // Job-level enum BrandJet uses; we accept VP and above
 const ACCEPTABLE_LEVELS = new Set(['VP', 'Director', 'C-Level', 'Owner', 'Partner']);
@@ -284,6 +301,9 @@ export async function discoverByTitleSearch(opts = {}) {
 
         for (const p of people) {
           const companyMatch = p.company && intentByName.get(p.company.toLowerCase().trim());
+
+          // 0. HARD REJECT: candidate's country not in English-primary list + UAE exception
+          if (!allowedCandidateCountry(p.country)) continue;
 
           // 1. HARD REJECT: negative company keywords (games, media, hotels, recruiters)
           if (negativeCompanyMatch(p.company)) continue;

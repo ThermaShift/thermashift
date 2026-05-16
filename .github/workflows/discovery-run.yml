@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       countries:
-        description: 'Comma-separated countries. Default covers Tier A + Tier B English-speaking DC markets.'
+        description: 'Comma-separated countries (English-primary + UAE exception).'
         required: false
-        default: 'United States,United Kingdom,Ireland,Canada,Australia,United Arab Emirates,Singapore,India'
+        default: 'United States,United Kingdom,Ireland,Canada,Australia,New Zealand,United Arab Emirates'
       reveal_credits_cap:
         description: 'Max credits to spend on email reveals'
         required: false
