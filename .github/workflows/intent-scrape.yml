@@ -1,0 +1,32 @@
+name: Run Intent Scrape
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (no DB write)?'
+        required: false
+        default: 'false'
+
+jobs:
+  scrape:
+    name: Run intent scraper on VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and trigger scrape
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            cd /var/www/thermashift
+            DRY="${{ inputs.dry_run }}"
+            if [ "$DRY" = "true" ]; then
+              echo "DRY RUN — no DB writes"
+              node server/intent-scraper.js --dry-run
+            else
+              node server/intent-scraper.js
+            fi
