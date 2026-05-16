@@ -3,20 +3,24 @@ name: Run BrandJet Discovery Pipeline
 on:
   workflow_dispatch:
     inputs:
-      max_companies:
-        description: 'Max intent companies to search contacts for'
+      countries:
+        description: 'Comma-separated countries (BrandJet names: "United States,United Kingdom,Canada,Ireland,Australia")'
         required: false
-        default: '20'
+        default: 'United States,United Kingdom,Canada,Ireland'
       reveal_credits_cap:
         description: 'Max credits to spend on email reveals'
         required: false
-        default: '100'
-      push_min_score:
-        description: 'Min contact score to push to BrandJet list'
+        default: '120'
+      discover_min_score:
+        description: 'Min score to STORE a contact'
         required: false
-        default: '60'
+        default: '55'
+      push_min_score:
+        description: 'Min score to push contact to BrandJet list'
+        required: false
+        default: '70'
       push_list_name:
-        description: 'BrandJet lead list name (timestamp auto-appended)'
+        description: 'BrandJet lead list base name (date auto-appended)'
         required: false
         default: 'ThermaShift Enriched'
 
@@ -33,8 +37,9 @@ jobs:
           command_timeout: 10m
           script: |
             cd /var/www/thermashift
-            export MAX_COMPANIES='${{ inputs.max_companies }}'
+            export COUNTRIES='${{ inputs.countries }}'
             export REVEAL_CAP='${{ inputs.reveal_credits_cap }}'
+            export DISCOVER_MIN='${{ inputs.discover_min_score }}'
             export PUSH_MIN='${{ inputs.push_min_score }}'
             export PUSH_LIST='${{ inputs.push_list_name }}'
             node -e "
@@ -53,10 +58,12 @@ jobs:
                 console.log('=== BEFORE: enrichment credit balance ===');
                 console.log(JSON.stringify(await mcp.getEnrichmentBalance(), null, 2));
 
+                const countries = (process.env.COUNTRIES || 'United States').split(',').map(s => s.trim()).filter(Boolean);
                 const result = await disc.runFullDiscovery({
-                  maxCompanies: parseInt(process.env.MAX_COMPANIES) || 20,
-                  revealCreditsCap: parseInt(process.env.REVEAL_CAP) || 100,
-                  pushMinScore: parseInt(process.env.PUSH_MIN) || 60,
+                  countries,
+                  discoverMinScore: parseInt(process.env.DISCOVER_MIN) || 55,
+                  revealCreditsCap: parseInt(process.env.REVEAL_CAP) || 120,
+                  pushMinScore: parseInt(process.env.PUSH_MIN) || 70,
                   pushListName: process.env.PUSH_LIST,
                 });
 

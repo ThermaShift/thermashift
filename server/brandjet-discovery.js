@@ -58,7 +58,7 @@ const ACCEPTABLE_LEVELS = new Set(['VP', 'Director', 'C-Level', 'Owner', 'Partne
 
 // ─── Scoring ────────────────────────────────────────────────────────
 
-function scoreCandidate(candidate, { intentCompanyMatch = false } = {}) {
+function scoreCandidate(candidate, { intentCompanyMatch = false, hardSignal = false } = {}) {
   let score = 0;
   const breakdown = {};
 
@@ -102,6 +102,9 @@ function scoreCandidate(candidate, { intentCompanyMatch = false } = {}) {
   // Cross-reference with intent_companies bonus (0-20) — the gold signal
   if (intentCompanyMatch) { score += 20; breakdown.intent_cross_reference = 20; }
 
+  // Hard-signal keyword bonus (0-15) — company/headline mentions DC/cooling
+  if (hardSignal) { score += 15; breakdown.hard_signal = 15; }
+
   // Geo bonus (0-10) — already filtered by country, small boost
   if (candidate.country === 'United States') { score += 5; breakdown.geo = 5; }
   else if (candidate.country) { score += 3; breakdown.geo = 3; }
@@ -140,14 +143,41 @@ async function upsertContact(payload) {
 // ─── Main flows ─────────────────────────────────────────────────────
 
 // Industries that map to ThermaShift-relevant buyers. Match against the
-// person's `industry` field (case-insensitive substring match).
+// person's `industry` field (case-insensitive substring match). Tightened
+// after first run let Asmodee / Vidio noise through via the broad
+// "internet" / "information technology" buckets.
 const RELEVANT_INDUSTRY_KEYWORDS = [
   'data center', 'colocation', 'colo',
-  'cloud', 'hosting',
-  'telecom', 'telecommunications',
-  'information technology', 'it services',
-  'internet', 'software',
-  'real estate investment trust', // many DC operators (Digital Realty, Equinix) are REITs
+  'cloud computing', 'cloud infrastructure', 'web hosting', 'managed hosting',
+  'telecommunications', 'wireless carrier',
+  'it infrastructure', 'managed it services', 'systems integrator',
+  'real estate investment trust', // Digital Realty, Equinix, etc.
+];
+
+// Hard signal — if any of these keywords appear in the company name, headline,
+// or jobTitle, the candidate auto-qualifies even if industry is ambiguous.
+const HARD_SIGNAL_KEYWORDS = [
+  'data center', 'datacenter', 'colocation', 'colo ',
+  'mission critical', 'mission-critical',
+  'cooling', 'thermal', 'hvac',
+  'cloud infrastructure', 'edge computing', 'edge data',
+  'crac', 'crah', 'cdu',  // industry terminology only insiders use
+];
+
+// Negative signal — if these appear in the company name, AUTO-REJECT.
+// Caught Asmodee (board games), Vidio (video streaming), 1980books, etc.
+const NEGATIVE_COMPANY_KEYWORDS = [
+  'games', 'gaming', 'entertainment', 'media',
+  'video', 'streaming', 'tv', 'broadcast',
+  'books', 'publishing', 'magazine',
+  'fashion', 'apparel', 'cosmetics',
+  'restaurant', 'food', 'beverage',
+  'travel', 'hotel', 'hospitality',
+  'nonprofit', 'charity', 'foundation',
+  'school', 'university', 'college', 'academy',
+  'church', 'religious',
+  'agency', 'recruiting', 'staffing', 'recruitment', 'talent',
+  'consulting',  // too broad — most pure consultancies aren't DC operators
 ];
 
 // Companies to skip (hyperscalers/recruiters/vendors that aren't our buyers)
@@ -164,6 +194,22 @@ function relevantIndustry(industry) {
   if (!industry) return false;
   const lower = industry.toLowerCase();
   return RELEVANT_INDUSTRY_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+function hardSignalMatch(candidate) {
+  const text = [
+    candidate.company || '',
+    candidate.headline || '',
+    candidate.jobTitle || '',
+    candidate.industry || '',
+  ].join(' ').toLowerCase();
+  return HARD_SIGNAL_KEYWORDS.some(kw => text.includes(kw));
+}
+
+function negativeCompanyMatch(company) {
+  if (!company) return false;
+  const lower = company.toLowerCase();
+  return NEGATIVE_COMPANY_KEYWORDS.some(kw => lower.includes(kw));
 }
 
 function blockedCompany(company) {
@@ -221,15 +267,23 @@ export async function discoverByTitleSearch(opts = {}) {
         for (const p of people) {
           const companyMatch = p.company && intentByName.get(p.company.toLowerCase().trim());
 
-          // Industry filter (or pass if cross-referenced to a known intent company)
-          if (!companyMatch && !relevantIndustry(p.industry)) continue;
-          stats.industry_passed++;
+          // 1. HARD REJECT: negative company keywords (games, media, hotels, recruiters)
+          if (negativeCompanyMatch(p.company)) continue;
 
-          // Company blocklist
+          // 2. HARD REJECT: blocklisted companies (hyperscalers, cooling vendors)
           if (blockedCompany(p.company)) continue;
+
+          // 3. QUALIFY: needs ONE of these signals
+          //    a) Hard-signal keyword in company/headline/title/industry
+          //    b) Industry matches our relevant list
+          //    c) Cross-referenced to known intent company
+          const hardSignal = hardSignalMatch(p);
+          const industryOk = relevantIndustry(p.industry);
+          if (!hardSignal && !industryOk && !companyMatch) continue;
+          stats.industry_passed++;
           stats.company_passed++;
 
-          const scored = scoreCandidate(p, { intentCompanyMatch: !!companyMatch });
+          const scored = scoreCandidate(p, { intentCompanyMatch: !!companyMatch, hardSignal });
           if (scored.score < minScore) continue;
 
           await upsertContact({
