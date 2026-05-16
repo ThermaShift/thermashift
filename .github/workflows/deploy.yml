@@ -50,6 +50,11 @@ jobs:
             npm install --no-audit --no-fund || exit 1
             echo "🛠 Building frontend..."
             npm run build || exit 1
-            echo "♻️  Restarting backend..."
-            pm2 restart chat-proxy --update-env || pm2 start server/chat-proxy.js --name chat-proxy --update-env
+            echo "♻️  Restarting backend (clean reload)..."
+            pm2 delete chat-proxy 2>/dev/null || true
+            pm2 start server/chat-proxy.js --name chat-proxy --update-env
+            pm2 save 2>/dev/null || true
+            sleep 2
+            echo "🔎 Verifying backend is up..."
+            pm2 status chat-proxy
             echo "✅ Deployed $(git rev-parse --short HEAD) at $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
