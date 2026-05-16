@@ -4,21 +4,20 @@ on:
   workflow_dispatch:
     inputs:
       buckets:
-        description: 'Comma-separated bucket filter (default HOT,WARM)'
+        description: 'Comma-separated bucket filter'
         required: false
         default: 'HOT,WARM'
       max:
         description: 'Max leads to push'
         required: false
-        default: '10'
+        default: '15'
       list_name:
-        description: 'BrandJet lead list name'
+        description: 'BrandJet lead list name (NEW list will be created)'
         required: false
-        default: 'ThermaShift Intent Scrape'
+        default: 'ThermaShift Intent'
 
 jobs:
   push:
-    name: Push leads via MCP
     runs-on: ubuntu-latest
     steps:
       - uses: appleboy/ssh-action@v1.2.0
@@ -46,14 +45,15 @@ jobs:
                 const t = await r.text(); return t ? JSON.parse(t) : null;
               }
               const BUCKETS = (process.env.BUCKETS || 'HOT,WARM').split(',');
-              const MAX = parseInt(process.env.MAX_LEADS) || 10;
-              const LIST = process.env.LIST_NAME || 'ThermaShift Intent Scrape';
+              const MAX = parseInt(process.env.MAX_LEADS) || 15;
+              const LIST = (process.env.LIST_NAME || 'ThermaShift Intent') + ' ' + new Date().toISOString().slice(0,10);
 
-              // Hand-curated mid-market filter: skip the hyperscalers + recruiter agencies
+              // Skip the hyperscalers + recruiters + cooling vendors (they're not buyers)
               const SKIP_COMPANIES = new Set([
                 'Google','Oracle','Amazon','Microsoft','Apple','Meta','IBM',
                 'Insight Global','Liberty Personnel Services,','Liberty Personnel Services',
                 'Vertiv Group','Johnson Controls','Trane Technologies','Schneider Electric',
+                'Delta Electronics',
                 'CBRE','Jacobs',
               ]);
 
@@ -61,91 +61,61 @@ jobs:
                 const mod = await import('./server/brandjet-mcp.js');
                 mod.configureMcp(sb);
 
-                // Pull top scored leads
                 const filter = BUCKETS.map(b => 'bucket.eq.'+b).join(',');
+                // Pull more than we need, then filter out blocked companies and skip already-exported
                 const rows = await sb('intent_companies', 'GET', null,
-                  '?or=('+filter+')&order=score.desc&limit=' + Math.min(100, MAX * 5));
+                  '?or=('+filter+')&status=neq.exported&order=score.desc&limit=' + (MAX * 4));
 
                 const candidates = rows.filter(r => !SKIP_COMPANIES.has(r.company)).slice(0, MAX);
+                if (!candidates.length) {
+                  console.log('No new candidates (all top scorers already exported or blocked).');
+                  return;
+                }
                 console.log('Selected', candidates.length, 'mid-market leads:');
                 candidates.forEach((c, i) => console.log('  ' + (i+1) + '. [' + c.bucket + ' ' + c.score + '] ' + c.company));
 
+                // 1. Create the list
                 console.log();
-                console.log('Pushing as new BrandJet lead list:', LIST);
+                console.log('Creating BrandJet lead list:', LIST);
+                const listId = await mod.createLeadList(LIST);
+                if (!listId) { console.error('Failed to extract leadListId'); process.exit(1); }
+                console.log('  ✓ List ID:', listId);
 
-                // Try a single create_list call with all leads first (efficient)
-                let results = { ok: 0, failed: 0, errors: [] };
-                try {
-                  const r = await mod.pushLead({
-                    action: 'create_list',
-                    listName: LIST,
-                    lead: {
-                      company: candidates[0].company,
-                      country: candidates[0].country?.toUpperCase() || 'US',
-                      custom_fields: {
-                        thermashift_score: candidates[0].score,
-                        thermashift_bucket: candidates[0].bucket,
-                        signal: candidates[0].signal_summary,
-                      },
-                    },
-                  });
-                  console.log('  ✓ List created with', candidates[0].company);
-                  console.log('  Raw response:', JSON.stringify(r).slice(0, 300));
-                  results.ok++;
-
-                  // Try to extract the new leadListId for subsequent adds
-                  let leadListId;
+                // 2. Push each lead
+                console.log();
+                console.log('Pushing leads...');
+                let ok = 0, failed = 0;
+                for (const c of candidates) {
                   try {
-                    const text = r?.content?.[0]?.text;
-                    if (text) {
-                      const parsed = JSON.parse(text);
-                      leadListId = parsed.leadListId || parsed.id || parsed.data?.id || parsed.leadList?.id;
-                    }
-                  } catch {}
-                  console.log('  Detected leadListId:', leadListId);
-
-                  // Push the rest into the new list
-                  for (let i = 1; i < candidates.length; i++) {
-                    const c = candidates[i];
-                    try {
-                      await mod.pushLead({
-                        action: 'add_to_list',
-                        leadListId,
-                        lead: {
-                          company: c.company,
-                          country: c.country?.toUpperCase() || 'US',
-                          custom_fields: {
-                            thermashift_score: c.score,
-                            thermashift_bucket: c.bucket,
-                            signal: c.signal_summary,
-                          },
-                        },
-                      });
-                      console.log('  ✓ Added:', c.company);
-                      results.ok++;
-                      // Mark as exported in Supabase
-                      await sb('intent_companies', 'PATCH',
-                        { status: 'exported', exported_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-                        '?id=eq.'+c.id);
-                    } catch (e) {
-                      console.log('  ✗ Failed:', c.company, '-', e.message.slice(0, 120));
-                      results.failed++;
-                      results.errors.push({ company: c.company, msg: e.message });
-                    }
+                    // BrandJet 'name' field is required (the lead's PERSONAL name). We don't have a
+                    // contact yet — use company name as a placeholder, real names will come once we
+                    // add Apollo Free enrichment.
+                    await mod.addLead({
+                      leadListId: listId,
+                      name: c.company,    // placeholder until enrichment
+                      customVariables: {
+                        company: c.company,
+                        country: (c.country || 'us').toUpperCase(),
+                        thermashift_score: c.score,
+                        thermashift_bucket: c.bucket,
+                        signal_summary: (c.signal_summary || '').slice(0, 300),
+                      },
+                    });
+                    console.log('  ✓ Added:', c.company);
+                    await sb('intent_companies', 'PATCH',
+                      { status: 'exported', exported_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+                      '?id=eq.'+c.id);
+                    ok++;
+                  } catch (e) {
+                    console.log('  ✗', c.company, '—', e.message.slice(0, 200));
+                    failed++;
                   }
-                  // Also mark the first one as exported
-                  await sb('intent_companies', 'PATCH',
-                    { status: 'exported', exported_at: new Date().toISOString(), updated_at: new Date().toISOString() },
-                    '?id=eq.'+candidates[0].id);
-                } catch (e) {
-                  console.log('Push FAILED at list creation:', e.message);
-                  results.failed = candidates.length;
-                  results.errors.push({ company: candidates[0].company, msg: e.message });
                 }
 
                 console.log();
                 console.log('=== Summary ===');
-                console.log('Pushed:', results.ok, '/ Failed:', results.failed);
-                if (results.errors.length) console.log('Errors:', JSON.stringify(results.errors, null, 2).slice(0, 1000));
+                console.log('Pushed:', ok, '/ Failed:', failed);
+                console.log('List ID:', listId);
+                console.log('List name:', LIST);
               })().catch(e => { console.error('FATAL:', e.message); process.exit(1); });
             "

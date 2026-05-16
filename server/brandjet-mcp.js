@@ -400,15 +400,43 @@ export async function listLeadLists() {
 }
 
 /**
- * Create a new lead OR add to an existing lead list.
- * action = 'create_list' to make a new list, 'add_to_list' to add to existing.
- * `lead` is the contact/company data.
+ * Create an empty lead list. Returns the new list's id (uuid).
  */
-export async function pushLead({ action = 'add_to_list', leadListId, listName, lead }) {
+export async function createLeadList(listName) {
   await ensureBrandSelected();
-  const args = { action, lead };
-  if (leadListId) args.leadListId = leadListId;
-  if (listName) args.listName = listName;
+  const r = await callTool('brandjet_create_lead', { action: 'create_list', listName });
+  // Response is wrapped in { content: [{ type:'text', text: '<json>' }] }
+  try {
+    const parsed = JSON.parse(r?.content?.[0]?.text || '{}');
+    return parsed.leadList?.id || parsed.id;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Add a single lead to an existing list. BrandJet's schema requires:
+ *   - leadListId (uuid of the list)
+ *   - name (the contact person's name — required)
+ * Optional: email, phoneNumber, linkedinProfileUrl, twitterProfileUrl,
+ *           instagramProfileUrl, customVariables (string→string only).
+ */
+export async function addLead({ leadListId, name, email, phoneNumber, linkedinProfileUrl, customVariables }) {
+  await ensureBrandSelected();
+  if (!leadListId) throw new Error('leadListId is required');
+  if (!name) throw new Error('name is required');
+  const args = { action: 'create_lead', leadListId, name };
+  if (email) args.email = email;
+  if (phoneNumber) args.phoneNumber = phoneNumber;
+  if (linkedinProfileUrl) args.linkedinProfileUrl = linkedinProfileUrl;
+  // customVariables must be all-string per schema; stringify any non-string values
+  if (customVariables) {
+    const stringified = {};
+    for (const [k, v] of Object.entries(customVariables)) {
+      if (v != null) stringified[k] = String(v);
+    }
+    args.customVariables = stringified;
+  }
   return callTool('brandjet_create_lead', args);
 }
 
