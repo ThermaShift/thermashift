@@ -1,0 +1,95 @@
+name: Check BrandJet Credit Balance
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 3m
+          script: |
+            cd /var/www/thermashift
+            node -e "
+              const SK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r = await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const mod = await import('./server/brandjet-mcp.js');
+                mod.configureMcp(sb);
+                console.log('=== Enrichment credits balance ===');
+                try {
+                  const balance = await mod.listTools.constructor === Function ? null : null;
+                  // Use raw mcpCall via callTool helper
+                  const r1 = await mod['listTools'](); // warmup, ensures init
+                  // We need to access callTool — pull via internal route
+                  const m2 = await import('./server/brandjet-mcp.js');
+                  // mcpCall is not exported; use a tool we know
+                } catch (e) { console.log('err', e.message); }
+                // Simpler: use the helper functions; if missing, talk via direct fetch + token in DB
+                const tok = await sb('oauth_tokens','GET',null,'?service=eq.brandjet&select=access_token&limit=1');
+                const accessToken = tok[0].access_token;
+
+                async function rawCall(method, params) {
+                  let session;
+                  // initialize
+                  const init = await fetch('https://mcp.brandjet.ai/mcp', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+accessToken},
+                    body:JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{tools:{}},clientInfo:{name:'creditcheck',version:'1'}}})
+                  });
+                  session = init.headers.get('mcp-session-id');
+                  await fetch('https://mcp.brandjet.ai/mcp', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+accessToken,'Mcp-Session-Id':session},
+                    body:JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized',params:{}})
+                  });
+                  // switch to brand
+                  const lb = await fetch('https://mcp.brandjet.ai/mcp', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+accessToken,'Mcp-Session-Id':session},
+                    body:JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'brandjet_list_brands',arguments:{}}})
+                  });
+                  const lbText = await lb.text();
+                  const lbData = lbText.startsWith('event') ? JSON.parse(lbText.split('data: ')[1]) : JSON.parse(lbText);
+                  const brand = JSON.parse(lbData.result.content[0].text);
+                  const brandId = (brand.brands || brand)[0].id;
+                  await fetch('https://mcp.brandjet.ai/mcp', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+accessToken,'Mcp-Session-Id':session},
+                    body:JSON.stringify({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'brandjet_switch_brand',arguments:{brandId}}})
+                  });
+                  // actual call
+                  const r = await fetch('https://mcp.brandjet.ai/mcp', {
+                    method:'POST',
+                    headers:{'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':'Bearer '+accessToken,'Mcp-Session-Id':session},
+                    body:JSON.stringify({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:method,arguments:params}})
+                  });
+                  const t = await r.text();
+                  const env = t.startsWith('event') ? JSON.parse(t.split('data: ')[1]) : JSON.parse(t);
+                  if (env.error) return env;
+                  try { return JSON.parse(env.result.content[0].text); } catch { return env.result; }
+                }
+
+                const balance = await rawCall('brandjet_get_enrichment_credits', { action: 'balance' });
+                console.log('BALANCE:', JSON.stringify(balance, null, 2));
+
+                console.log();
+                console.log('=== Test free search: VPs of Operations at data centers, US ===');
+                const search = await rawCall('brandjet_search_lead_database', {
+                  searchType: 'people',
+                  jobTitle: 'VP of Operations',
+                  countryName: 'United States',
+                });
+                console.log('SEARCH RESULT (first 1500 chars):', JSON.stringify(search).slice(0, 1500));
+              })().catch(e => { console.error('FATAL:', e.message); process.exit(1); });
+            "
