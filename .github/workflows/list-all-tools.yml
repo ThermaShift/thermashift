@@ -1,0 +1,42 @@
+name: List All BrandJet MCP Tools
+
+on:
+  workflow_dispatch:
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            cd /var/www/thermashift
+            node -e "
+              const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r = await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q, {
+                  method:m, headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+                  body: b ? JSON.stringify(b) : undefined
+                });
+                if (!r.ok) throw new Error(t+': '+r.status+' '+await r.text());
+                const x = await r.text(); return x ? JSON.parse(x) : null;
+              }
+              (async () => {
+                const mod = await import('./server/brandjet-mcp.js');
+                mod.configureMcp(sb);
+                const res = await mod.listTools();
+                const tools = res.tools || res;
+                console.log('TOTAL TOOLS:', tools.length);
+                console.log();
+                // Group by prefix-after-brandjet_
+                tools.forEach((t, i) => {
+                  console.log((i+1).toString().padStart(2) + '. ' + t.name);
+                  console.log('     ' + (t.description || '').replace(/\n/g, ' ').slice(0, 220));
+                });
+              })().catch(e => { console.error('FATAL:', e.message); process.exit(1); });
+            "
