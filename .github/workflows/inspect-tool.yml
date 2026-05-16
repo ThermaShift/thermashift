@@ -1,0 +1,49 @@
+name: Inspect BrandJet Tool Schema
+
+on:
+  workflow_dispatch:
+    inputs:
+      tool_name:
+        description: 'Tool name to inspect'
+        required: true
+        default: 'brandjet_create_lead'
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            cd /var/www/thermashift
+            export TOOL_NAME='${{ inputs.tool_name }}'
+            node -e "
+              const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(table, method, body, query='') {
+                const r = await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+table+query, {
+                  method, headers: {
+                    'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY,
+                    'Content-Type': 'application/json', 'Prefer': 'return=representation',
+                  }, body: body ? JSON.stringify(body) : undefined
+                });
+                if (!r.ok) throw new Error(table+': '+r.status+' '+await r.text());
+                const t = await r.text(); return t ? JSON.parse(t) : null;
+              }
+              (async () => {
+                const mod = await import('./server/brandjet-mcp.js');
+                mod.configureMcp(sb);
+                const result = await mod.listTools();
+                const tools = result.tools || result;
+                const t = tools.find(x => x.name === process.env.TOOL_NAME);
+                if (!t) { console.log('Tool not found'); return; }
+                console.log('=== ' + t.name + ' ===');
+                console.log('Description:', t.description);
+                console.log('Input schema:');
+                console.log(JSON.stringify(t.inputSchema, null, 2));
+              })().catch(e => { console.error('FATAL:', e.message); process.exit(1); });
+            "
