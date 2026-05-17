@@ -320,16 +320,23 @@ async function upsertContact(payload) {
 
 // ─── Main flows ─────────────────────────────────────────────────────
 
-// Industries that map to ThermaShift-relevant buyers. Match against the
-// person's `industry` field (case-insensitive substring match). Tightened
-// after first run let Asmodee / Vidio noise through via the broad
-// "internet" / "information technology" buckets.
-const RELEVANT_INDUSTRY_KEYWORDS = [
+// Industries that AUTO-QUALIFY a candidate. These are unambiguous DC-buyer
+// signals — anyone whose `industry` field matches one of these is in.
+const STRONG_INDUSTRY_KEYWORDS = [
   'data center', 'colocation', 'colo',
-  'cloud computing', 'cloud infrastructure', 'web hosting', 'managed hosting',
+  'cloud computing', 'cloud infrastructure',
+  'web hosting', 'managed hosting',
+  'real estate investment trust', // Digital Realty, Equinix, etc.
+];
+
+// Industries that are POSSIBLY-RELEVANT but too broad to qualify on their own.
+// A weak-industry match is useful for scoring but doesn't pass the qualifier
+// without corroborating hard_signal or intent-company cross-reference.
+// (P4 reason: telecom industry catches NJ Transit; IT infrastructure catches
+// billing/banking MSPs like RevSpring/Alogent.)
+const WEAK_INDUSTRY_KEYWORDS = [
   'telecommunications', 'wireless carrier',
   'it infrastructure', 'managed it services', 'systems integrator',
-  'real estate investment trust', // Digital Realty, Equinix, etc.
 ];
 
 // Hard signal — if any of these keywords appear in the company name, headline,
@@ -344,6 +351,8 @@ const HARD_SIGNAL_KEYWORDS = [
 
 // Negative signal — if these appear in the company name, AUTO-REJECT.
 // Caught Asmodee (board games), Vidio (video streaming), 1980books, etc.
+// P4 additions: transit / healthcare / legal / insurance verticals that
+// passed via the old telecom + IT-services industry catch-alls.
 const NEGATIVE_COMPANY_KEYWORDS = [
   'games', 'gaming', 'entertainment', 'media',
   'video', 'streaming', 'tv', 'broadcast',
@@ -356,22 +365,60 @@ const NEGATIVE_COMPANY_KEYWORDS = [
   'church', 'religious',
   'agency', 'recruiting', 'staffing', 'recruitment', 'talent',
   'consulting',  // too broad — most pure consultancies aren't DC operators
+  // P4 — off-ICP verticals
+  'transit', 'transportation',
+  'hospital', 'medical center', 'health system', 'healthcare', 'clinic',
+  'pharmaceutical', 'pharma', 'biotech',
+  'court', 'attorney', 'judiciary',
+  'insurance',
 ];
 
-// Companies to skip (hyperscalers/recruiters/vendors that aren't our buyers)
+// Hyperscalers / big-tech / SaaS giants — matched anywhere in the company
+// name via word boundary so variants like "Yahoo Inc", "Yahoo!", "Amazon Web
+// Services" all get caught even though the prefix-blocklist below didn't.
+// Word boundary avoids false positives like "DataBank" or "Pawsitive".
+const HYPERSCALER_NAMES = [
+  // Big-tech hyperscalers
+  'google', 'amazon', 'aws', 'microsoft', 'azure',
+  'apple', 'meta', 'facebook', 'ibm', 'oracle',
+  'hp', 'hpe', 'dell', 'cisco', 'yahoo',
+  // CDN / edge — not buying our cooling services
+  'akamai', 'cloudflare', 'fastly',
+  // International hyperscalers
+  'alibaba', 'tencent', 'baidu',
+  // SaaS giants
+  'salesforce', 'workday', 'adobe',
+];
+const HYPERSCALER_REGEX = new RegExp(
+  '\\b(' + HYPERSCALER_NAMES.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b',
+  'i',
+);
+
+// Companies to skip (cooling vendors + recruiters). Prefix-match because some
+// of these (e.g., "carrier", "trane") collide with common words/industries.
 const COMPANY_BLOCKLIST = new Set([
-  'google','oracle','amazon','amazon web services','aws','microsoft','azure',
-  'apple','meta','facebook','ibm','dell','hp','hpe','cisco',
   'vertiv','vertiv group','schneider electric','schneider','johnson controls',
   'trane','trane technologies','carrier','delta electronics',
   'insight global','liberty personnel services','liberty personnel','breagh recruitment','eligo recruitment','reed talent solutions','hireiq solutions',
   'cbre','jacobs','jll',
 ]);
 
-function relevantIndustry(industry) {
+function strongIndustry(industry) {
   if (!industry) return false;
   const lower = industry.toLowerCase();
-  return RELEVANT_INDUSTRY_KEYWORDS.some(kw => lower.includes(kw));
+  return STRONG_INDUSTRY_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+function weakIndustry(industry) {
+  if (!industry) return false;
+  const lower = industry.toLowerCase();
+  return WEAK_INDUSTRY_KEYWORDS.some(kw => lower.includes(kw));
+}
+
+// Backward-compat: scoring uses this combined check for the +8/+15 industry
+// bonus. The qualification gate uses strongIndustry() only.
+function relevantIndustry(industry) {
+  return strongIndustry(industry) || weakIndustry(industry);
 }
 
 function hardSignalMatch(candidate) {
@@ -393,6 +440,7 @@ function negativeCompanyMatch(company) {
 function blockedCompany(company) {
   if (!company) return true;
   const lower = company.toLowerCase().trim();
+  if (HYPERSCALER_REGEX.test(lower)) return true;
   for (const blocked of COMPANY_BLOCKLIST) {
     if (lower === blocked || lower.startsWith(blocked + ' ') || lower.startsWith(blocked + ',')) return true;
   }
@@ -458,11 +506,13 @@ export async function discoverByTitleSearch(opts = {}) {
 
           // 3. QUALIFY: needs ONE of these signals
           //    a) Hard-signal keyword in company/headline/title/industry
-          //    b) Industry matches our relevant list
+          //    b) STRONG industry match (data center / colocation / cloud / hosting / REIT)
           //    c) Cross-referenced to known intent company
+          // Weak industry (telecom, generic IT services) is NOT enough on its
+          // own — P4 fix to stop NJ Transit / billing-MSP / legal-info noise.
           const hardSignal = hardSignalMatch(p);
-          const industryOk = relevantIndustry(p.industry);
-          if (!hardSignal && !industryOk && !companyMatch) continue;
+          const industryStrong = strongIndustry(p.industry);
+          if (!hardSignal && !industryStrong && !companyMatch) continue;
           stats.industry_passed++;
           stats.company_passed++;
 
