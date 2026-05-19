@@ -663,8 +663,13 @@ export async function revealTopEmails({ maxCredits = 100, minScore = 60 } = {}) 
 export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore = 60, topNPerCompany = 1 } = {}) {
   if (!_sb) throw new Error('Discovery not configured');
 
-  const ts = new Date().toISOString().slice(0, 10);
-  const finalListName = listName || `ThermaShift Enriched ${ts}`;
+  // Always append a high-precision timestamp suffix so re-runs in the same
+  // day don't collide on BrandJet's list-name dedup. (Discovered when 3
+  // successive runs all named "ThermaShift Enriched" — the 4th failed at
+  // create_list because BrandJet returned a non-standard response we
+  // couldn't parse to a list ID.)
+  const ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
+  const finalListName = listName ? `${listName} ${ts}` : `ThermaShift Enriched ${ts}`;
 
   // Pull a broader pool, then dedup per company in code so we pick the
   // best contact per account rather than emailing 3 directors at the

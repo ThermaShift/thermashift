@@ -409,10 +409,16 @@ export async function createLeadList(listName) {
   await ensureBrandSelected();
   const r = await callTool('brandjet_create_lead', { action: 'create_list', listName });
   // Response is wrapped in { content: [{ type:'text', text: '<json>' }] }
+  const rawText = r?.content?.[0]?.text;
   try {
-    const parsed = JSON.parse(r?.content?.[0]?.text || '{}');
-    return parsed.leadList?.id || parsed.id;
-  } catch {
+    const parsed = JSON.parse(rawText || '{}');
+    const id = parsed.leadList?.id || parsed.id;
+    if (!id) {
+      console.warn('[createLeadList] no id in response:', JSON.stringify(parsed).slice(0, 300));
+    }
+    return id || null;
+  } catch (e) {
+    console.warn('[createLeadList] parse error:', e.message, 'raw:', String(rawText).slice(0, 300));
     return null;
   }
 }
