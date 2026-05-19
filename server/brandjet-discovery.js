@@ -306,12 +306,47 @@ export function configureDiscovery(sbHelper) {
 async function upsertContact(payload) {
   // Dedupe by (source, source_external_id) — re-running shouldn't duplicate
   const key = `?source=eq.${encodeURIComponent(payload.source)}&source_external_id=eq.${encodeURIComponent(payload.source_external_id || '')}`;
-  const existing = await _sb('discovered_contacts', 'GET', null, key + '&limit=1');
+  const existing = await _sb('discovered_contacts', 'GET', null, key + '&select=*&limit=1');
   if (existing && existing.length) {
-    await _sb('discovered_contacts', 'PATCH',
-      { ...payload, updated_at: new Date().toISOString() },
-      `?id=eq.${existing[0].id}`);
-    return existing[0].id;
+    const e = existing[0];
+    // Discovery should refresh re-discoverable fields (names, scores, company
+    // metadata) but MUST NOT overwrite lifecycle state. Previously the PATCH
+    // spread the whole payload — that reset status='pushed_to_brandjet' back
+    // to 'new' on every sweep, releasing pushed contacts into the next push
+    // pool and creating duplicate entries across BrandJet lists.
+    const patch = {
+      full_name: payload.full_name,
+      first_name: payload.first_name,
+      last_name: payload.last_name,
+      job_title: payload.job_title,
+      job_level: payload.job_level,
+      job_function: payload.job_function,
+      linkedin_url: payload.linkedin_url,
+      profile_picture_url: payload.profile_picture_url,
+      headline: payload.headline,
+      company: payload.company,
+      company_domain: payload.company_domain,
+      company_size: payload.company_size,
+      industry: payload.industry,
+      country: payload.country,
+      intent_company_id: payload.intent_company_id,
+      score: payload.score,
+      bucket: payload.bucket,
+      score_breakdown: payload.score_breakdown,
+      updated_at: new Date().toISOString(),
+    };
+    // Only refresh email/email_status when discovery has new info AND we
+    // haven't already moved past those states. Verified emails and country-
+    // rejected records keep their existing email_status.
+    if (!e.email && payload.email) patch.email = payload.email;
+    if (e.email_status !== 'verified' && e.email_status !== 'rejected_country') {
+      patch.email_status = payload.email_status;
+    }
+    // NEVER touched by discovery: status, brandjet_lead_list_id, pushed_at,
+    // email_revealed_at, credits_spent. Those are owned by the reveal/push
+    // pipeline downstream.
+    await _sb('discovered_contacts', 'PATCH', patch, `?id=eq.${e.id}`);
+    return e.id;
   }
   const inserted = await _sb('discovered_contacts', 'POST',
     { ...payload, created_at: new Date().toISOString() });
