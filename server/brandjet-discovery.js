@@ -433,17 +433,30 @@ const HYPERSCALER_REGEX = new RegExp(
   'i',
 );
 
-// POSITIVE company hints — DC operators that BrandJet sometimes classifies
-// as "Telecommunications" or "Information Technology", causing them to be
-// dropped by the strong-industry-only qualifier. Word-boundary match. Add
-// here when a known DC operator we want gets filtered out for the wrong
-// reason. Keep this list short — overuse defeats the strong-industry gate.
+// POSITIVE company hints — DC operators and DC-infrastructure suppliers
+// that BrandJet wildly misclassifies (DataBank as "Prepackaged software
+// services", Rackspace same, RC Andersen as generic "Engineering services",
+// Xnrgy Climate Systems as "Analytical Laboratory Instrument Manufacturing").
+// Word-boundary regex match — multi-word entries match the exact phrase.
+// Add here when a real DC-relevant company gets dropped at qualification.
 const POSITIVE_COMPANY_HINTS = [
-  'ntt',                        // Global NTT / NTT Communications — telecom-classified DC giant
-  'lumen', 'centurylink',       // Lumen Technologies — telecom-classified DC ops
+  // Telecom-classified DC operators
+  'ntt',                        // Global NTT / NTT Communications
+  'lumen', 'centurylink',       // Lumen Technologies
   'iron mountain',              // Data center / records — sometimes "real estate"
   'cyxtera',                    // Colo — sometimes misclassified
   'segra', 'consolidated communications',  // Regional telecom + DC ops
+  // Colo / hosting operators BrandJet misclassifies as software/processing
+  'databank', 'rackspace', 'liquid web', 'liquidweb',
+  'limestone networks', 'expedient', 'edgeconnex',
+  'applied digital', 'novva', 'carbonite',
+  // DC infrastructure contractors (HVAC, electrical, construction, design)
+  // that build/maintain data centers but BrandJet classifies under their
+  // generic industry vertical (construction, electrical, manufacturing).
+  'pepper construction', 'brinkmann constructors', 'rc andersen',
+  'jrm construction', 'jrm construction management',
+  'rogers mechanical', 'icon mechanical', 'ermco',
+  'xnrgy', 'himes associates',
 ];
 const POSITIVE_COMPANY_REGEX = new RegExp(
   '\\b(' + POSITIVE_COMPANY_HINTS.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b',
