@@ -328,8 +328,11 @@ async function mcpCall(method, params, opts = { retried: false, initRetried: fal
       _session = { id: null, initialized: false }; // re-handshake on new token
       return mcpCall(method, params, { ...opts, retried: true });
     }
-    // "Server not initialized" — reset session and try once more
-    if (/not initialized/i.test(e.message) && !opts.initRetried) {
+    // Session-state errors — reset session and try once more. BrandJet sends
+    // either "Server not initialized" (cold path) or "Session not found.
+    // Please re-initialize" (after a transient error invalidated the session).
+    // Both require the same fix: drop our cached session id and re-handshake.
+    if (/not initialized|session not found|re-?initialize/i.test(e.message) && !opts.initRetried) {
       _session = { id: null, initialized: false };
       return mcpCall(method, params, { ...opts, initRetried: true });
     }
