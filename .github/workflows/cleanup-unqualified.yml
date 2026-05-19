@@ -1,0 +1,144 @@
+name: Cleanup Unqualified Push Records
+
+# Re-applies the CURRENT qualification gate to records currently in BrandJet
+# lists. Records that no longer qualify get removed from BrandJet and marked
+# status='rejected_unqualified' in Supabase. Use this after tightening the
+# filter (e.g., P5/P6) when prior sweeps left contaminated records in lists.
+
+on:
+  workflow_dispatch:
+    inputs:
+      scan_statuses:
+        description: 'Comma-separated Supabase statuses to scan.'
+        required: false
+        default: 'pushed_to_brandjet,new'
+      list_id:
+        description: 'Optional BJ list ID to scope BrandJet lookups.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Print what would be deleted without actually deleting.'
+        required: false
+        default: 'false'
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            cd /var/www/thermashift
+            export SCAN_STATUSES='${{ inputs.scan_statuses }}'
+            export LIST_ID='${{ inputs.list_id }}'
+            export DRY_RUN='${{ inputs.dry_run }}'
+            node -e "
+              const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r=await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const bj = await import('./server/brandjet-mcp.js');
+                const disc = await import('./server/brandjet-discovery.js');
+                bj.configureMcp(sb);
+
+                const statuses = (process.env.SCAN_STATUSES || 'pushed_to_brandjet,new').split(',').map(s => s.trim()).filter(Boolean);
+                const listId = (process.env.LIST_ID || '').trim() || null;
+                const dryRun = process.env.DRY_RUN === 'true';
+                console.log('=== cleanup unqualified records ===');
+                console.log('scan_statuses:', statuses.join(','), 'list_id:', listId || '(any)', 'dry_run:', dryRun);
+                console.log();
+
+                const statusFilter = statuses.length === 1
+                  ? 'status=eq.' + encodeURIComponent(statuses[0])
+                  : 'status=in.(' + statuses.map(encodeURIComponent).join(',') + ')';
+                const rows = await sb('discovered_contacts', 'GET', null,
+                  '?' + statusFilter + '&select=id,full_name,email,country,company,company_domain,industry,intent_company_id,status,brandjet_lead_list_id&limit=2000');
+                console.log('Records scanned:', rows?.length || 0);
+
+                // Re-validate each against the CURRENT qualification gate.
+                const failing = [];
+                const reasonCounts = {};
+                for (const r of (rows || [])) {
+                  const q = disc.isQualifiedCandidate(r);
+                  if (!q.qualified) {
+                    failing.push({ ...r, reason: q.reason });
+                    reasonCounts[q.reason] = (reasonCounts[q.reason] || 0) + 1;
+                  }
+                }
+                console.log('Failing records:', failing.length, JSON.stringify(reasonCounts));
+                if (!failing.length) {
+                  console.log('Nothing to clean up. Done.');
+                  return;
+                }
+
+                console.log();
+                console.log('=== executing cleanup ===');
+                let bjDeleted = 0, bjNotFound = 0, bjFailed = 0, sbPatched = 0;
+                let bjSkipped = 0;
+
+                for (const f of failing) {
+                  console.log('processing:', f.full_name, '<' + (f.email || 'no-email') + '> reason=' + f.reason + ' status=' + f.status);
+
+                  // Only try BrandJet delete when the record was actually pushed.
+                  if (f.status === 'pushed_to_brandjet' && f.email) {
+                    let bjId = null;
+                    try {
+                      const found = await bj.findLeadByEmail(f.email, { leadListId: listId });
+                      bjId = found?.id || found?.leadId || found?._id;
+                    } catch (e) {
+                      console.warn('  ! findLeadByEmail error:', e.message);
+                    }
+
+                    if (bjId) {
+                      if (dryRun) {
+                        console.log('  [dry] would delete BJ lead', bjId);
+                        bjDeleted++;
+                      } else {
+                        try {
+                          await bj.deleteLead(bjId);
+                          console.log('  ✓ deleted BJ lead', bjId);
+                          bjDeleted++;
+                        } catch (e) {
+                          console.warn('  ✗ delete failed:', e.message);
+                          bjFailed++;
+                        }
+                      }
+                    } else {
+                      console.warn('  ! no BJ lead match (may already be deleted)');
+                      bjNotFound++;
+                    }
+                  } else {
+                    bjSkipped++;
+                  }
+
+                  if (!dryRun) {
+                    await sb('discovered_contacts', 'PATCH',
+                      { status: 'rejected_unqualified', updated_at: new Date().toISOString() },
+                      '?id=eq.' + f.id);
+                    sbPatched++;
+                  }
+                }
+
+                console.log();
+                console.log('=== cleanup result ===');
+                console.log(JSON.stringify({
+                  scanned: rows?.length || 0,
+                  failing: failing.length,
+                  reasons: reasonCounts,
+                  brandjet_deleted: bjDeleted,
+                  brandjet_not_found: bjNotFound,
+                  brandjet_failed: bjFailed,
+                  brandjet_skipped_no_email_or_not_pushed: bjSkipped,
+                  supabase_patched: sbPatched,
+                  dry_run: dryRun,
+                }, null, 2));
+              })().catch(e => { console.error('FATAL:', e.message); console.error(e.stack); process.exit(1); });
+            "

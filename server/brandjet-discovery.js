@@ -423,6 +423,10 @@ const HYPERSCALER_NAMES = [
   'alibaba', 'tencent', 'baidu',
   // SaaS giants
   'salesforce', 'workday', 'adobe',
+  // P6b: US telecom giants — too commoditized to be our buyers, and their
+  // retail-mobile employees keep matching DC-flavored titles in search.
+  'verizon', 'at&t', 'att', 't-mobile', 'tmobile',
+  'comcast', 'spectrum', 'charter communications', 'cox communications',
 ];
 const HYPERSCALER_REGEX = new RegExp(
   '\\b(' + HYPERSCALER_NAMES.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b',
@@ -511,6 +515,38 @@ function blockedCompany(company) {
 }
 
 /**
+ * The qualification gate — applied at both discovery time AND push time.
+ * Discovery-time application keeps junk out of `discovered_contacts`; push-
+ * time re-application catches records that were stored under looser filters
+ * in earlier sweeps. Returns `{ qualified: boolean, reason: string | null }`.
+ *
+ * Accepts either a BrandJet search result (camelCase: `companyDomain`,
+ * `jobLevel`, …) or a Supabase row (snake_case: `company_domain`,
+ * `intent_company_id`, …) — fields are normalized internally.
+ */
+export function isQualifiedCandidate(c, opts = {}) {
+  const country = c.country || null;
+  const companyDomain = c.companyDomain || c.company_domain || c.domain || null;
+  const company = c.company || '';
+  const industry = c.industry || '';
+  const intentMatch = opts.intentCompanyMatch !== undefined
+    ? !!opts.intentCompanyMatch
+    : (c.intent_company_id != null);
+
+  if (!allowedCandidateCountry(country, companyDomain)) return { qualified: false, reason: 'country' };
+  if (negativeCompanyMatch(company)) return { qualified: false, reason: 'negative_company' };
+  if (blockedCompany(company)) return { qualified: false, reason: 'blocked_company' };
+
+  const hardSignal = hardSignalMatch({ company, industry });
+  const industryStrong = strongIndustry(industry);
+  const positiveCompany = isPositiveCompany(company);
+  if (!hardSignal && !industryStrong && !intentMatch && !positiveCompany) {
+    return { qualified: false, reason: 'no_qualifying_signal' };
+  }
+  return { qualified: true, reason: null };
+}
+
+/**
  * Find decision-makers via title-based search of BrandJet's 700M-contact DB.
  *
  * We iterate target titles one-at-a-time (basic 'people' search only accepts
@@ -556,32 +592,17 @@ export async function discoverByTitleSearch(opts = {}) {
         for (const p of people) {
           const companyMatch = p.company && intentByName.get(p.company.toLowerCase().trim());
 
-          // 0. HARD REJECT: candidate's country not in English-primary list + UAE exception.
-          //    Falls back to domain TLD when country field is empty (was the leak
-          //    that let through .sa / .ee / .de / .fi contacts on prior runs).
-          if (!allowedCandidateCountry(p.country, p.companyDomain || p.domain)) continue;
-
-          // 1. HARD REJECT: negative company keywords (games, media, hotels, recruiters)
-          if (negativeCompanyMatch(p.company)) continue;
-
-          // 2. HARD REJECT: blocklisted companies (hyperscalers, cooling vendors)
-          if (blockedCompany(p.company)) continue;
-
-          // 3. QUALIFY: needs ONE of these signals
-          //    a) Hard-signal keyword in company name or industry (not title!)
-          //    b) STRONG industry match (data center / colocation / cloud / hosting / REIT)
-          //    c) Cross-referenced to known intent company
-          //    d) Positive company hint — known DC operator BrandJet sometimes
-          //       misclassifies as telecom/IT (NTT, Lumen, Iron Mountain, etc.)
-          // P5 fix: hardSignal no longer reads jobTitle/headline (was tautological
-          // because we search BY DC titles). Off-ICP companies whose employees
-          // happened to have DC-flavored titles (LexisNexis, Alogent, etc.) now drop.
-          const hardSignal = hardSignalMatch(p);
-          const industryStrong = strongIndustry(p.industry);
-          const positiveCompany = isPositiveCompany(p.company);
-          if (!hardSignal && !industryStrong && !companyMatch && !positiveCompany) continue;
+          // Apply the qualification gate (country, blocklists, signal-required).
+          // Same helper is used at push time so candidates stored under looser
+          // filters in prior sweeps don't sneak through.
+          const q = isQualifiedCandidate(p, { intentCompanyMatch: !!companyMatch });
+          if (!q.qualified) continue;
           stats.industry_passed++;
           stats.company_passed++;
+
+          // Re-derive these here because the score function needs them as
+          // boolean flags (scoring uses hardSignal/companyMatch as features).
+          const hardSignal = hardSignalMatch(p);
 
           const scored = scoreCandidate(p, { intentCompanyMatch: !!companyMatch, hardSignal });
           if (scored.score < minScore) continue;
@@ -715,10 +736,37 @@ export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore
     return { listId: null, pushed: 0, message: 'No enriched contacts ready to push' };
   }
 
+  // P6a: re-validate each candidate against the CURRENT qualification gate.
+  // Catches records stored under looser filters in prior sweeps (RevSpring,
+  // Alogent, AT&T, Verizon, healthcare orgs, etc.) that wouldn't qualify
+  // today. Failing records get marked status='rejected_unqualified' so they
+  // never reappear in this pool.
+  const qualified = [];
+  let rejected = 0;
+  const rejectionReasons = {};
+  for (const c of allCandidates) {
+    const q = isQualifiedCandidate(c);
+    if (q.qualified) {
+      qualified.push(c);
+    } else {
+      rejected++;
+      rejectionReasons[q.reason] = (rejectionReasons[q.reason] || 0) + 1;
+      await _sb('discovered_contacts', 'PATCH',
+        { status: 'rejected_unqualified', updated_at: new Date().toISOString() },
+        `?id=eq.${c.id}`);
+    }
+  }
+  if (rejected > 0) {
+    console.log(`[push] rejected ${rejected} candidates by current qualification gate:`, rejectionReasons);
+  }
+  if (!qualified.length) {
+    return { listId: null, pushed: 0, rejected, rejectionReasons, message: 'All candidates rejected by re-validation' };
+  }
+
   // Per-company dedup: keep top N (by score) per normalized company name
   const perCompanyCount = new Map();
   const contacts = [];
-  for (const c of allCandidates) {
+  for (const c of qualified) {
     const key = (c.company || '').toLowerCase().trim();
     const seen = perCompanyCount.get(key) || 0;
     if (seen >= topNPerCompany) continue;
@@ -728,7 +776,7 @@ export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore
   }
 
   if (!contacts.length) {
-    return { listId: null, pushed: 0, message: 'No contacts left after per-company dedup' };
+    return { listId: null, pushed: 0, rejected, message: 'No contacts left after per-company dedup' };
   }
 
   console.log(`[push] creating list "${finalListName}" with ${contacts.length} enriched contacts`);
@@ -768,7 +816,7 @@ export async function pushEnrichedToBrandJet({ listName, maxLeads = 50, minScore
       failed++;
     }
   }
-  return { listId, listName: finalListName, pushed, failed };
+  return { listId, listName: finalListName, pushed, failed, rejected, rejectionReasons };
 }
 
 /**
