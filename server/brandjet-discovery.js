@@ -394,6 +394,28 @@ const HYPERSCALER_REGEX = new RegExp(
   'i',
 );
 
+// POSITIVE company hints — DC operators that BrandJet sometimes classifies
+// as "Telecommunications" or "Information Technology", causing them to be
+// dropped by the strong-industry-only qualifier. Word-boundary match. Add
+// here when a known DC operator we want gets filtered out for the wrong
+// reason. Keep this list short — overuse defeats the strong-industry gate.
+const POSITIVE_COMPANY_HINTS = [
+  'ntt',                        // Global NTT / NTT Communications — telecom-classified DC giant
+  'lumen', 'centurylink',       // Lumen Technologies — telecom-classified DC ops
+  'iron mountain',              // Data center / records — sometimes "real estate"
+  'cyxtera',                    // Colo — sometimes misclassified
+  'segra', 'consolidated communications',  // Regional telecom + DC ops
+];
+const POSITIVE_COMPANY_REGEX = new RegExp(
+  '\\b(' + POSITIVE_COMPANY_HINTS.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b',
+  'i',
+);
+
+function isPositiveCompany(company) {
+  if (!company) return false;
+  return POSITIVE_COMPANY_REGEX.test(company.toLowerCase());
+}
+
 // Companies to skip (cooling vendors + recruiters). Prefix-match because some
 // of these (e.g., "carrier", "trane") collide with common words/industries.
 const COMPANY_BLOCKLIST = new Set([
@@ -422,10 +444,16 @@ function relevantIndustry(industry) {
 }
 
 function hardSignalMatch(candidate) {
+  // jobTitle AND headline deliberately excluded. We search BY title via
+  // TARGET_TITLES (all containing "data center" / "mission critical" / etc.),
+  // and LinkedIn headlines almost always echo the title. Including either
+  // field made hardSignal tautologically true for every search result and
+  // bypassed the company-level qualifier — LexisNexis, Alogent, water farms
+  // and other non-DC companies were sneaking through P4 because their
+  // employees' titles contained "data center" by construction. hardSignal
+  // now verifies the COMPANY actually operates in the DC space.
   const text = [
     candidate.company || '',
-    candidate.headline || '',
-    candidate.jobTitle || '',
     candidate.industry || '',
   ].join(' ').toLowerCase();
   return HARD_SIGNAL_KEYWORDS.some(kw => text.includes(kw));
@@ -505,14 +533,18 @@ export async function discoverByTitleSearch(opts = {}) {
           if (blockedCompany(p.company)) continue;
 
           // 3. QUALIFY: needs ONE of these signals
-          //    a) Hard-signal keyword in company/headline/title/industry
+          //    a) Hard-signal keyword in company name or industry (not title!)
           //    b) STRONG industry match (data center / colocation / cloud / hosting / REIT)
           //    c) Cross-referenced to known intent company
-          // Weak industry (telecom, generic IT services) is NOT enough on its
-          // own — P4 fix to stop NJ Transit / billing-MSP / legal-info noise.
+          //    d) Positive company hint — known DC operator BrandJet sometimes
+          //       misclassifies as telecom/IT (NTT, Lumen, Iron Mountain, etc.)
+          // P5 fix: hardSignal no longer reads jobTitle/headline (was tautological
+          // because we search BY DC titles). Off-ICP companies whose employees
+          // happened to have DC-flavored titles (LexisNexis, Alogent, etc.) now drop.
           const hardSignal = hardSignalMatch(p);
           const industryStrong = strongIndustry(p.industry);
-          if (!hardSignal && !industryStrong && !companyMatch) continue;
+          const positiveCompany = isPositiveCompany(p.company);
+          if (!hardSignal && !industryStrong && !companyMatch && !positiveCompany) continue;
           stats.industry_passed++;
           stats.company_passed++;
 
