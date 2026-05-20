@@ -457,6 +457,13 @@ const POSITIVE_COMPANY_HINTS = [
   'jrm construction', 'jrm construction management',
   'rogers mechanical', 'icon mechanical', 'ermco',
   'xnrgy', 'himes associates',
+  // Major DC builders/integrators added on the second cleanup dry-run.
+  // McDean: top DC electrical contractor (M.C. Dean). Swinerton: large GC
+  // that builds DCs for hyperscalers + colos. Diversified (a.k.a. One
+  // Diversified): AV/IT integrator with a DC services line.
+  'mcdean', 'm.c. dean', 'mc dean',
+  'swinerton',
+  'diversified', 'onediversified', 'one diversified',
 ];
 const POSITIVE_COMPANY_REGEX = new RegExp(
   '\\b(' + POSITIVE_COMPANY_HINTS.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\b',
