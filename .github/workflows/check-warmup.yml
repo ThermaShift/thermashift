@@ -1,0 +1,56 @@
+name: Check BrandJet Warmup Status
+
+# Query BrandJet to confirm what email mailbox + LinkedIn accounts are
+# connected and whether warmup is actively running. Run before launching
+# any outreach campaign.
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 3m
+          script: |
+            cd /var/www/thermashift
+            node -e "
+              const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r=await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const bj = await import('./server/brandjet-mcp.js');
+                bj.configureMcp(sb);
+
+                console.log('=== BRANDS ===');
+                console.log(JSON.stringify(bj.unwrap(await bj.listBrands()), null, 2));
+
+                console.log();
+                console.log('=== EMAIL ACCOUNTS (sending mailboxes + warmup state) ===');
+                try {
+                  console.log(JSON.stringify(await bj.getEmailAccounts(), null, 2));
+                } catch (e) {
+                  console.warn('getEmailAccounts failed:', e.message);
+                }
+
+                console.log();
+                console.log('=== AVAILABLE TOOLS (warmup/account/sender related) ===');
+                const tools = await bj.listTools();
+                const all = (tools?.tools || []).map(t => ({ name: t.name, desc: t.description }));
+                const filtered = all.filter(t => /warm|email_acc|sender|deliverab|linkedin|outreach/i.test(t.name + ' ' + (t.desc || '')));
+                console.log(JSON.stringify(filtered, null, 2));
+
+                console.log();
+                console.log('=== CAMPAIGNS ===');
+                console.log(JSON.stringify(bj.unwrap(await bj.listCampaigns()), null, 2));
+              })().catch(e => { console.error('FATAL:', e.message); console.error(e.stack); process.exit(1); });
+            "

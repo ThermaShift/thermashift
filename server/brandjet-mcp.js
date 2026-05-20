@@ -455,6 +455,24 @@ export async function listTools() {
 }
 
 /**
+ * Generic tool call escape hatch — for one-off ops where we don't want to
+ * write a dedicated helper (warmup checks, schema inspection, etc.).
+ * Returns the unwrapped JSON payload when possible, else the raw envelope.
+ */
+export async function callToolRaw(name, args = {}) {
+  await ensureBrandSelected();
+  const r = await callTool(name, args);
+  return unwrap(r);
+}
+
+/** Get connected email accounts (their warmup state, sending limits, etc.). */
+export async function getEmailAccounts() {
+  await ensureBrandSelected();
+  const r = await callTool('brandjet_get_email_accounts', {});
+  return unwrap(r);
+}
+
+/**
  * Delete a lead from BrandJet by lead ID. Wraps brandjet_update_lead with
  * action='delete' (per tool docs: "Update a single lead: ... or delete the lead").
  */
