@@ -1800,6 +1800,16 @@ app.post('/api/monitoring/readings/manual', adminAuth, async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Admin: force-run the alert evaluator immediately. Short-circuits the 60s cron
+// so the emulator/scenario runner can validate trigger→incident→notification
+// in seconds instead of minutes. Returns the same shape as the cron tick.
+app.post('/api/monitoring/evaluate-now', adminAuth, async (req, res) => {
+  try {
+    const result = await evaluateAlertRules(sb);
+    res.json({ ok: true, evaluated_at: new Date().toISOString(), result });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // Admin: client overview (sites, sensors, recent incidents)
 app.get('/api/monitoring/clients/:id/overview', adminAuth, async (req, res) => {
   try {
