@@ -473,6 +473,28 @@ export async function getEmailAccounts() {
 }
 
 /**
+ * Get integrations (LinkedIn, Twitter, Instagram, Reddit, etc.) connected
+ * to the brand. Useful for checking LinkedIn account health + warmup.
+ * Optional filter: `{ type: 'linkedin', activeOnly: true }`.
+ */
+export async function getIntegrations(opts = {}) {
+  await ensureBrandSelected();
+  return unwrap(await callTool('brandjet_get_integrations', opts || {}));
+}
+
+/**
+ * List the resources available for building campaigns — email accounts,
+ * integrations, lead lists. Each integration row carries `canSend` + a
+ * `canSendReason` (disabled|inactive|error|pending|rate_limited|
+ * requires_review|null) which is the cleanest "is this account safe to
+ * send from RIGHT NOW" check.
+ */
+export async function listCampaignResources() {
+  await ensureBrandSelected();
+  return unwrap(await callTool('brandjet_list_campaign_resources', {}));
+}
+
+/**
  * Delete a lead from BrandJet by lead ID. Wraps brandjet_update_lead with
  * action='delete' (per tool docs: "Update a single lead: ... or delete the lead").
  */

@@ -43,6 +43,29 @@ jobs:
                 }
 
                 console.log();
+                console.log('=== LINKEDIN + OTHER INTEGRATIONS (warmup / connect status) ===');
+                try {
+                  const integrations = await bj.getIntegrations({ activeOnly: false });
+                  console.log(JSON.stringify(integrations, null, 2));
+                } catch (e) {
+                  console.warn('getIntegrations failed:', e.message);
+                }
+
+                console.log();
+                console.log('=== CAMPAIGN RESOURCES (canSend + canSendReason per channel) ===');
+                try {
+                  const resources = await bj.listCampaignResources();
+                  // Pluck just the integration list (the part we care about for warmup health)
+                  if (resources?.integrations) {
+                    console.log(JSON.stringify(resources.integrations, null, 2));
+                  } else {
+                    console.log(JSON.stringify(resources, null, 2));
+                  }
+                } catch (e) {
+                  console.warn('listCampaignResources failed:', e.message);
+                }
+
+                console.log();
                 console.log('=== AVAILABLE TOOLS (warmup/account/sender related) ===');
                 const tools = await bj.listTools();
                 const all = (tools?.tools || []).map(t => ({ name: t.name, desc: t.description }));
