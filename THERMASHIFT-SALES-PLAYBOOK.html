@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ThermaShift Sales Playbook</title>
+<style>
+  body { font-family: Calibri, Arial, sans-serif; max-width: 8.5in; margin: 0.75in auto; color: #1f2937; line-height: 1.55; padding: 0 0.5in; }
+  h1 { color: #863bff; border-bottom: 3px solid #863bff; padding-bottom: 8px; font-size: 28px; }
+  h2 { color: #0a1628; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-top: 28px; font-size: 20px; }
+  h3 { color: #863bff; margin-top: 18px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+  h4 { color: #1f2937; margin-top: 14px; margin-bottom: 6px; font-size: 13px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 12px; }
+  th { background: #0a1628; color: white; padding: 8px 10px; text-align: left; font-weight: 600; }
+  td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .highlight-box { background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 12px 16px; margin: 12px 0; }
+  .pro-box { background: #f5f3ff; border-left: 4px solid #863bff; padding: 12px 16px; margin: 12px 0; }
+  .warning-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 12px 0; }
+  .pricing-tier { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 14px 18px; margin: 10px 0; }
+  .pricing-tier.featured { border-color: #863bff; border-width: 2px; background: #faf5ff; }
+  .price-tag { color: #863bff; font-weight: 700; font-size: 22px; }
+  .objection { background: #fef2f2; border-left: 4px solid #ef4444; padding: 10px 14px; margin: 8px 0; font-style: italic; font-size: 13px; }
+  .response { background: #f0fdf4; border-left: 4px solid #10b981; padding: 10px 14px; margin: 4px 0 14px 0; font-size: 13px; }
+  ul { margin: 6px 0; padding-left: 22px; }
+  li { margin: 3px 0; }
+  .accent { color: #863bff; font-weight: 600; }
+  .small { font-size: 11px; color: #64748b; }
+  .subtitle { color: #64748b; font-style: italic; margin-top: 0; }
+</style>
+</head>
+<body>
+
+<h1>ThermaShift Sales Playbook</h1>
+<p class="subtitle">Reference document for client conversations · Pricing, talking points, objection handling · Updated May 2026</p>
+
+<div class="highlight-box">
+<strong>How to use this document:</strong> Skim before any prospect call. Use the discovery questions on the call. Reference the pricing tiers when they ask. Use the objection handling section when they push back. The demo URL is at the bottom for live walk-throughs.
+</div>
+
+<h2>1. The 30-Second Elevator Pitch</h2>
+
+<p><em>"ThermaShift is an AI-driven cooling intelligence platform for data centers. We help operators cut cooling costs 15-30% and turn wasted heat into revenue. Unlike Splunk or generic monitoring tools, we're built specifically for cooling — our AI not only alerts you to thermal issues, it can take action automatically by adjusting fan speeds, chilled water setpoints, and pump VFDs. We're priced from $99 to $599 per month for self-serve, with custom enterprise pricing for white-label and SLA-backed deployments."</em></p>
+
+<h2>2. Pricing — Self-Serve SaaS Tiers</h2>
+
+<p>These are monthly subscription tiers. No setup fees. Bring-your-own-sensors (Monnit, SensorPush, Disruptive Tech, or any system that posts JSON).</p>
+
+<div class="pricing-tier">
+<h3 style="margin-top: 0;">Watch — <span class="price-tag">$99/month</span></h3>
+<p style="margin-top: 4px;"><strong>For:</strong> Single facility, want visibility, lowest commitment</p>
+<ul>
+  <li>Real-time monitoring dashboard</li>
+  <li>Email alerts on threshold breaches</li>
+  <li>3 sites, 30-day data history</li>
+  <li>Up to 25 sensors per site</li>
+  <li>Sensor webhook ingestion (any vendor)</li>
+</ul>
+</div>
+
+<div class="pricing-tier">
+<h3 style="margin-top: 0;">Guard — <span class="price-tag">$299/month</span></h3>
+<p style="margin-top: 4px;"><strong>For:</strong> Multi-site operators, need urgent alerts, want AI insights</p>
+<ul>
+  <li>Everything in Watch</li>
+  <li>+ Multi-channel alerts: SMS (Twilio), voice calls (Vapi), Slack/Teams/PagerDuty webhooks</li>
+  <li>+ <span class="accent">AI Cooling Advisor</span> — Claude-powered analysis with quantified dollar impact on every incident</li>
+  <li>+ 10 sites, 1-year data history</li>
+  <li>+ Custom alert rules (above/below/delta/missing thresholds with debounce)</li>
+  <li>+ Composite rules (X AND Y, time-of-day windows, cross-sensor)</li>
+</ul>
+</div>
+
+<div class="pricing-tier featured">
+<h3 style="margin-top: 0;">Pro — <span class="price-tag">$599/month</span> · THE DIFFERENTIATOR</h3>
+<p style="margin-top: 4px;"><strong>For:</strong> AI/GPU density, hyperscale, operators who want autonomous cooling</p>
+<ul>
+  <li>Everything in Guard</li>
+  <li>+ <span class="accent">AI takes action automatically</span> on cooling: CRAC fan speed, chilled water setpoints, pump VFD, RDHX flow, economizer mode</li>
+  <li>+ <span class="accent">Permission rules</span> — auto-approve safe actions, require approval for risky ones</li>
+  <li>+ <span class="accent">Immutable audit log</span> for compliance and liability protection</li>
+  <li>+ Webhook integration to your existing BMS or DCIM (Niagara/Tridium, Schneider EcoStruxure, JCI Metasys, Honeywell Forge, Vertiv Trellis)</li>
+  <li>+ <span class="accent">Multi-turn AI chat</span> — talk to the advisor mid-incident</li>
+  <li>+ <span class="accent">Drag-and-drop custom dashboards</span> with 9 widget types</li>
+  <li>+ AI sales recommendations (AI flags recurring expensive problems and suggests solutions)</li>
+  <li>+ Unlimited sites, unlimited history, multi-user access</li>
+</ul>
+</div>
+
+<div class="pricing-tier">
+<h3 style="margin-top: 0;">Enterprise — <span class="price-tag">$2,500–$10,000/month custom</span></h3>
+<p style="margin-top: 4px;"><strong>For:</strong> Large operators, white-label needs, SOC 2/SLA requirements</p>
+<ul>
+  <li>Everything in Pro</li>
+  <li>+ Dedicated BMS integration support (we wire your equipment for you, $5K-$15K one-time)</li>
+  <li>+ SLA guarantees (99.9% uptime, 1-hour critical response)</li>
+  <li>+ SOC 2 Type II documentation</li>
+  <li>+ SAML SSO</li>
+  <li>+ White-label / custom domain (cooling.yourdomain.com)</li>
+  <li>+ Multi-tenancy (managing sub-tenants/customers)</li>
+  <li>+ Quarterly review calls with our engineering team</li>
+</ul>
+</div>
+
+<h2>3. Pricing — Implementation Projects (Separate from SaaS)</h2>
+
+<p>For greenfield deployments, hardware-included, or full-service engagements. Often pairs with a SaaS subscription for ongoing operations.</p>
+
+<table>
+<tr><th>Service</th><th>Setup Fee</th><th>Monthly Platform Fee</th><th>Best For</th></tr>
+<tr>
+  <td><strong>Cooling Optimization</strong><br>Liquid cooling design, retrofit, install, commission</td>
+  <td>$25K-$500K<br>(scales by rack count)</td>
+  <td>—</td>
+  <td>High-density AI/GPU racks, sustained hot aisles &gt;80°F</td>
+</tr>
+<tr>
+  <td><strong>Waste Heat Recovery & Monetization</strong><br>Capture exhaust heat, route to greenhouses/district heating/algae</td>
+  <td>$50K-$300K (assessment + design)</td>
+  <td>Revenue share or fixed monthly</td>
+  <td>Generates $100K-$1M/yr per site in new revenue</td>
+</tr>
+<tr>
+  <td><strong>Thermal Intelligence Implementation</strong><br>Full sensor + gateway + platform deployment</td>
+  <td>Small (≤100 racks): $10K-$25K<br>Mid (100-300): $25K-$50K<br>Large (300+): $50K-$100K</td>
+  <td>Small: $2K-$5K<br>Mid: $5K-$10K<br>Large: $10K-$20K</td>
+  <td>Clients who don't have sensors yet and want turnkey</td>
+</tr>
+<tr>
+  <td><strong>ESG / Sustainability Consulting</strong><br>Section 179D filings, Duke Energy rebate applications, ESG reports</td>
+  <td>$5K-$50K (project)</td>
+  <td>—</td>
+  <td>Compliance-driven clients, public companies, capital-efficiency CFOs</td>
+</tr>
+</table>
+
+<div class="highlight-box">
+<strong>Payment terms (implementation projects):</strong> 30% deposit before work begins, 40% at midpoint, 30% on completion. We never engage subcontractors without deposit collected. This protects both parties.
+</div>
+
+<h2>4. Bundle Discounts</h2>
+
+<table>
+<tr><th>Bundle</th><th>Discount</th></tr>
+<tr><td>Any 2 services</td><td>10% off</td></tr>
+<tr><td>Any 3 services</td><td>12% off</td></tr>
+<tr><td>All 4 services (full managed relationship)</td><td>15% off</td></tr>
+<tr><td>Annual prepay (any tier)</td><td>2 months free (16% effective discount)</td></tr>
+<tr><td>Multi-year commitment (3 years)</td><td>20% off + price lock</td></tr>
+</table>
+
+<h2>5. Competitive Positioning</h2>
+
+<p>Reference these comparisons when prospects ask "how do you compare to..."</p>
+
+<table>
+<tr><th>Competitor</th><th>Their Pricing</th><th>Our Advantage</th></tr>
+<tr>
+  <td><strong>Splunk</strong> (generic monitoring)</td>
+  <td>$15K minimum/year, scales to $100K+</td>
+  <td>"Splunk monitors everything but understands nothing about cooling. We're built for cooling. Our AI takes cooling actions, theirs just shows you graphs."</td>
+</tr>
+<tr>
+  <td><strong>Vigilent</strong> (AI HVAC control)</td>
+  <td>$50K-$200K+/year, enterprise-only</td>
+  <td>"Same AI auto-action capability for $599/mo. Self-serve onboarding. Vendor-agnostic — they're hardware-tied."</td>
+</tr>
+<tr>
+  <td><strong>EkkoSense</strong> (UK-based AI cooling)</td>
+  <td>Enterprise quote ($30K+)</td>
+  <td>"US-based, faster response, integrated AI sales advisor that quantifies upgrade value."</td>
+</tr>
+<tr>
+  <td><strong>Sunbird DCIM</strong></td>
+  <td>$50K-$100K/year, custom quote</td>
+  <td>"DCIM is generic asset management. We're cooling-specialized with AI built in. Half the price."</td>
+</tr>
+<tr>
+  <td><strong>Nlyte</strong> (enterprise DCIM)</td>
+  <td>$100K-$500K/year</td>
+  <td>"Heavy, slow to deploy, no AI. We're 80% cheaper and AI-native."</td>
+</tr>
+<tr>
+  <td><strong>Schneider EcoStruxure</strong></td>
+  <td>$50K-$200K+/year</td>
+  <td>"Tied to Schneider hardware. We're vendor-agnostic — works with whatever sensors you already have."</td>
+</tr>
+<tr>
+  <td><strong>Vertiv Trellis / Environet</strong></td>
+  <td>Custom enterprise</td>
+  <td>"Tied to Vertiv hardware. We integrate with their gear AND every other vendor's."</td>
+</tr>
+</table>
+
+<h2>6. Discovery Questions (Use These on Calls)</h2>
+
+<p>Use SPIN-style probing — Situation → Problem → Implication → Need-payoff. Don't pitch until you understand their pain.</p>
+
+<h3>Situation Questions</h3>
+<ul>
+  <li>How many racks do you currently operate? Mostly air-cooled or any liquid cooling?</li>
+  <li>What's your current PUE? (If they don't know — that's data point #1, they probably need monitoring)</li>
+  <li>What sensors do you already have deployed? Vendor?</li>
+  <li>Do you have a BMS or DCIM platform? Which one?</li>
+  <li>How are alerts currently routed today — email only? On-call?</li>
+</ul>
+
+<h3>Problem Questions</h3>
+<ul>
+  <li>When was the last time you had a thermal incident that required physical intervention? How was it handled?</li>
+  <li>What percentage of your op-ex goes to cooling? Are you tracking that monthly?</li>
+  <li>Are you running any AI/GPU workloads or planning to? How is your cooling handling the density?</li>
+  <li>How do you decide when to bring more cooling capacity online?</li>
+  <li>What does it cost you per hour when a hot aisle goes above safe temps?</li>
+</ul>
+
+<h3>Implication Questions (the painful ones)</h3>
+<ul>
+  <li>If a critical incident happened at 2am on a Saturday, how long until someone is responding?</li>
+  <li>What's your current cooling efficiency vs your design target? What does the gap cost annually?</li>
+  <li>If your PUE improved from X to Y, what's the dollar value? (Help them calculate)</li>
+  <li>The 2026 IRS guidance pushed Section 179D up to $5.36/sq ft (was $1.88) for energy-efficient retrofits, retroactive to 2023 placed-in-service dates — has your team filed at the new rates yet?</li>
+  <li>If your facility could generate $200K-$500K per year from currently-wasted heat, what would that change?</li>
+</ul>
+
+<h3>Need-Payoff Questions</h3>
+<ul>
+  <li>If we could give you AI that automatically adjusts cooling before an incident becomes a problem, what would that be worth?</li>
+  <li>If you could see in real-time the dollar impact of every cooling decision, would your team make different choices?</li>
+  <li>What would it mean for your team if AI handled the routine cooling tuning so they could focus on bigger problems?</li>
+</ul>
+
+<h2>7. Common Objections + How to Handle Them</h2>
+
+<div class="objection">"We already have monitoring through our BMS — we don't need another tool."</div>
+<div class="response">
+"Most BMS systems show you data. We use AI to <em>act on it</em>. Quick question — when your CRAC is running at 78% fan and a hot aisle spikes, does your BMS automatically increase the fan speed and quantify the dollar impact, or does it just alert someone? That's the gap we fill. We integrate with your existing BMS via webhook — we don't replace it, we make it 10x smarter. Want to see what that looks like in 5 minutes?"
+</div>
+
+<div class="objection">"We don't trust AI to control our equipment."</div>
+<div class="response">
+"That's exactly why we built it with permission-first defaults. Out of the box, AI proposes actions and waits for your approval — nothing happens automatically until you set explicit permission rules. Most clients start with full manual approval, then over time they auto-approve low-risk actions like 'enable economizer when outside air drops below 55°F.' Plus every action is logged with full audit trail — for compliance and to protect you if anything goes sideways."
+</div>
+
+<div class="objection">"Splunk or Vigilent already does this."</div>
+<div class="response">
+"Splunk is generic infrastructure monitoring — they don't understand cooling specifically and they don't take cooling actions. Vigilent is the closest comparison, but they're $50K-$200K+/year and require enterprise sales cycles. We give you the same AI auto-action capability at $599/month with self-serve onboarding. The difference: we're built ground-up for AI/GPU density. Theirs was built before AI workloads existed."
+</div>
+
+<div class="objection">"$599/month seems expensive."</div>
+<div class="response">
+"Compared to what? A single thermal incident that takes a rack offline costs $5K-$50K depending on workload. A 1% PUE improvement at a 1MW facility saves about $30K/year. The 2026 IRS guidance pushed Section 179D up to $5.36/sq ft (from $1.88) for energy-efficient retrofits, retroactive to 2023 placed-in-service dates. For a 100K sq ft data center that's typically $500K–$2M in deductions on cooling, lighting, or envelope work already done — and most operators either haven't filed or filed at the old rates. Pro tier pays for itself in the first month for any facility above 100kW. Want to see the math for your specific facility?"
+</div>
+
+<div class="objection">"We need this approved by IT/Engineering/Procurement."</div>
+<div class="response">
+"Totally understand. Two ways I can help: (1) I can do a complimentary cooling efficiency assessment that gives you actual data on your facility — that's typically what gets engineering bought in. (2) I can put together an internal one-pager for your procurement team with ROI math specific to your environment. Which would help you move faster?"
+</div>
+
+<div class="objection">"We're not running AI/GPU workloads — do we need this?"</div>
+<div class="response">
+"Even traditional workloads benefit. The Watch tier at $99 just gives you visibility — most facilities discover they're 20-40% inefficient on cooling without ever knowing. The free assessment will tell you the dollar value of fixing that for your specific facility. Want to start there?"
+</div>
+
+<div class="objection">"How do we know you'll be around in 5 years?"</div>
+<div class="response">
+"Fair concern. Three answers: (1) Our pricing is intentionally low because we're growing — you're getting enterprise capability at SMB pricing. (2) Vendor-agnostic by design — your sensors and BMS are yours, not us. If we ever vanished, you'd just lose a UI layer. (3) We're profitable from day one of any subscription because our marginal cost per client is low. We're not a VC-burning unicorn play."
+</div>
+
+<div class="objection">"We need on-prem, not cloud."</div>
+<div class="response">
+"Pro tier offers a hybrid where the AI runs in our cloud but actions are dispatched via webhook to your on-prem BMS — your control logic never leaves your network. For full on-prem deployment we have an Enterprise option with a self-hosted instance ($10K+/mo). Let's understand the requirement first — is it data sovereignty, latency, or something else?"
+</div>
+
+<h2>8. Section 179D — The "Money Left On The Table" Lever</h2>
+
+<p>The deduction was <strong>expanded</strong> by the Inflation Reduction Act, not expiring. The pitch is "most operators haven't captured it at the new rates" — not artificial deadline pressure.</p>
+
+<div class="warning-box">
+<strong>Section 179D federal tax deduction — IRA-expanded, not expiring.</strong>
+<ul>
+  <li>$5.36 per square foot for energy-efficient retrofits in 2026 (was $1.88 pre-IRA)</li>
+  <li>Requires prevailing wage + apprenticeship compliance for the top rate; base rate is lower without it</li>
+  <li>Retroactive to systems placed in service since 2023</li>
+  <li>For a 100,000 sq ft data center: typically $500K–$2M in deductions on cooling, lighting, or envelope work already done</li>
+  <li>For a 50,000 sq ft facility at full rate: $268K deduction</li>
+  <li><strong>Most operators either haven't filed at all or filed at the old $1.88/sq ft rate — money on the table.</strong></li>
+</ul>
+</div>
+
+<p><strong>Talking points:</strong></p>
+<ul>
+  <li>"You're not missing a deadline — you may have already missed the rate change."</li>
+  <li>"Every cooling improvement done since 2023 may qualify retroactively at the new rate."</li>
+  <li>"The 179D specialty firms (KBKG, alliantgroup) charge 20–30% of the deduction value to file. We help you scope what qualifies, then either file directly or refer to a partner CPA — we don't charge contingency."</li>
+  <li>Reference: <em>"Most CFOs I talk to are still operating on the pre-IRA numbers. The ones who've updated are pulling cooling projects forward to maximize the deduction."</em></li>
+</ul>
+
+<p><strong>Honesty note for solo-founder positioning:</strong> 179D filings require a licensed P.E. to stamp the energy analysis (in most states). ThermaShift can identify qualifying improvements and scope the deduction; the actual certification should be referred to a partner firm (KBKG, alliantgroup, or Walker Reid Strategies). Don't oversell direct filing capability on calls.</p>
+
+<h2>9. Duke Energy Efficiency Rebates (NC/SC clients)</h2>
+
+<p>Duke Energy's <strong>EnergyWise Business program</strong> offers $50/kW saved through cooling efficiency upgrades. For a 1MW facility achieving 10% efficiency improvement = $5,000 in rebates. ThermaShift's optimization service typically delivers 15-30% improvement.</p>
+
+<p>Other rebates worth mentioning:</p>
+<ul>
+  <li>Custom Incentive Program for projects &gt;$5,000 in saved kWh</li>
+  <li>Free energy assessments for commercial customers</li>
+  <li>Stackable with Section 179D tax deduction</li>
+</ul>
+
+<h2>10. The Demo Flow (When Prospect Wants to See It)</h2>
+
+<div class="highlight-box">
+<strong>Live demo URL (always offer this — it converts):</strong><br>
+<code style="background: #fff; padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">https://thermashift.net/saas?key=tsk_demo_9f42e3c62de1be877830fa37dab0f3f2</code>
+</div>
+
+<h3>5-Minute Demo Script</h3>
+<ol>
+  <li><strong>Land on Overview tab.</strong> "This is what your facilities team sees every morning. Live status across all your sites. The AI Advisor at the top reads the real data and tells you what to focus on today — see how it called out Hot Aisle 3 Rack 18 specifically?"</li>
+  <li><strong>Click the open incident banner.</strong> "When something goes wrong, you don't just get an alert — you get analysis. The AI quantified this incident: 88°F sustained, peak 88.9°F, recommends LCaaS retrofit at $150K-250K with specific reasoning."</li>
+  <li><strong>Click a sensor card.</strong> "Drill down to time-series. 24-hour view, can stretch to 7 days or 30 days for trend analysis."</li>
+  <li><strong>Click Cooling AI tab.</strong> "Pro tier — this is where it gets interesting. AI proposes specific cooling actions with reasoning. CRAC 2 fan to 95%, lower CW setpoint to 44°F. Click Approve, it dispatches to your BMS via webhook."</li>
+  <li><strong>Click Chat with AI.</strong> "Multi-turn conversation. Ask the advisor anything about your environment. It has full context."</li>
+  <li><strong>Click Custom Dashboard.</strong> "Drag-and-drop. Build your own views. Save layouts. Different views for different teams."</li>
+  <li><strong>Close.</strong> "What I just showed you is what you get for $99-$599 a month. The full enterprise version with white-label and SLA is custom. Want a complimentary assessment of your facility?"</li>
+</ol>
+
+<h2>11. Closing Techniques</h2>
+
+<h3>The Free Assessment Close (lowest friction)</h3>
+<p><em>"We do complimentary cooling efficiency assessments. About 10 minutes of your time, you get a detailed report with estimated annual savings, PUE improvement targets, waste heat revenue opportunity, and specific recommendations. No commitment. Sound useful?"</em></p>
+
+<h3>The Trial Close (Watch tier)</h3>
+<p><em>"Watch tier is $99/month. First month free. You can cancel anytime. The whole point is for you to see the data on your own facility. Want to spin it up this week?"</em></p>
+
+<h3>The 179D Close (urgency)</h3>
+<p><em>"Section 179D expires June 30. We can have a full assessment done in 2 weeks, identify the qualifying improvements, and get them documented for your tax filing this year. After June 30, the deduction value drops by 75% for most clients. Worth a 30-minute call to see what's at stake?"</em></p>
+
+<h3>The Sample Project Close (consulting upsell)</h3>
+<p><em>"For your size facility, a typical cooling optimization project runs $25K-$50K and saves $200K-$500K/year. Even at the high end of project cost, you're 4-10x ROI in year one. I can scope it more precisely after a 30-minute call. Want to grab a slot this week?"</em></p>
+
+<h2>12. Follow-Up Cadence</h2>
+
+<table>
+<tr><th>Day</th><th>Action</th><th>What to send</th></tr>
+<tr><td>Day 0</td><td>Initial cold email or call</td><td>Discovery + free assessment offer</td></tr>
+<tr><td>Day 3</td><td>Section 179D urgency email</td><td>Tax deduction + deadline reminder</td></tr>
+<tr><td>Day 7</td><td>Final cold email</td><td>"3 numbers and I'll leave you alone" framing</td></tr>
+<tr><td>Day 14</td><td>LinkedIn connection request</td><td>Personalized note, no pitch</td></tr>
+<tr><td>Day 30</td><td>Industry insight email</td><td>Share an article on AI cooling, no ask</td></tr>
+<tr><td>Day 60</td><td>Re-engage with case study</td><td>Synthetic-but-realistic case study from peer facility</td></tr>
+<tr><td>Day 90</td><td>One last touch</td><td>Then archive — they'll come back when timing is right</td></tr>
+</table>
+
+<h2>13. Reference: ThermaShift Live System</h2>
+
+<table>
+<tr><th>Resource</th><th>URL / Detail</th></tr>
+<tr><td>Demo dashboard</td><td>https://thermashift.net/saas?key=tsk_demo_9f42e3c62de1be877830fa37dab0f3f2</td></tr>
+<tr><td>Public website</td><td>https://thermashift.net</td></tr>
+<tr><td>Phone (AI assistant Alex)</td><td>(786) 605-6239</td></tr>
+<tr><td>Sales email</td><td>steve@thermashift.net</td></tr>
+<tr><td>Admin contact</td><td>admin@thermashift.net</td></tr>
+<tr><td>Calendly booking</td><td>https://calendly.com/thermashift/consultation</td></tr>
+</table>
+
+<h2>14. Red Flags — When to Disqualify</h2>
+
+<p>Not every prospect is a good fit. Walk away from:</p>
+<ul>
+  <li>Facilities under 50kW total IT load — economics don't work for them</li>
+  <li>Prospects who only want "free advice" with no buying intent across multiple touchpoints</li>
+  <li>Companies with active litigation around cooling — wait for legal resolution</li>
+  <li>Prospects asking for white-label as a pre-qualification at the Watch tier — that's an Enterprise conversation, requalify</li>
+  <li>Facilities locked into multi-year vendor contracts with no exit path until 2028+</li>
+</ul>
+
+<h2>15. Personal Story Hooks</h2>
+
+<p>Have these ready when small talk happens:</p>
+<ul>
+  <li>"I'm based in Harrisburg NC, 20 minutes from Charlotte. Founded ThermaShift after watching too many data centers leave money on the table from cooling inefficiency."</li>
+  <li>"15 years in technical program management before this — saw enterprise cooling problems firsthand."</li>
+  <li>"What we're building is what I wish I'd had access to when I was on the buyer side."</li>
+</ul>
+
+<p style="margin-top: 30px; color: #64748b; font-size: 11px; text-align: center;">
+ThermaShift — Cooling Intelligence. Environmental Impact.<br>
+This document is for internal sales use. Pricing as of May 2026 — verify current pricing before quoting clients.
+</p>
+
+</body>
+</html>

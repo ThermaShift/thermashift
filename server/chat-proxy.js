@@ -537,11 +537,29 @@ app.post('/api/payments/create-checkout', async (req, res) => {
 });
 
 // Stripe webhook — handles payment confirmation
+// SECURITY: this endpoint marks invoices paid and flips work_authorized=true.
+// It MUST verify the Stripe signature; without verification anyone can forge
+// a checkout.session.completed event. (Fix landed 2026-05-29 security audit.)
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
-  // In production, verify webhook signature with STRIPE_WEBHOOK_SECRET
-  try {
-    const event = JSON.parse(req.body);
+  const sig = req.headers['stripe-signature'];
+  const secret = process.env.STRIPE_WEBHOOK_SECRET || process.env.STRIPE_INVOICE_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn('[stripe-webhook] STRIPE_WEBHOOK_SECRET not set — refusing unverified event');
+    return res.status(503).json({ error: 'webhook_secret_not_configured' });
+  }
+  if (!sig) return res.status(400).json({ error: 'missing_signature_header' });
 
+  let event;
+  try {
+    const Stripe = (await import('stripe')).default;
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    event = stripe.webhooks.constructEvent(req.body, sig, secret);
+  } catch (err) {
+    console.warn('[stripe-webhook] signature verification failed:', err.message);
+    return res.status(400).json({ error: 'invalid_signature' });
+  }
+
+  try {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const invoiceId = session.metadata?.invoice_id;
@@ -776,7 +794,13 @@ async function adminAuth(req, res, next) {
   try {
     const crypto = await import('crypto');
     const hash = crypto.createHash('sha256').update(token).digest('hex');
-    if (hash !== ADMIN_HASH) {
+    // Constant-time compare — same pattern used for Resend + BrandJet webhooks
+    // below. The per-IP lockout below makes pure timing exfil hard but a hash
+    // compare should never be `===`.
+    const hashBuf = Buffer.from(hash, 'hex');
+    const expectBuf = Buffer.from(ADMIN_HASH, 'hex');
+    const ok = hashBuf.length === expectBuf.length && crypto.timingSafeEqual(hashBuf, expectBuf);
+    if (!ok) {
       // Track failed attempt
       const r = record && (now - record.firstAttempt) < ADMIN_AUTH_WINDOW_MS
         ? record

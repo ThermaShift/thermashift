@@ -135,9 +135,32 @@ function SensorChart({ apiKey, sensor, onBack }) {
     value: Number(r.value),
   }));
 
-  const min = Math.min(...chartData.map(d => d.value));
-  const max = Math.max(...chartData.map(d => d.value));
-  const avg = chartData.reduce((s, d) => s + d.value, 0) / chartData.length;
+  // Empty-data guard: Math.min(...[]) returns Infinity, division by zero is NaN.
+  // A demo sensor with no readings would otherwise render garbage stats and an
+  // empty chart in front of a prospect.
+  if (!chartData.length) {
+    return (
+      <div className="card" style={{ padding: 24, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <button onClick={onBack} className="btn" style={{ padding: '6px 10px', fontSize: '0.85rem' }}>
+            <ArrowLeft size={16} /> Back
+          </button>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{sensorIcon(sensor.sensor_type)} {sensor.name}</h3>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{sensor.location} · {sensor.zone}</div>
+          </div>
+        </div>
+        <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
+          No readings yet for this sensor. Check your integration is sending data, or wait a moment if you just connected it.
+        </div>
+      </div>
+    );
+  }
+
+  const values = chartData.map(d => d.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const avg = values.reduce((s, v) => s + v, 0) / values.length;
 
   return (
     <div className="card" style={{ padding: 24, marginBottom: 20 }}>

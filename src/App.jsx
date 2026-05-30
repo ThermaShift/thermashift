@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider, ProtectedRoute, AdminLogin } from './components/AdminAuth';
 import Home from './pages/Home';
 import Calculator from './pages/Calculator';
@@ -76,7 +77,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppLayout />
+        <ErrorBoundary>
+          <AppLayout />
+        </ErrorBoundary>
       </AuthProvider>
     </Router>
   );

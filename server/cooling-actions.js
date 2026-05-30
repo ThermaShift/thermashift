@@ -118,6 +118,23 @@ export async function proposeAction(sb, {
 }) {
   if (!ACTION_CATALOG[action_type]) throw new Error(`unknown_action_type: ${action_type}`);
 
+  // Tenant boundary: site_id and incident_id come from the client-provided
+  // payload but the route only enforces client_id ownership. Verify both
+  // referenced rows actually belong to client_id before persisting, otherwise
+  // an authenticated client could attach an action to another tenant's site
+  // or incident (and that cross-tenant id would leak into the signed webhook
+  // payload + audit trail).
+  if (site_id != null) {
+    const sites = await sb('monitoring_sites', 'GET', null,
+      `?id=eq.${encodeURIComponent(site_id)}&client_id=eq.${encodeURIComponent(client_id)}&limit=1`);
+    if (!sites?.length) throw new Error(`site_not_owned_by_client: ${site_id}`);
+  }
+  if (incident_id != null) {
+    const incs = await sb('monitoring_incidents', 'GET', null,
+      `?id=eq.${encodeURIComponent(incident_id)}&client_id=eq.${encodeURIComponent(client_id)}&limit=1`);
+    if (!incs?.length) throw new Error(`incident_not_owned_by_client: ${incident_id}`);
+  }
+
   const perm = await evaluatePermission(sb, client_id, { action_type, site_id, parameters });
   const requires_permission = !perm.auto_approve;
 

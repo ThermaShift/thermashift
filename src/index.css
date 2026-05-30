@@ -17,6 +17,11 @@
   --border: #334155;
   --gradient-start: #0f172a;
   --gradient-end: #0c1524;
+  /* Aliases — ChatWidget.jsx and a few other places use these names. Keep
+     them mapped to the canonical tokens so the chat header/input/bubbles
+     don't fall back to transparent on the live site. */
+  --bg-card: #1e293b;
+  --bg-dark: #0c1524;
 }
 
 * {

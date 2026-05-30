@@ -28,6 +28,18 @@ const env = () => ({
 });
 
 let stripeClient = null;
+
+/**
+ * Forward-compatible read of a subscription's current period end.
+ * As of Stripe API 2025-01, `current_period_end` moved off Subscription
+ * and onto Subscription.items.data[N]. We try the new location first,
+ * fall back to the legacy location, return null if neither exists.
+ * Without this, a future Stripe API bump silently breaks billing PATCHes.
+ */
+function periodEndIso(sub) {
+  const epoch = sub?.items?.data?.[0]?.current_period_end ?? sub?.current_period_end;
+  return epoch ? new Date(epoch * 1000).toISOString() : null;
+}
 function stripe() {
   const e = env();
   if (!e.secret) throw new Error('STRIPE_SECRET_KEY not configured');
@@ -137,7 +149,7 @@ export async function processStripeWebhook(sb, rawBody, signature) {
             tier,
             stripe_subscription_id: sub.id,
             subscription_status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_end: periodEndIso(sub),
             updated_at: new Date().toISOString(),
           }, `?id=eq.${clientId}`);
           result = { client_id: clientId, tier, status: sub.status };
@@ -152,7 +164,7 @@ export async function processStripeWebhook(sb, rawBody, signature) {
           const tier = TIER_FROM_PRICE(sub.items.data[0]?.price.id);
           const patch = {
             subscription_status: sub.status,
-            current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+            current_period_end: periodEndIso(sub),
             updated_at: new Date().toISOString(),
           };
           if (tier) patch.tier = tier;

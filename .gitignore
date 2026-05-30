@@ -51,3 +51,16 @@ screenshots/
 
 # Admin password — local only, NEVER commit
 THERMASHIFT-ADMIN-PASSWORD.txt
+
+# Catch-all API key / secret files — defensive against accidental commits
+# After 2026-05-29 security audit found "brandjet api key.txt" sitting
+# untracked at repo root, one git-add-A away from being public.
+*api*key*
+*api*key*.txt
+*api*key*.rtf
+*-key.txt
+*.key
+*api-token*
+*-token.txt
+secrets/
+.secrets/
