@@ -76,12 +76,11 @@ jobs:
                 const byFirm = {};
                 for (const f of FIRMS) byFirm[f.domain] = { firm: f, candidates: new Map() };
 
+                // Strategy 1 — title-based search, filter by companyDomain in results
+                console.log('--- Strategy 1: title-based search across ' + TITLES.length + ' titles ---');
                 for (const title of TITLES) {
                   let result;
                   try {
-                    // Use the United States country to focus and stay within scope.
-                    // No companyName filter (broken); we'll filter by companyDomain
-                    // on the result side.
                     result = await bj.searchLeads({ jobTitle: title, countryName: 'United States' });
                   } catch (e) {
                     console.warn('  search threw for', title, ':', e.message);
@@ -97,6 +96,62 @@ jobs:
                     matched++;
                   }
                   if (matched > 0) console.log('  title=' + JSON.stringify(title) + ' → ' + matched + ' match(es) across target firms');
+                }
+
+                // Strategy 2 — direct companyName search per firm (companyName filter
+                // is known unreliable but worth trying for these specific firms).
+                console.log();
+                console.log('--- Strategy 2: companyName search per firm ---');
+                for (const f of FIRMS) {
+                  for (const cname of [f.name, f.name.toLowerCase(), f.name.toUpperCase()]) {
+                    let result;
+                    try {
+                      result = await bj.searchLeads({ companyName: cname, countryName: 'United States' });
+                    } catch (e) {
+                      console.warn('  companyName=' + cname + ' threw:', e.message);
+                      continue;
+                    }
+                    const people = result?.results || [];
+                    let added = 0;
+                    for (const p of people) {
+                      // For company-name searches, accept any result whose domain
+                      // matches OR whose company string fuzzy-matches the firm name.
+                      const cd = (p.companyDomain || p.domain || '').toLowerCase().trim();
+                      const co = (p.company || '').toLowerCase().trim();
+                      const domainHit = cd === f.domain || cd.endsWith('.' + f.domain);
+                      const nameHit = co === f.name.toLowerCase() || co.includes(f.name.toLowerCase());
+                      if (!domainHit && !nameHit) continue;
+                      if (!byFirm[f.domain].candidates.has(p.id)) {
+                        byFirm[f.domain].candidates.set(p.id, p);
+                        added++;
+                      }
+                    }
+                    if (people.length > 0 || added > 0) {
+                      console.log('  companyName=' + JSON.stringify(cname) + ' → ' + people.length + ' raw, ' + added + ' new match(es)');
+                    }
+                  }
+                }
+
+                // Strategy 3 — companyDomain search per firm if BrandJet supports it
+                console.log();
+                console.log('--- Strategy 3: companyDomain search per firm ---');
+                for (const f of FIRMS) {
+                  let result;
+                  try {
+                    result = await bj.searchLeads({ companyDomain: f.domain, countryName: 'United States' });
+                  } catch (e) {
+                    console.warn('  companyDomain=' + f.domain + ' threw:', e.message);
+                    continue;
+                  }
+                  const people = result?.results || [];
+                  let added = 0;
+                  for (const p of people) {
+                    if (!byFirm[f.domain].candidates.has(p.id)) {
+                      byFirm[f.domain].candidates.set(p.id, p);
+                      added++;
+                    }
+                  }
+                  console.log('  companyDomain=' + f.domain + ' → ' + people.length + ' raw, ' + added + ' new match(es)');
                 }
 
                 console.log();
