@@ -1,0 +1,171 @@
+name: Find Partnership Contacts (179D firms)
+
+# One-off targeted search for partnership / channel / BD people at the
+# three 179D specialty firms Steve wants to reach: KBKG, alliantgroup,
+# Walker Reid Strategies. Uses BrandJet title-search + post-filter by
+# companyDomain (since companyName filter is unreliable). Does NOT
+# reveal emails — returns candidate list for Steve to pick from, then
+# we reveal selectively to spend credits wisely.
+
+on:
+  workflow_dispatch:
+    inputs:
+      reveal_top_per_firm:
+        description: 'Reveal emails for top N candidates per firm (0 = list only, no reveals)'
+        required: false
+        default: '0'
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            cd /var/www/thermashift
+            export REVEAL_TOP_PER_FIRM='${{ inputs.reveal_top_per_firm }}'
+            node -e "
+              const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r=await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const bj = await import('./server/brandjet-mcp.js');
+                bj.configureMcp(sb);
+
+                const FIRMS = [
+                  { name: 'KBKG',                domain: 'kbkg.com' },
+                  { name: 'alliantgroup',        domain: 'alliantgroup.com' },
+                  { name: 'Walker Reid Strategies', domain: 'walkerreid.com' },
+                ];
+
+                // Partnership / channel / BD titles we want.
+                const TITLES = [
+                  'Director of Strategic Partnerships',
+                  'VP of Strategic Partnerships',
+                  'Director of Channel Partnerships',
+                  'VP of Business Development',
+                  'Director of Business Development',
+                  'Head of Partnerships',
+                  'Strategic Alliances Director',
+                  'Channel Partner Manager',
+                  'Partnership Manager',
+                  'Director of Alliances',
+                ];
+
+                const revealCap = parseInt(process.env.REVEAL_TOP_PER_FIRM) || 0;
+                console.log('=== Partnership-contact search ===');
+                console.log('Firms:', FIRMS.map(f => f.name).join(', '));
+                console.log('Titles searched:', TITLES.length);
+                console.log('Reveal-top-per-firm:', revealCap);
+                console.log();
+
+                // Pre-load enrichment balance so we cap reveals if budget tight
+                const balBefore = await bj.getEnrichmentBalance();
+                console.log('Enrichment credits available:', balBefore?.balance);
+                console.log();
+
+                // Domain → matched candidates (deduped by id)
+                const byFirm = {};
+                for (const f of FIRMS) byFirm[f.domain] = { firm: f, candidates: new Map() };
+
+                for (const title of TITLES) {
+                  let result;
+                  try {
+                    // Use the United States country to focus and stay within scope.
+                    // No companyName filter (broken); we'll filter by companyDomain
+                    // on the result side.
+                    result = await bj.searchLeads({ jobTitle: title, countryName: 'United States' });
+                  } catch (e) {
+                    console.warn('  search threw for', title, ':', e.message);
+                    continue;
+                  }
+                  const people = result?.results || [];
+                  let matched = 0;
+                  for (const p of people) {
+                    const cd = (p.companyDomain || p.domain || '').toLowerCase().trim();
+                    const hit = FIRMS.find(f => cd === f.domain || cd.endsWith('.' + f.domain));
+                    if (!hit) continue;
+                    byFirm[hit.domain].candidates.set(p.id, p);
+                    matched++;
+                  }
+                  if (matched > 0) console.log('  title=' + JSON.stringify(title) + ' → ' + matched + ' match(es) across target firms');
+                }
+
+                console.log();
+                console.log('=== RESULTS by firm ===');
+                let totalCandidates = 0;
+                for (const f of FIRMS) {
+                  const cands = Array.from(byFirm[f.domain].candidates.values());
+                  console.log();
+                  console.log('## ' + f.name + ' (' + f.domain + ') — ' + cands.length + ' candidate(s)');
+                  if (!cands.length) {
+                    console.log('  (none — title not present, or company size below BrandJet threshold, or different role nomenclature)');
+                    continue;
+                  }
+                  totalCandidates += cands.length;
+                  // Sort by seniority hint (C-level / VP first, then Director, then Manager)
+                  cands.sort((a, b) => {
+                    const score = (p) => {
+                      const t = (p.jobTitle || '').toLowerCase();
+                      if (/chief|c-?level|cxo/.test(t)) return 5;
+                      if (/\\bvp\\b|vice president/.test(t)) return 4;
+                      if (/senior director/.test(t)) return 3.5;
+                      if (/director/.test(t)) return 3;
+                      if (/head of/.test(t)) return 2.5;
+                      if (/manager/.test(t)) return 2;
+                      return 1;
+                    };
+                    return score(b) - score(a);
+                  });
+                  for (const p of cands) {
+                    console.log('  - ' + (p.fullName || (p.firstName + ' ' + p.lastName)));
+                    console.log('      title:    ' + (p.jobTitle || '?'));
+                    console.log('      level:    ' + (p.jobLevel || '?'));
+                    console.log('      location: ' + (p.country || '?') + ' ' + (p.city || ''));
+                    console.log('      linkedin: ' + (p.linkedinUrl || '?'));
+                    console.log('      bj_id:    ' + p.id + (p.emailAvailable ? ' (email available, ' + (revealCap > 0 ? 'will reveal' : 'not revealed yet') + ')' : ' (no email on file)'));
+                  }
+
+                  // Selective reveal: top N per firm
+                  if (revealCap > 0) {
+                    console.log();
+                    console.log('  --- revealing top ' + Math.min(revealCap, cands.length) + ' ---');
+                    let revealed = 0;
+                    for (const p of cands) {
+                      if (revealed >= revealCap) break;
+                      if (!p.emailAvailable) continue;
+                      try {
+                        const r = await bj.revealEmail(p.id);
+                        const email = r?.email || r?.emailAddress || r?.contactInfo?.email;
+                        if (email) {
+                          console.log('  ✓ ' + p.fullName + ' → ' + email);
+                          revealed++;
+                        } else {
+                          console.log('  ✗ ' + p.fullName + ' → reveal failed (no email returned)');
+                        }
+                      } catch (e) {
+                        console.log('  ✗ ' + p.fullName + ' → reveal error: ' + e.message);
+                      }
+                    }
+                  }
+                }
+
+                console.log();
+                console.log('=== summary ===');
+                console.log('total candidates across 3 firms:', totalCandidates);
+                if (revealCap > 0) {
+                  const balAfter = await bj.getEnrichmentBalance();
+                  console.log('credits before:', balBefore?.balance, 'after:', balAfter?.balance, 'spent:', (balBefore?.balance || 0) - (balAfter?.balance || 0));
+                } else {
+                  console.log('no reveals attempted (set reveal_top_per_firm > 0 to spend credits)');
+                }
+              })().catch(e => { console.error('FATAL:', e.message); console.error(e.stack); process.exit(1); });
+            "
