@@ -12,28 +12,28 @@ const services = [
   {
     icon: Thermometer,
     title: 'Liquid Cooling Design & Install',
-    desc: 'One-time project: thermal assessment, CFD modeling, and turnkey installation of rear-door heat exchangers, direct-to-chip, or immersion cooling. Equipment paid upfront and owned by you from day one. Ongoing monitoring optionally handled by our Thermal Intelligence SaaS.',
+    desc: 'One-time engagement: thermal assessment, CFD modeling, and dielectric-fluid / manifold / CDU spec for rear-door heat exchangers, direct-to-chip, or immersion cooling. We own the design; partnered installers deliver. Equipment paid upfront and owned by you from day one. Ongoing monitoring optionally handled by our Thermal Intelligence SaaS.',
     tag: 'Liquid Cooling',
     anchor: 'service-liquid-cooling',
   },
   {
     icon: Leaf,
     title: 'Waste Heat Recovery & Monetization',
-    desc: 'Turn your thermal waste into revenue. We broker heat sales to greenhouses, district heating networks, and algae carbon capture systems.',
+    desc: 'Turn your thermal waste into revenue. We assess waste-heat monetization opportunities — greenhouses, district heating networks, algae carbon capture — and connect you with viable offtake buyers in your geography.',
     tag: 'Revenue from Heat',
     anchor: 'service-waste-heat',
   },
   {
     icon: BarChart3,
     title: 'Thermal Intelligence Platform',
-    desc: 'Real-time monitoring dashboard: rack thermal loads, PUE/WUE/carbon reporting, hotspot prediction, and efficiency optimization.',
+    desc: 'Real-time monitoring dashboard: rack thermal loads, PUE/WUE/carbon reporting, hotspot detection and alerting, and efficiency optimization. Predictive forecasting on the platform roadmap.',
     tag: 'SaaS',
     anchor: 'service-platform',
   },
   {
     icon: FileCheck,
     title: 'ESG & Environmental Consulting',
-    desc: 'Environmental impact assessments, heat reuse feasibility studies, water audits, PUE certification prep, and regulatory compliance guidance.',
+    desc: 'Environmental impact assessments, heat reuse feasibility studies, water-quality scoping (full audit available via partnered lab), Section 179D opportunity identification, and regulatory compliance guidance.',
     tag: 'Consulting',
     anchor: 'service-esg',
   },
@@ -89,7 +89,7 @@ export default function Home() {
               marginBottom: '40px',
               maxWidth: '560px',
             }}>
-              We help AI data centers cool their systems efficiently, safely, and sustainably — while converting waste heat from a liability into a community and environmental asset.
+              We help mid-market data centers and AI-first facilities cool their systems efficiently, safely, and sustainably — while converting waste heat from a liability into a community and environmental asset.
             </p>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               <Link to="/contact" className="btn btn-primary">
