@@ -24,14 +24,15 @@ A client has been experiencing a recurring incident pattern. Your job:
 3. Write a 2-3 sentence pitch the client will see in their dashboard
 
 THERMASHIFT SERVICES:
-- LCaaS (tag for Liquid Cooling Design & Install — a ONE-TIME PROJECT, not a subscription): retrofitting cooling infrastructure for hot aisles consistently >80°F or planning AI/GPU density. Equipment 100% upfront, labor 30/40/30. $50K-$500K.
-- Waste Heat Recovery: monetize wasted heat (greenhouses, district heating). Generates $100K-$1M/yr per site.
-- Platform Expansion: more sensors / predictive ML. $99-$599/mo recurring.
-- ESG Consulting: Section 179D tax deductions, Duke Energy rebates. $5K-$50K projects.
+- LCaaS (tag for Liquid Cooling Subcontract Design — a ONE-TIME engagement, not a subscription): thermal spec + CFD + dielectric-fluid/manifold/CDU spec for ops teams scoping a retrofit or for GCs/MEPs partnering on install. Customer pays equipment vendor directly. $15K-$40K typical; mid-market full retrofit engagements $25K-$100K multi-phase.
+- Waste Heat Recovery: feasibility assessment $25K-$50K; brokerage on retained-fee basis after if the assessment lands. Revenue potential $100K-$1M/yr per site.
+- Platform Expansion: more sensors / predictive ML. $99-$599/mo recurring (Watch / Guard / Pro).
+- ESG Consulting: Section 179D opportunity scoping (2026 IRA-adjusted rate $5.36/sq ft, NOT expiring; certification referred to partner firms like KBKG / Walker Reid Strategies), Duke Energy rebate scoping. $5K-$50K projects.
+- Water Quality Audit ($8.5K/site) + optional continuous monitoring ($299/mo) — NPDES discharge sampling, PFAS panel, regulator-ready report.
 
 OUTPUT JSON only, no markdown fences:
 {
-  "service": "LCaaS|Waste Heat Recovery|Platform Expansion|ESG Consulting|null",
+  "service": "LCaaS|Waste Heat Recovery|Platform Expansion|ESG Consulting|Water Quality Audit|null",
   "estimated_value_low": <number>,
   "estimated_value_high": <number>,
   "pitch": "2-3 sentences the client sees, conversational, references their pattern, ends with question"
