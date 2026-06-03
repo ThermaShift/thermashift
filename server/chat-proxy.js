@@ -732,7 +732,35 @@ app.get('/api/leads/:email/history', adminAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // VAPI VOICE CALL WEBHOOK
 // ═══════════════════════════════════════════════════════════
+// SECURITY: this endpoint writes to call_logs AND fires a real SMS via
+// Twilio when duration > 30s with the caller-supplied phone number.
+// Without auth, an attacker can forge an `end-of-call-report` with any
+// `customer.number` they choose and use the Twilio account to spam SMS
+// (eventually getting the Twilio number blocklisted).
+//
+// Vapi supports a shared-secret header — set VAPI_WEBHOOK_SECRET in env
+// AND in the Vapi dashboard (Server URL Secret). Without the env var set
+// the endpoint fails closed (503). Same posture as the Resend webhook
+// above.
 app.post('/api/webhooks/vapi', async (req, res) => {
+  const expected = process.env.VAPI_WEBHOOK_SECRET;
+  if (!expected) {
+    console.warn('[vapi-webhook] VAPI_WEBHOOK_SECRET not set — refusing unverified event');
+    return res.status(503).json({ error: 'webhook_secret_not_configured' });
+  }
+  const provided = req.headers['x-vapi-secret'] || req.headers['x-vapi-signature'] || '';
+  // Constant-time compare. Lengths may differ — short-circuit safely.
+  let ok = false;
+  if (typeof provided === 'string' && provided.length === expected.length) {
+    try {
+      ok = crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+    } catch { ok = false; }
+  }
+  if (!ok) {
+    console.warn(`[vapi-webhook] signature mismatch from ${req.headers['x-forwarded-for'] || req.socket.remoteAddress}`);
+    return res.status(401).json({ error: 'invalid_signature' });
+  }
+
   try {
     const event = req.body;
     const type = event.message?.type || event.type;
