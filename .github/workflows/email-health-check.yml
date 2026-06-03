@@ -1,0 +1,121 @@
+name: Email Health Check (both senders)
+
+# Sends one diagnostic email from each verified sender via the existing
+# Resend infrastructure + queries BrandJet for the steve@thermashiftcooling.com
+# mailbox state. Steve can then verify receipt manually in his Gmail.
+
+on:
+  workflow_dispatch:
+    inputs:
+      recipient:
+        description: 'Where to send the diagnostic email'
+        required: false
+        default: 'thermashiftofficial@gmail.com'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 3m
+          script: |
+            cd /var/www/thermashift
+            export RECIPIENT='${{ inputs.recipient }}'
+            node -e "
+              const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
+              async function sb(t,m,b,q='') {
+                const r=await fetch('https://auqklthrpvsqyelfjood.supabase.co/rest/v1/'+t+q,{method:m,headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'},body:b?JSON.stringify(b):undefined});
+                if(!r.ok)throw new Error(t+': '+r.status+' '+await r.text());
+                const x=await r.text();return x?JSON.parse(x):null;
+              }
+              (async () => {
+                const recipient = process.env.RECIPIENT;
+                const ts = new Date().toISOString();
+
+                console.log('=== EMAIL HEALTH CHECK ===');
+                console.log('Recipient:', recipient);
+                console.log('Timestamp:', ts);
+                console.log();
+
+                // Path 1: Resend outbound via thermashift.net domain
+                // (this is the same path used by chat-proxy.js → email.js for lead
+                // notifications, review delivery, call notifications, etc.)
+                const RESEND_KEY = process.env.RESEND_API_KEY;
+                console.log('--- Test 1: Resend outbound from thermashift.net ---');
+                if (!RESEND_KEY) {
+                  console.log('  ✗ RESEND_API_KEY not set in env — skipping');
+                } else {
+                  // Send from notifications@ since that's what the existing
+                  // call-notification email uses (line ~803 in chat-proxy.js).
+                  const fromAddresses = [
+                    'ThermaShift <notifications@thermashift.net>',
+                    'ThermaShift <admin@thermashift.net>',
+                    'Steve Betancur <steve@thermashift.net>',
+                  ];
+                  for (const from of fromAddresses) {
+                    try {
+                      const r = await fetch('https://api.resend.com/emails', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + RESEND_KEY, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          from,
+                          to: [recipient],
+                          subject: 'ThermaShift email health check (' + from.match(/<(.+)>/)[1] + ') — ' + ts.slice(0,16),
+                          text: 'Diagnostic from email-health-check workflow.\\nFrom address: ' + from + '\\nTimestamp: ' + ts + '\\nIf you see this in your inbox, this sender is healthy.',
+                        }),
+                      });
+                      const body = await r.text();
+                      console.log('  ' + (r.ok ? '✓' : '✗') + ' ' + from + ' → status=' + r.status);
+                      if (!r.ok) console.log('      body:', body.slice(0, 200));
+                      else {
+                        try { console.log('      resend_id:', JSON.parse(body).id); } catch {}
+                      }
+                    } catch (e) {
+                      console.log('  ✗ ' + from + ' threw: ' + e.message);
+                    }
+                  }
+                }
+
+                // Path 2: BrandJet email-account status (steve@thermashiftcooling.com)
+                console.log();
+                console.log('--- Test 2: BrandJet sender state (steve@thermashiftcooling.com) ---');
+                try {
+                  const bj = await import('./server/brandjet-mcp.js');
+                  bj.configureMcp(sb);
+                  const accounts = await bj.getEmailAccounts();
+                  const cold = (accounts?.emailAccounts || []).find(a => /thermashiftcooling/.test(a.email || ''));
+                  if (!cold) {
+                    console.log('  ✗ steve@thermashiftcooling.com not found in BrandJet email accounts list');
+                    console.log('  Available:', (accounts?.emailAccounts || []).map(a => a.email).join(', '));
+                  } else {
+                    console.log('  email:', cold.email);
+                    console.log('  accountStatus:', cold.accountStatus);
+                    console.log('  warmupEnabled:', cold.warmupEnabled);
+                    console.log('  warmupAccountStatus:', cold.warmupAccountStatus);
+                    console.log('  warmupReadiness:', JSON.stringify(cold.warmupReadiness));
+                    if (cold.accountStatus !== 'connected' || cold.warmupAccountStatus !== 'active') {
+                      console.log('  ✗ WARNING — sender is not in healthy connected+active state');
+                    } else {
+                      console.log('  ✓ sender healthy (connected + warmup active)');
+                    }
+                  }
+                } catch (e) {
+                  console.log('  ✗ BrandJet check threw:', e.message);
+                }
+
+                console.log();
+                console.log('=== STEVE TO VERIFY MANUALLY ===');
+                console.log('1. Check ' + recipient + ' inbox in ~30 seconds for the diagnostic email(s).');
+                console.log('   If notifications@/admin@/steve@thermashift.net all arrive: outbound chain is healthy.');
+                console.log('   If admin@ arrives but routing to thermashiftofficial@gmail.com fails: Porkbun forwarding broken.');
+                console.log('2. For thermashiftcooling.com: open BrandJet dashboard. Confirm warmup conversations');
+                console.log('   are still flowing in the warmup inbox (look for incoming warmup mail from other BrandJet users).');
+                console.log('3. To send a test FROM steve@thermashiftcooling.com, log into the Zoho webmail');
+                console.log('   for that mailbox and compose a normal email to your Gmail. SPF/DKIM should pass at mail-tester.com.');
+              })().catch(e => { console.error('FATAL:', e.message); console.error(e.stack); process.exit(1); });
+            "
