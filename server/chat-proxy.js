@@ -31,6 +31,7 @@ import { runIntentScrape } from './intent-scraper.js';
 import { buildCSV, brandjetHealth } from './brandjet.js';
 import * as bjMcp from './brandjet-mcp.js';
 import * as bjDiscovery from './brandjet-discovery.js';
+import { SYSTEM_PROMPT as ALEX_SYSTEM_PROMPT } from './alex-prompt.js';
 import crypto from 'node:crypto';
 
 try {
@@ -68,6 +69,56 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '1mb' }));
 
+// ─── Resource-token HMAC scheme ─────────────────────────────
+// Used to gate /api/audits/:id, /api/audits/:id/pdf, /api/invoices/:id
+// without breaking the customer email-link flow. Each token encodes:
+//   <expires-unix-seconds>.<sha256-hmac(resource:id:exp, secret)>
+// Customer-facing links carry ?t=<token>; admin requests can use adminAuth
+// instead. Without one of those, the GET returns 401.
+//
+// Secret: process.env.RESOURCE_TOKEN_SECRET (deploy must set this; we fall
+// back to the Supabase anon key as a derivable secret so dev doesn't break).
+// Long expiration (default 1 year) — these are emailed links, not session
+// tokens; receivers may open them weeks/months later.
+function _resourceSecret() {
+  return process.env.RESOURCE_TOKEN_SECRET || process.env.SUPABASE_KEY || 'thermashift-dev-secret';
+}
+function generateResourceToken(resource, id, expiresInDays = 365) {
+  const crypto = require('crypto');
+  const exp = Math.floor(Date.now() / 1000) + (expiresInDays * 86400);
+  const payload = `${resource}:${id}:${exp}`;
+  const mac = crypto.createHmac('sha256', _resourceSecret()).update(payload).digest('hex');
+  return `${exp}.${mac}`;
+}
+function verifyResourceToken(resource, id, token) {
+  if (!token) return false;
+  const [expStr, mac] = String(token).split('.');
+  if (!expStr || !mac) return false;
+  const exp = parseInt(expStr, 10);
+  if (Number.isNaN(exp) || exp < Math.floor(Date.now() / 1000)) return false;
+  const crypto = require('crypto');
+  const expectedMac = crypto.createHmac('sha256', _resourceSecret())
+    .update(`${resource}:${id}:${exp}`).digest('hex');
+  if (mac.length !== expectedMac.length) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(mac, 'hex'), Buffer.from(expectedMac, 'hex'));
+  } catch { return false; }
+}
+/**
+ * Middleware factory: requires either a valid ?t=<token> for the resource:id
+ * combination, OR a valid admin token (basic / x-admin-token / authorization).
+ * Use as: app.get('/api/audits/:id', requireResourceTokenOrAdmin('audit', 'id'), handler)
+ */
+function requireResourceTokenOrAdmin(resource, idParam = 'id') {
+  return async (req, res, next) => {
+    const id = req.params[idParam];
+    const token = req.query.t || req.headers['x-resource-token'];
+    if (id && verifyResourceToken(resource, id, token)) return next();
+    // Fall through to admin auth — same code path used by the adminAuth route gate.
+    return adminAuth(req, res, next);
+  };
+}
+
 // ─── Supabase helper ────────────────────────────────────────
 async function sb(table, method, body, query = '') {
   const url = `${SUPABASE_URL}/${table}${query}`;
@@ -103,9 +154,52 @@ function generateInvoiceNumber() {
 // ═══════════════════════════════════════════════════════════
 // CHAT PROXY
 // ═══════════════════════════════════════════════════════════
+// ─── /api/chat hardening ──────────────────────────────────────
+// (1) Server enforces the SYSTEM_PROMPT — caller-supplied `system` is
+//     IGNORED. Prevents (a) the full pricing playbook from sitting in
+//     the public client bundle, and (b) attackers from using the proxy
+//     as a free Claude relay with their own prompt.
+// (2) `max_tokens` hard-capped at 1024. The widget UI never needs more
+//     and the cap blocks budget-drain attacks.
+// (3) Per-IP rate limit. ~20/min, ~200/day. Burns through one IP's quota
+//     before the daily budget can be cleaned out.
+const CHAT_RL = { perMin: new Map(), perDay: new Map() };
+const CHAT_RL_LIMIT_MIN = 20;
+const CHAT_RL_LIMIT_DAY = 200;
+function chatRateOk(ip) {
+  const now = Date.now();
+  // Per-minute bucket
+  const m = CHAT_RL.perMin.get(ip);
+  if (!m || (now - m.start) > 60_000) {
+    CHAT_RL.perMin.set(ip, { count: 1, start: now });
+  } else {
+    m.count += 1;
+    if (m.count > CHAT_RL_LIMIT_MIN) return { ok: false, retryAfter: 60 - Math.floor((now - m.start) / 1000) };
+  }
+  // Per-day bucket
+  const d = CHAT_RL.perDay.get(ip);
+  if (!d || (now - d.start) > 86_400_000) {
+    CHAT_RL.perDay.set(ip, { count: 1, start: now });
+  } else {
+    d.count += 1;
+    if (d.count > CHAT_RL_LIMIT_DAY) return { ok: false, retryAfter: 86_400 - Math.floor((now - d.start) / 1000) };
+  }
+  return { ok: true };
+}
+
 app.post('/api/chat', async (req, res) => {
-  const { model, max_tokens, system, messages, stream } = req.body;
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const rl = chatRateOk(ip);
+  if (!rl.ok) {
+    res.set('Retry-After', String(rl.retryAfter));
+    return res.status(429).json({ error: 'rate_limited', retry_after_seconds: rl.retryAfter });
+  }
+
+  const { messages, stream } = req.body;
+  // NOTE: caller-supplied `model`, `max_tokens`, and `system` are deliberately
+  // ignored. We pick safe values server-side.
   if (!messages || !Array.isArray(messages)) return res.status(400).json({ error: 'messages array required' });
+  if (messages.length > 60) return res.status(400).json({ error: 'message history too long (max 60 turns)' });
 
   try {
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
@@ -116,9 +210,9 @@ app.post('/api/chat', async (req, res) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: model || 'claude-sonnet-4-20250514',
-        max_tokens: max_tokens || 2048,
-        system: system || '',
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1024,           // hard cap (was caller-supplied up to 2048)
+        system: ALEX_SYSTEM_PROMPT, // server-side ONLY
         messages,
         stream: stream !== false,
       }),
@@ -279,8 +373,11 @@ app.post('/api/audits', async (req, res) => {
     const auditId = result?.[0]?.id;
     console.log(`Audit ${auditId} created for ${audit.lead_email} — generating review...`);
 
-    // Return immediately, generate review in background
-    res.json({ success: true, audit_id: auditId, status: 'generating' });
+    // Return immediately, generate review in background.
+    // `audit_token` lets the chat widget poll status without enabling drive-by
+    // enumeration of any audit by sequential id.
+    const auditToken = generateResourceToken('audit', auditId);
+    res.json({ success: true, audit_id: auditId, audit_token: auditToken, status: 'generating' });
 
     // Generate review asynchronously
     try {
@@ -351,8 +448,10 @@ app.post('/api/audits', async (req, res) => {
   }
 });
 
-// Get audit status (polled by frontend)
-app.get('/api/audits/:id', async (req, res) => {
+// Get audit status (polled by frontend).
+// Gated by HMAC token (?t=...) returned at audit creation, OR adminAuth.
+// Closes the open-enumeration path that let anyone walk /api/audits/1, 2, 3...
+app.get('/api/audits/:id', requireResourceTokenOrAdmin('audit'), async (req, res) => {
   try {
     const result = await sb('audits', 'GET', null, `?id=eq.${req.params.id}&limit=1`);
     if (!result?.length) return res.status(404).json({ error: 'Audit not found' });
@@ -362,8 +461,8 @@ app.get('/api/audits/:id', async (req, res) => {
   }
 });
 
-// Get audit review as PDF
-app.get('/api/audits/:id/pdf', async (req, res) => {
+// Get audit review as PDF (same gate)
+app.get('/api/audits/:id/pdf', requireResourceTokenOrAdmin('audit'), async (req, res) => {
   try {
     const result = await sb('audits', 'GET', null, `?id=eq.${req.params.id}&limit=1`);
     if (!result?.length) return res.status(404).json({ error: 'Audit not found' });
@@ -470,7 +569,7 @@ app.post('/api/proposals', async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // INVOICES
 // ═══════════════════════════════════════════════════════════
-app.get('/api/invoices/:id', async (req, res) => {
+app.get('/api/invoices/:id', requireResourceTokenOrAdmin('invoice'), async (req, res) => {
   try {
     const result = await sb('invoices', 'GET', null, `?id=eq.${req.params.id}&limit=1`);
     if (!result?.length) return res.status(404).json({ error: 'Invoice not found' });
@@ -479,7 +578,8 @@ app.get('/api/invoices/:id', async (req, res) => {
 });
 
 // Get all invoices for a lead
-app.get('/api/leads/:email/invoices', async (req, res) => {
+// Admin-only — internal lookup of all invoices for a lead.
+app.get('/api/leads/:email/invoices', adminAuth, async (req, res) => {
   try {
     const invoices = await sb('invoices', 'GET', null,
       `?lead_email=eq.${encodeURIComponent(req.params.email)}&order=created_at.desc`);
@@ -607,7 +707,9 @@ app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), asyn
 // ═══════════════════════════════════════════════════════════
 // LEAD HISTORY
 // ═══════════════════════════════════════════════════════════
-app.get('/api/leads/:email/history', async (req, res) => {
+// Admin-only — internal CRM lookup. Was previously OPEN, leaking every
+// conversation, audit, proposal, invoice, and call_log for any guessed email.
+app.get('/api/leads/:email/history', adminAuth, async (req, res) => {
   const email = decodeURIComponent(req.params.email);
   try {
     const leads = await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(email)}&limit=1`);
@@ -1376,28 +1478,22 @@ app.get('/api/admin/activity', adminAuth, async (req, res) => {
 // ═══════════════════════════════════════════════════════════
 // RETURNING VISITOR LOOKUP
 // ═══════════════════════════════════════════════════════════
+// Returning-visitor check — called by the public chat widget.
+// Returns ONLY name + company (so the widget can say "welcome back, {{name}}").
+// Was previously leaking: lead_score, sales pipeline status, last audit savings
+// estimate, target PUE, recommended_services. Anyone enumerating emails could
+// scrape ThermaShift's lead score on every contact + the deal-value estimates
+// in their audit history. Reduced to the minimum the widget actually needs.
+//
+// Admin can still get the full record via /api/admin/leads or
+// /api/leads/:email/history (both adminAuth-gated).
 app.get('/api/leads/lookup/:email', async (req, res) => {
   const email = decodeURIComponent(req.params.email);
   try {
-    const leads = await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(email)}&limit=1`);
+    const leads = await sb('leads', 'GET', null, `?email=eq.${encodeURIComponent(email)}&select=name,company&limit=1`);
     if (!leads?.length) return res.json({ found: false });
-
     const lead = leads[0];
-    const audits = await sb('audits', 'GET', null, `?lead_email=eq.${encodeURIComponent(email)}&order=created_at.desc&limit=1`).catch(() => []);
-
-    res.json({
-      found: true,
-      name: lead.name,
-      company: lead.company,
-      status: lead.status,
-      lead_score: lead.lead_score,
-      last_audit: audits?.[0] ? {
-        status: audits[0].status,
-        estimated_annual_savings: audits[0].estimated_annual_savings,
-        target_pue: audits[0].target_pue,
-        recommended_services: audits[0].recommended_services,
-      } : null,
-    });
+    res.json({ found: true, name: lead.name || null, company: lead.company || null });
   } catch { res.json({ found: false }); }
 });
 

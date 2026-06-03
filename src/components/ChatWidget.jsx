@@ -71,12 +71,12 @@ export default function ChatWidget() {
   }, []);
 
   // Poll for audit completion and inject results into conversation
-  const pollAuditResults = useCallback(async (auditId) => {
+  const pollAuditResults = useCallback(async (auditId, auditToken) => {
     const maxAttempts = 30; // 30 seconds
     for (let i = 0; i < maxAttempts; i++) {
       await new Promise(r => setTimeout(r, 2000));
       try {
-        const result = await getAuditStatus(auditId);
+        const result = await getAuditStatus(auditId, auditToken);
         if (result?.status === 'completed' && result.review_summary) {
           // Inject the review results as a system context message and trigger Alex to discuss them
           const reviewContext = `[SYSTEM: The cooling efficiency review has been generated and emailed to the prospect. Here are the results for you to discuss with them:\n\n` +
@@ -201,8 +201,9 @@ export default function ChatWidget() {
               }).then(result => {
                 if (result?.audit_id) {
                   auditIdRef.current = result.audit_id;
-                  // Start polling for results
-                  pollAuditResults(result.audit_id);
+                  // audit_token gates the polling request server-side (HMAC).
+                  // Without it, /api/audits/:id returns 401.
+                  pollAuditResults(result.audit_id, result.audit_token);
                 }
               }).catch(err => console.error('Audit submit error:', err));
             }
@@ -392,7 +393,7 @@ export default function ChatWidget() {
               ><Send size={18} /></button>
             </div>
             <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '0.7rem', color: 'var(--text-dim)' }}>
-              Powered by ThermaShift AI
+              Powered by ThermaShift
             </div>
           </div>
         </div>

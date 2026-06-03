@@ -1,0 +1,43 @@
+Category,Tier/Service,Price,Period,Best For,Key Features,Setup Fee
+SaaS Subscription,Watch,99,monthly,Single facility / lowest commitment,"Email alerts; 3 sites; 30-day history; BYO sensors; Real-time dashboard",0
+SaaS Subscription,Guard,299,monthly,Multi-site ops / want AI insights,"Watch + SMS/voice alerts + AI Cooling Advisor + 10 sites + 1-year history + Custom alert rules + Composite rules",0
+SaaS Subscription,Pro,599,monthly,AI/GPU density / want auto-action,"Guard + AI auto-action on cooling + Permission rules + Audit log + BMS webhook + Multi-turn AI chat + Drag-drop dashboards + Sales recommendations + Unlimited sites",0
+SaaS Subscription,Enterprise,2500-10000,monthly,Large operators / white-label / SLA,"Pro + Dedicated BMS integration + SLA guarantees + SOC 2 + SAML SSO + White-label + Multi-tenancy + Quarterly review calls",5000-15000 (one-time)
+Consulting / Design,Liquid Cooling Subcontract Design,15000-40000,one-time,"GC / MEP firms bidding DC liquid cooling work; ops teams scoping a retrofit","Thermal design, CFD modeling, dielectric fluid spec, manifold/CDU spec. Customer pays equipment vendor directly; ThermaShift owns the thermal spec, partnered MEP/GC handles install.",-
+Consulting / Design,Cooling Optimization Engagement,25000-100000,one-time,"Mid-market colo retrofits up to ~5MW","Thermal assessment + CFD + recommendation roadmap + vendor-neutral spec + partnered implementation. Larger retrofits should be scoped as a multi-phase engagement, not a fixed-fee bid.",-
+Consulting / Design,Waste Heat Feasibility Assessment,25000-50000,one-time,"Sites generating 1MW+ waste heat exploring monetization","Heat-buyer identification, district heating / greenhouse / aquaculture revenue modeling, regulatory review. Brokerage to follow on retained-fee basis if the assessment lands.",-
+Consulting / Design,Thermal Intelligence Implementation (Small),17500,one-time,Up to 100 racks turnkey,"Sensors + gateways + install + commissioning",-
+Consulting / Design,Thermal Intelligence Implementation (Mid),37500,one-time,100-300 racks turnkey,"Sensors + gateways + install + commissioning",-
+Consulting / Design,Thermal Intelligence Implementation (Large),75000,one-time,300+ racks turnkey,"Sensors + gateways + install + commissioning",-
+Consulting / Design,Thermal Intelligence Implementation - Monthly (Small),3500,monthly,Up to 100 racks ongoing,"Cloud platform + AI analytics + alerts",-
+Consulting / Design,Thermal Intelligence Implementation - Monthly (Mid),7500,monthly,100-300 racks ongoing,"Cloud platform + AI analytics + alerts",-
+Consulting / Design,Thermal Intelligence Implementation - Monthly (Large),15000,monthly,300+ racks ongoing,"Cloud platform + AI analytics + alerts",-
+Consulting / Design,ESG Consulting (Project),5000-50000,one-time,"Compliance / Section 179D scoping / Duke Energy rebates","179D opportunity identification + scope; Duke Energy rebate apps; ESG report drafting. 179D certification itself referred to partner P.E./CPA firms (KBKG, Walker Reid, etc.) — ThermaShift does not stamp energy analyses.",-
+Consulting / Design,Water Quality Audit (per site),8500,one-time,"DC operators with cooling tower discharge, NPDES exposure, or PFAS concerns","Sample chain-of-custody, certified lab panel (TDS, pH, biocides, PFAS via 537.1/533, heavy metals), regulator-ready PDF report, mass balance + cycles-of-concentration analysis.",-
+Consulting / Design,Water Quality Continuous Monitoring (Add-on),299,monthly,"After audit; want ongoing quarterly reporting","Add water-quality sensors to SaaS dashboard, monthly DMR-style report, regulatory threshold alerts.",-
+Bundle Discount,2 services,10% off,-,Cross-sell,Apply to project work,-
+Bundle Discount,3 services,12% off,-,Cross-sell,Apply to project work,-
+Bundle Discount,4 services (full managed),15% off,-,Maximum bundle,Full ThermaShift relationship,-
+Bundle Discount,Annual SaaS prepay,16% off,-,Cash-flow positive clients,2 months free on any tier,-
+Bundle Discount,3-year commitment,20% off,-,Long-term partnership,Price lock + 20% discount,-
+Competitor Reference,Phaidra,Custom (enterprise),annually,"AI-native cooling control at hyperscale","Ex-DeepMind founders / RL-based / Series A $25M (Index Ventures) / NTT customer signed / Tier 1-2 target, not mid-market — ThermaShift positioning moves down-market to avoid head-to-head",-
+Competitor Reference,Vigilent AI Cooling,50000-200000+,annually,Enterprise-only,"Closest direct competitor / hardware-tied",-
+Competitor Reference,EkkoSense,30000+,annually,UK-based,"AI thermal optimization / international",-
+Competitor Reference,Sunbird DCIM,50000-100000,annually,DCIM,"Generic DCIM / not cooling-focused. ThermaShift gap: no DCIM read adapter today (priority gap to close).",-
+Competitor Reference,Nlyte DCIM,100000-500000,annually,Enterprise DCIM,"Heavy / slow to deploy",-
+Competitor Reference,Schneider EcoStruxure,50000-200000+,annually,Enterprise / Schneider hardware-tied,"Tied to Schneider equipment",-
+Tax/Rebate,Section 179D,5.36 per sq ft (2026 max),per filing,Cooling efficiency upgrades,"2026 IRA-adjusted: $5.36/sq ft at full prevailing-wage rate (up from pre-IRA $1.88). Retroactive to 2023 placed-in-service. NOT expiring. Certification requires licensed P.E. — refer to KBKG / alliantgroup / Walker Reid Strategies, do not stamp directly.",-
+Tax/Rebate,Duke Energy EnergyWise,50 per kW saved,annual rebate,NC/SC commercial customers,"Stackable with 179D / cooling efficiency",-
+Tax/Rebate,Duke Custom Incentive,Custom,one-time,Projects >$5K saved kWh,"Custom rebate program",-
+
+# RETIRED 2026-05-29 — these tiers were on the public pricing reference but
+# ThermaShift cannot solo-deliver them at the quality bar expected at that
+# price point. Listing them on a public site damages credibility on first
+# contact with enterprise buyers (they can tell you don't have a bonded GC,
+# licensed P.E. on staff, or commissioning agents). Retained here as a
+# changelog entry; do NOT quote in calls or copy.
+#  Cooling Optimization (Large), $500K, hyperscale-adjacent retrofit — RETIRED
+#  Waste Heat Recovery (Full), $300K, build-out heat recovery system — RETIRED
+# Replacements above: "Cooling Optimization Engagement" (mid-market scope at
+# realistic price, multi-phase if larger) and "Waste Heat Feasibility
+# Assessment" (assessment-only; brokerage on retained-fee basis after).
