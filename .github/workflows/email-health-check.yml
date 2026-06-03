@@ -26,10 +26,29 @@ jobs:
           script: |
             cd /var/www/thermashift
             export RECIPIENT='${{ inputs.recipient }}'
-            # Load .env so RESEND_API_KEY + others are visible to the inline node script.
-            # The main chat-proxy process loads it via dotenv at startup; a one-off
-            # `node -e` does not, hence this explicit export.
-            set -a; [ -f .env ] && source .env; set +a
+
+            # Diagnostic: confirm .env exists + grep RESEND_API_KEY presence
+            # (we'll see this in the log even before node runs)
+            echo "--- .env presence check ---"
+            if [ -f .env ]; then
+              echo ".env file: present"
+              if grep -q '^RESEND_API_KEY=' .env; then
+                echo "RESEND_API_KEY: present in .env"
+                # Extract the value safely (no shell expansion of dollar signs)
+                export RESEND_API_KEY=$(grep '^RESEND_API_KEY=' .env | head -1 | cut -d'=' -f2- | sed -e "s/^['\"]//" -e "s/['\"]$//")
+              else
+                echo "RESEND_API_KEY: NOT in .env"
+              fi
+              if grep -q '^VAPI_WEBHOOK_SECRET=' .env; then
+                echo "VAPI_WEBHOOK_SECRET: present in .env (vapi webhook will accept signed requests)"
+              else
+                echo "VAPI_WEBHOOK_SECRET: NOT in .env (vapi webhook returns 503 until set)"
+              fi
+            else
+              echo ".env file: MISSING — this is the problem"
+            fi
+            echo "--- end .env check ---"
+
             node -e "
               const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
               async function sb(t,m,b,q='') {
