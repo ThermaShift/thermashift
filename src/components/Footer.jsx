@@ -20,10 +20,10 @@ export default function Footer() {
           <div>
             <h4 style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>Services</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Liquid Cooling Design & Install</Link>
-              <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Waste Heat Recovery</Link>
-              <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Thermal Intelligence Platform</Link>
-              <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>ESG Consulting</Link>
+              <Link to="/#service-liquid-cooling" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Liquid Cooling Design & Install</Link>
+              <Link to="/#service-waste-heat" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Waste Heat Recovery</Link>
+              <Link to="/#service-platform" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Thermal Intelligence Platform</Link>
+              <Link to="/#service-esg" style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>ESG Consulting</Link>
             </div>
           </div>
           <div>

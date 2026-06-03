@@ -14,24 +14,28 @@ const services = [
     title: 'Liquid Cooling Design & Install',
     desc: 'One-time project: thermal assessment, CFD modeling, and turnkey installation of rear-door heat exchangers, direct-to-chip, or immersion cooling. Equipment paid upfront and owned by you from day one. Ongoing monitoring optionally handled by our Thermal Intelligence SaaS.',
     tag: 'Liquid Cooling',
+    anchor: 'service-liquid-cooling',
   },
   {
     icon: Leaf,
     title: 'Waste Heat Recovery & Monetization',
     desc: 'Turn your thermal waste into revenue. We broker heat sales to greenhouses, district heating networks, and algae carbon capture systems.',
     tag: 'Revenue from Heat',
+    anchor: 'service-waste-heat',
   },
   {
     icon: BarChart3,
     title: 'Thermal Intelligence Platform',
     desc: 'Real-time monitoring dashboard: rack thermal loads, PUE/WUE/carbon reporting, hotspot prediction, and efficiency optimization.',
     tag: 'SaaS',
+    anchor: 'service-platform',
   },
   {
     icon: FileCheck,
     title: 'ESG & Environmental Consulting',
     desc: 'Environmental impact assessments, heat reuse feasibility studies, water audits, PUE certification prep, and regulatory compliance guidance.',
     tag: 'Consulting',
+    anchor: 'service-esg',
   },
 ];
 
@@ -170,7 +174,12 @@ export default function Home() {
             gap: '24px',
           }}>
             {services.map((s, i) => (
-              <div key={i} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div
+                key={i}
+                id={s.anchor}
+                className="card"
+                style={{ display: 'flex', flexDirection: 'column', scrollMarginTop: '90px' }}
+              >
                 <div style={{
                   width: '48px',
                   height: '48px',

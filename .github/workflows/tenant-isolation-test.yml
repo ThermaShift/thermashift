@@ -1,0 +1,61 @@
+name: Tenant Isolation Test (Day-1 quality bar)
+
+# Seeds two TEST_ clients in Supabase, runs the tenant-isolation scenario
+# (sentinel reading + cross-tenant probe), tears down the test data.
+# This is the gating quality bar — must pass before any paying customer.
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_teardown:
+        description: 'Skip teardown (leaves TEST_ data in Supabase for manual inspection)'
+        required: false
+        default: 'false'
+
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 10m
+          script: |
+            cd /var/www/thermashift
+            export SKIP_TEARDOWN='${{ inputs.skip_teardown }}'
+            export THERMASHIFT_BASE_URL='https://thermashift.net'
+
+            echo "=== STEP 1: Seed TEST_A and TEST_B clients ==="
+            node server/emulator/seed.js
+            seed_status=$?
+            if [ $seed_status -ne 0 ]; then
+              echo "FATAL: seed.js failed (exit $seed_status)"
+              exit $seed_status
+            fi
+
+            echo ""
+            echo "=== STEP 2: Run tenant-isolation scenario ==="
+            node server/emulator/scenarios/tenant-isolation.js
+            iso_status=$?
+            echo "Scenario exit code: $iso_status"
+
+            echo ""
+            if [ "$SKIP_TEARDOWN" = "true" ]; then
+              echo "=== STEP 3 (skipped): teardown left for manual inspection ==="
+              echo "Run \`node server/emulator/teardown.js\` manually when ready."
+            else
+              echo "=== STEP 3: Teardown TEST_ data ==="
+              node server/emulator/teardown.js
+            fi
+
+            echo ""
+            echo "=== FINAL RESULT ==="
+            if [ $iso_status -eq 0 ]; then
+              echo "✓ PASS — tenant isolation holds. Safe to onboard real customers."
+            else
+              echo "✗ FAIL — tenant isolation broken. DO NOT ONBOARD real customers until fixed."
+            fi
+            exit $iso_status
