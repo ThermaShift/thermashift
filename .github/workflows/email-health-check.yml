@@ -26,6 +26,10 @@ jobs:
           script: |
             cd /var/www/thermashift
             export RECIPIENT='${{ inputs.recipient }}'
+            # Load .env so RESEND_API_KEY + others are visible to the inline node script.
+            # The main chat-proxy process loads it via dotenv at startup; a one-off
+            # `node -e` does not, hence this explicit export.
+            set -a; [ -f .env ] && source .env; set +a
             node -e "
               const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1cWtsdGhycHZzcXllbGZqb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzYxOTksImV4cCI6MjA5MDY1MjE5OX0.xWWKByjiASSOC9QqhHdj2M8NkifsjJhXrFBYmpeXVH4';
               async function sb(t,m,b,q='') {
