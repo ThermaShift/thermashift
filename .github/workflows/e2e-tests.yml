@@ -1,0 +1,56 @@
+name: E2E Tests (Playwright)
+
+# Runs the Playwright smoke suite against the built dist via vite preview.
+# Catches the kinds of regressions the 2026-05-29 audit found:
+#   - Broken footer/nav links
+#   - ChatWidget rendering issues (broken CSS vars)
+#   - Service-card copy regressions
+#   - SYSTEM_PROMPT accidentally back in the client bundle
+# Plus a security suite that hits live thermashift.net to confirm the
+# HMAC-gated PII endpoints still return 401 to unauthenticated callers.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run Playwright tests (against built preview)
+        run: npm run test:e2e
+        env:
+          CI: 'true'
+          # The security spec hits the live API to confirm PII endpoints
+          # still reject unauthenticated requests. Override with a staging
+          # URL once one exists.
+          PLAYWRIGHT_LIVE_API_URL: 'https://thermashift.net'
+
+      - name: Upload Playwright HTML report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
